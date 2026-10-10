@@ -3,9 +3,12 @@
 // a single bundle per function removes both problems. The output is committed so Vercel finds the functions before it builds.
 import { build } from 'esbuild'
 import { readdirSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 
 const entries = readdirSync(new URL('../api-src/', import.meta.url)).filter((f) => f.endsWith('.ts')).map((f) => `api-src/${f}`)
 await build({
+  // ../shared/events.ts imports zod but lives outside this package: resolve it from admin's own node_modules, so only `admin` needs installing
+  alias: { zod: fileURLToPath(new URL('../node_modules/zod', import.meta.url)) },
   entryPoints: entries, outdir: 'api', bundle: true, platform: 'node', target: 'node20', format: 'esm', outExtension: { '.js': '.js' },
   external: ['pg-native', '@electric-sql/pglite'], // pglite is only used for local development and tests
   banner: { js: "import { createRequire as __cr } from 'node:module'; const require = __cr(import.meta.url);" },
