@@ -220,7 +220,7 @@ export interface ActivityDef {
   effects?: Effect[]
   check?: { stat: StatKey | 'hustle' | 'charm'; difficulty: number }
   outcomes?: Partial<Record<Tier, Outcome>>
-  special?: 'study' | 'dash' | 'applyJob' | 'socialise' | 'familyTime' | 'rest' | 'shop' | 'quitJob' | 'overtime' | 'chat'
+  special?: 'study' | 'dash' | 'applyJob' | 'socialise' | 'familyTime' | 'rest' | 'shop' | 'quitJob' | 'overtime' | 'chat' | 'tv' | 'meal' | 'groom'
   hidden?: boolean
   maxPerYear?: number
   scene?: string
@@ -319,4 +319,6 @@ export interface GameState {
   dashBest: number
   cowriesEarnedLife: number
   lastAction?: { text: string; deltas: StatDelta[] }
+  /** In-world time of day (a typical day within the year). Cosmetic and used for opening hours and sleep. */
+  clock?: { hour: number; day: number }
 }

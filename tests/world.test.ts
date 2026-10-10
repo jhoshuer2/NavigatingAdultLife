@@ -33,3 +33,43 @@ describe('district layout and navigation', () => {
     expect(p.z).toBeGreaterThan(2)
   })
 })
+
+import { fmtClock, isOpen, lightingAt, periodOf } from '../src/world/time'
+describe('time and lighting', () => {
+  it('formats the clock and reports opening hours', () => {
+    expect(fmtClock(6.5)).toBe('6:30 AM'); expect(fmtClock(18.25)).toBe('6:15 PM'); expect(fmtClock(0)).toBe('12:00 AM')
+    expect(isOpen('school', 9)).toBe(true); expect(isOpen('school', 18)).toBe(false); expect(isOpen('market', 21)).toBe(false)
+    expect(isOpen('pitch', 3)).toBe(true) // open air places have no opening hours
+    expect(periodOf(22)).toBe('night'); expect(periodOf(13)).toBe('afternoon')
+  })
+  it('is bright at noon and dark at night, and always returns finite values', () => {
+    expect(lightingAt(12).dark).toBe(0); expect(lightingAt(23).dark).toBe(1)
+    expect(lightingAt(12).hemiI).toBeGreaterThan(lightingAt(23).hemiI)
+    for (let h = -3; h < 30; h += 0.5) { const l = lightingAt(h); expect(Number.isFinite(l.hemiI)).toBe(true); expect(l.dark).toBeGreaterThanOrEqual(0); expect(l.dark).toBeLessThanOrEqual(1) }
+  })
+})
+
+import { INTERIORS, interiorBlockers } from '../src/world/interiors'
+import { buildNavFor } from '../src/world/nav'
+describe('interiors', () => {
+  for (const [id, it] of Object.entries(INTERIORS)) {
+    it_(id, it!)
+  }
+  function it_(id: string, def: NonNullable<(typeof INTERIORS)[keyof typeof INTERIORS]>) {
+    it(`${id}: spawn, exit, hotspots and people are reachable and not inside furniture`, () => {
+      const nav = buildNavFor(interiorBlockers(def), def.bounds, 0.5)
+      expect(walkable(nav, def.spawn.x, def.spawn.z), 'spawn').toBe(true)
+      expect(walkable(nav, def.door.x, def.door.z), 'exit').toBe(true)
+      for (const h of def.hotspots) {
+        expect(walkable(nav, h.x, h.z), `hotspot ${h.id} stand point`).toBe(true)
+        const path = findPath(nav, def.spawn, { x: h.x, z: h.z })
+        expect(path, `path to ${h.id}`).not.toBeNull()
+      }
+      for (const p of def.people) {
+        expect(walkable(nav, p.x, p.z), `person ${p.id}`).toBe(true)
+        expect(findPath(nav, def.spawn, { x: p.x, z: p.z }), `path to ${p.id}`).not.toBeNull()
+      }
+      expect(findPath(nav, { x: def.hotspots[0].x, z: def.hotspots[0].z }, def.door)).not.toBeNull()
+    })
+  }
+})

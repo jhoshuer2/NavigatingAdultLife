@@ -20,6 +20,10 @@ export function createNewLife(config: NewLifeConfig, seed: number): GameState {
   }).state
 }
 
+export function setClock(state: GameState, hour: number, day: number): GameState {
+  const s = structuredClone(state); s.clock = { hour, day }; return s
+}
+
 export function getActivities(state: GameState) { return withCtx(state, (ctx) => listActivities(ctx)).result }
 export function getShopItems(state: GameState) { return withCtx(state, (ctx) => shopItems(ctx)).result }
 export function getJobOptions(state: GameState) { return withCtx(state, (ctx) => jobOptions(ctx)).result }

@@ -1,0 +1,48 @@
+import { chromium } from 'playwright-core'
+import { mkdirSync } from 'node:fs'
+const OUT = process.env.OUT ?? '/tmp/claude-0/-home-user-NavigatingAdultLife/f97bb3da-afd4-5501-b372-1bb1d534ad7b/scratchpad/shots'
+mkdirSync(OUT, { recursive: true })
+const browser = await chromium.launch({ executablePath: process.env.CHROME, args: ['--no-sandbox', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--use-gl=angle'] })
+const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1 })
+page.setDefaultTimeout(15000)
+const errors = []
+page.on('pageerror', (e) => errors.push(String(e)))
+page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()) })
+await page.goto('http://localhost:4173/?unlimited=1&debug=1')
+await page.waitForFunction(() => window.__nal)
+const G = () => page.evaluate(() => { const s = window.__nal.useGame.getState(); return { hour: s.hour, day: s.day, en: s.life.character.stats.energy, hp: s.life.character.stats.health, cash: s.life.character.stats.cash } })
+await page.evaluate(() => { const g = window.__nal.useGame; g.setState({ meta: { ...g.getState().meta, seenTutorial: true } }); window.__nal.jump(16, 'scholar', 3) })
+await page.waitForTimeout(1500)
+await page.evaluate(() => window.__nal.useGame.getState().setHourTo(20))
+await page.waitForTimeout(500)
+await page.screenshot({ path: `${OUT}/80-night-outside.png` })
+// Rest & recover from the home place sheet
+await page.evaluate(() => window.__nal.useGame.getState().openPlace('home'))
+await page.waitForTimeout(300)
+await page.getByText('Rest & recover', { exact: false }).first().click()
+for (let i = 0; i < 40; i++) { await page.waitForTimeout(400); const ins = await page.evaluate(() => window.__world.inside); const sh = await page.getByText('Go to sleep').count(); if (ins && sh) break }
+console.log('inside', await page.evaluate(() => window.__world.inside))
+await page.waitForTimeout(500)
+await page.screenshot({ path: `${OUT}/81-bed-prompt.png` })
+// turn things off: go to the TV
+await page.getByRole('button', { name: 'Close', exact: true }).last().click(); await page.waitForTimeout(300)
+const goto = async (id) => { const p = await page.evaluate((i) => window.__world.hotspotPos(i), id); await page.evaluate((q) => window.__world.walkTo(q.x, q.z), p); for (let i = 0; i < 40; i++) { await page.waitForTimeout(300); const pos = await page.evaluate(() => window.__world.position); if (Math.hypot(pos.x - p.x, pos.z - p.z) < 1.2) break } await page.waitForTimeout(300) }
+await goto('tv'); await page.keyboard.press('e'); await page.waitForTimeout(300)
+await page.screenshot({ path: `${OUT}/82-tv-sheet.png` })
+await page.getByText('Turn the TV on/off').click(); await page.waitForTimeout(300)
+await page.getByRole('button', { name: 'Close', exact: true }).last().click(); await page.waitForTimeout(300)
+await goto('bath'); await page.keyboard.press('e'); await page.waitForTimeout(300)
+await page.getByText('Brush teeth').click(); await page.waitForTimeout(500)
+console.log('after groom', await G())
+await goto('bed'); await page.keyboard.press('e'); await page.waitForTimeout(300)
+await page.getByText('Go to sleep').click(); await page.waitForTimeout(1500)
+await page.screenshot({ path: `${OUT}/83-sleeping.png` })
+await page.waitForTimeout(2500)
+await page.getByText('Wake up').click(); await page.waitForTimeout(800)
+console.log('after wake', await G())
+await page.screenshot({ path: `${OUT}/84-awake.png` })
+await page.getByRole('button', { name: /Outside/ }).click(); await page.waitForTimeout(1200)
+console.log('inside after leave', await page.evaluate(() => window.__world.inside))
+await page.screenshot({ path: `${OUT}/85-morning-outside.png` })
+console.log('errors', errors)
+await browser.close()

@@ -47,7 +47,7 @@ function finish(ctx: Ctx, before: StatDelta[], text: string) {
   log(ctx.s, 'activity', text)
 }
 
-export interface ActivityArgs { target?: NpcRole; track?: TrackId; itemId?: string }
+export interface ActivityArgs { target?: NpcRole; track?: TrackId; itemId?: string; hours?: number; appliancesOn?: number }
 
 export function performActivity(ctx: Ctx, id: string, args: ActivityArgs = {}): boolean {
   const { s, rng } = ctx
@@ -106,11 +106,31 @@ export function performActivity(ctx: Ctx, id: string, args: ActivityArgs = {}): 
       break
     }
     case 'rest': {
-      addStat(ctx, 'health', 5, 'Rest')
-      addStat(ctx, 'stress', -9, 'Rest')
-      addStat(ctx, 'happiness', c.traits.includes('hustler') ? 1 : 3, 'Rest')
+      const hours = args.hours ?? 8
+      const f = Math.min(1.2, Math.max(0.3, hours / 8))
+      const pen = args.appliancesOn ? 0.7 : 1
+      addStat(ctx, 'health', Math.round(5 * f * pen), 'Rest')
+      addStat(ctx, 'stress', -Math.round(9 * f * pen), 'Rest')
+      addStat(ctx, 'happiness', Math.round((c.traits.includes('hustler') ? 1 : 3) * f), 'Rest')
       if (c.traits.includes('foodie')) { addStat(ctx, 'energy', 6, 'Good food'); addStat(ctx, 'happiness', 2, 'Good food') }
-      text = 'You slept well and ate better. NEPA, surprisingly, cooperated.'
+      if (args.appliancesOn) addStat(ctx, 'cash', -2500 * args.appliancesOn, 'Fuel and electricity')
+      text = args.appliancesOn ? `You slept ${Math.round(hours)}h, but left ${args.appliancesOn} appliance${args.appliancesOn > 1 ? 's' : ''} on. Poor sleep and a bigger fuel bill.` : hours >= 7 ? 'A full night of sleep. NEPA, surprisingly, cooperated.' : `A short rest of ${Math.round(hours)}h. Better than nothing.`
+      break
+    }
+    case 'tv': {
+      addStat(ctx, 'happiness', 3, 'TV'); addStat(ctx, 'stress', -3, 'TV')
+      text = 'A good episode, an argument with the screen, and a plate of something on your lap.'
+      break
+    }
+    case 'meal': {
+      c.stats.energy = Math.min(c.stats.maxEnergy, c.stats.energy + 5)
+      addStat(ctx, 'happiness', 2 + (c.traits.includes('foodie') ? 2 : 0), 'Good food'); addStat(ctx, 'health', 1, 'Good food')
+      text = 'You ate well. Mama says you are too thin. Mama always says this.'
+      break
+    }
+    case 'groom': {
+      addStat(ctx, 'health', 1, 'Hygiene'); addStat(ctx, 'reputation', 1, 'Looking sharp'); addStat(ctx, 'stress', -2, 'Fresh start')
+      text = 'Teeth brushed, face washed, wrapper tied. A new person.'
       break
     }
     case 'applyJob': {

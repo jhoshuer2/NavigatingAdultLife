@@ -46,6 +46,9 @@ export const ACTIVITIES: ActivityDef[] = [
   },
   { id: 'shop', label: 'Shop', blurb: 'Buy things that actually help.', icon: '🛒', stages: [...SCHOOLISH, 'adult', 'elder'], cost: { energy: 5 }, special: 'shop', scene: 'market' },
   { id: 'chat', label: 'Chat', blurb: 'A quick catch-up.', icon: '💬', stages: [...ALL], cost: { energy: 3 }, special: 'chat', maxPerYear: 6, hidden: true, scene: 'compound' },
+  { id: 'tv', label: 'Watch TV', blurb: 'Nollywood, football or the news you cannot fix.', icon: '📺', stages: [...ALL], cost: { energy: 2 }, special: 'tv', maxPerYear: 3, hidden: true, scene: 'home' },
+  { id: 'meal', label: 'Eat a meal', blurb: 'Rice, beans, eba, whatever Mama made.', icon: '🍛', stages: [...ALL], cost: { energy: 1 }, special: 'meal', maxPerYear: 3, hidden: true, scene: 'home' },
+  { id: 'groom', label: 'Freshen up', blurb: 'Brush your teeth, bathe, look sharp.', icon: '🪥', stages: [...ALL], cost: { energy: 1 }, special: 'groom', maxPerYear: 3, hidden: true, scene: 'home' },
   { id: 'quitJob', label: 'Resign', blurb: 'Walk away from your job. Bold. Possibly foolish.', icon: '🚪', stages: ['youngAdult', 'adult'], cost: { energy: 0 }, special: 'quitJob', requires: { all: [{ employed: true }] }, scene: 'office' },
 ]
 export const ACTIVITY_BY_ID = Object.fromEntries(ACTIVITIES.map((a) => [a.id, a]))

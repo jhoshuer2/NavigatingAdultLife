@@ -1,12 +1,13 @@
 import { create } from 'zustand'
 import type { GameState, NewLifeConfig, Lifestyle, QuizQuestion } from '@engine/core/types'
-import { createNewLife, doActivity, submitQuizAnswer, finishActions, chooseOption, continueAfterEvent, advanceYear, setLifestyle, applyDashResult, type ActivityArgs, type MiniGameResult } from '@engine/api'
+import { createNewLife, doActivity, setClock, submitQuizAnswer, finishActions, chooseOption, continueAfterEvent, advanceYear, setLifestyle, applyDashResult, type ActivityArgs, type MiniGameResult } from '@engine/api'
 import { ACHIEVEMENT_BY_ID } from '@content/achievements'
 import { defaultMeta, mergeEnding, UNLOCKABLES, type MetaProfile, type Settings } from '@platform/meta'
 import { loadLife, loadMeta, saveLife, saveMeta, importSave, exportSave } from '@platform/storage'
 import { addPaid, consume, refreshTokens, remainingSec } from '@platform/tokens'
 import { audio } from '@platform/audio'
 import { track } from '@platform/analytics'
+import { ACTIVITY_HOURS } from './world/time'
 
 export type Screen = 'title' | 'create' | 'play' | 'ending' | 'achievements' | 'unlocks' | 'settings' | 'dash' | 'history'
 export type Sheet = null | 'shop' | 'jobs' | 'quests' | 'profile' | 'pick-social' | 'pick-family' | 'lifestyle' | 'paywall' | 'place' | 'npc' | 'places'
@@ -28,6 +29,12 @@ interface Store {
   placeId: PlaceId | null
   npcId: string | null
   walkReq: { place: PlaceId; n: number } | null
+  hour: number
+  day: number
+  enterReq: { place: PlaceId; intent?: 'sleep'; n: number } | null
+  enterPlace: (id: PlaceId, intent?: 'sleep') => void
+  advance: (hours: number) => void
+  setHourTo: (hour: number, dayAdd?: number) => void
   openPlace: (id: PlaceId) => void
   openNpc: (id: string) => void
   goToPlace: (id: PlaceId) => void
@@ -79,7 +86,10 @@ export const useGame = create<Store>((set, get) => {
   }
   const setMeta = (meta: MetaProfile) => { saveMeta(meta); set({ meta }); audio.configure(meta.settings) }
   return {
-    screen: 'title', life: null, meta: defaultMeta(), sheet: null, toasts: [], quizFeedback: null, dashMode: 'foot', lastDash: null, endingRecorded: false, placeId: null, npcId: null, walkReq: null,
+    screen: 'title', life: null, meta: defaultMeta(), sheet: null, toasts: [], quizFeedback: null, dashMode: 'foot', lastDash: null, endingRecorded: false, placeId: null, npcId: null, walkReq: null, hour: 8, day: 0, enterReq: null,
+    enterPlace: (id, intent) => set((st) => ({ enterReq: { place: id, intent, n: (st.enterReq?.n ?? 0) + 1 }, sheet: null })),
+    advance: (hours) => { const { hour, day } = get(); let h = hour + hours, d = day; while (h >= 24) { h -= 24; d++ }; get().setHourTo(h, d - day) },
+    setHourTo: (h, dayAdd = 0) => { const st = get(); const day = st.day + dayAdd; set({ hour: h, day }); if (st.life) { const l = setClock(st.life, h, day); saveLife(l); set({ life: l }) } },
     openPlace: (id) => set({ placeId: id, sheet: 'place' }),
     openNpc: (id) => set({ npcId: id, sheet: 'npc' }),
     goToPlace: (id) => set((st) => ({ walkReq: { place: id, n: (st.walkReq?.n ?? 0) + 1 }, sheet: null })),
@@ -96,17 +106,17 @@ export const useGame = create<Store>((set, get) => {
       saveMeta(meta)
       audio.configure(meta.settings)
       document.documentElement.classList.toggle('big-text', meta.settings.bigText)
-      set({ meta, life: loadLife() })
+      const life = loadLife(); set({ meta, life, hour: life?.clock?.hour ?? 8, day: life?.clock?.day ?? 0 })
     },
     newLife: (cfg) => {
       const seed = (Math.random() * 2 ** 32) >>> 0
       const life = createNewLife(cfg, seed)
       saveLife(life)
       track(get().meta.consentAnalytics, 'life_started')
-      set({ life, endingRecorded: false, screen: 'play', sheet: null, quizFeedback: null })
+      set({ life, endingRecorded: false, screen: 'play', sheet: null, quizFeedback: null, hour: 8, day: 0 })
     },
     continueLife: () => { if (get().life) set({ screen: 'play' }) },
-    act: (id, args) => { const life = get().life; if (!life) return; const r = doActivity(life, id, args); if (r.ok) { commit(r.state); set({ sheet: null }) } },
+    act: (id, args) => { const life = get().life; if (!life) return; const r = doActivity(life, id, args); if (r.ok) { commit(r.state); set({ sheet: null }); if (id !== 'rest' && ACTIVITY_HOURS[id]) get().advance(ACTIVITY_HOURS[id]) } },
     answer: (i) => {
       const life = get().life; if (!life) return
       const q = life.quiz?.questions[life.quiz.index]
@@ -118,7 +128,7 @@ export const useGame = create<Store>((set, get) => {
     endActions: () => { const life = get().life; if (life) { commit(finishActions(life)) } },
     choose: (id) => { const life = get().life; if (life) commit(chooseOption(life, id)) },
     proceed: () => { const life = get().life; if (life) commit(continueAfterEvent(life)) },
-    nextYear: () => { const life = get().life; if (life) commit(advanceYear(life)) },
+    nextYear: () => { const life = get().life; if (life) { commit(advanceYear(life)); set({ hour: 7 }) } },
     lifestyle: (l) => { const life = get().life; if (life) { commit(setLifestyle(life, l)); set({ sheet: null }) } },
     startDash: () => {
       const life = get().life; if (!life) return

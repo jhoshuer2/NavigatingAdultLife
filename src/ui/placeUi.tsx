@@ -4,6 +4,8 @@ import { Btn, DeltaChips, Modal, nairaShort } from './components'
 import { getActivities } from '@engine/api'
 import { DISTRICTS, buildDistrict, type PlaceId } from '../world/layout'
 import { placeActive, placeNote } from '../world/guide'
+import { INTERIORS } from '../world/interiors'
+import { isOpen, opensAt, fmtClock } from '../world/time'
 import { useActivityRouter } from './useActivities'
 import { audio } from '@platform/audio'
 
@@ -15,7 +17,7 @@ const BENEFIT: Record<string, string> = {
 }
 
 export function PlaceModal() {
-  const { life, placeId, openSheet, endActions } = useGame()
+  const { life, placeId, openSheet, endActions, enterPlace, hour } = useGame()
   const route = useActivityRouter()
   const acts = useMemo(() => (life ? getActivities(life) : []), [life])
   if (!life || !placeId) return null
@@ -25,6 +27,7 @@ export function PlaceModal() {
   const rows = place.activities.map((id) => acts.find((a) => a.def.id === id)).filter(Boolean) as typeof acts
   const note = placeNote(life, placeId)
   const active = placeActive(life, placeId)
+  const closed = !isOpen(placeId, hour)
   const lastDelta = life.lastAction?.deltas ?? []
   return (
     <Modal onClose={() => openSheet(null)}>
@@ -34,16 +37,19 @@ export function PlaceModal() {
       </div>
       {note && <div className="card p-3 mt-3 text-sm">{note}</div>}
       <div className="mt-3 grid gap-2">
+        {INTERIORS[placeId] && (isOpen(placeId, hour)
+          ? <button className="card-btn" style={{ borderColor: '#ffd23f' }} onClick={() => { audio.sfx('click'); enterPlace(placeId) }}><b>🚪 Go inside</b><div className="text-xs opacity-75">Open the door and walk in.</div></button>
+          : <div className="card p-3 text-sm text-yellow-300">🔒 Closed. Opens at {fmtClock(opensAt(placeId))}.</div>)}
         {rows.map(({ def, enabled, reason, remaining }) => (
-          <button key={def.id} className="card-btn" disabled={!enabled || life.phase !== 'action'} onClick={() => { audio.sfx('click'); if (def.id !== 'applyJob' && def.id !== 'socialise' && def.id !== 'familyTime' && def.id !== 'shop') openSheet(null); route(def.id) }}>
+          <button key={def.id} className="card-btn" disabled={!enabled || life.phase !== 'action' || closed} onClick={() => { audio.sfx('click'); if (def.id === 'rest' && placeId === 'home') { enterPlace('home', 'sleep'); return } if (def.id !== 'applyJob' && def.id !== 'socialise' && def.id !== 'familyTime' && def.id !== 'shop') openSheet(null); route(def.id) }}>
             <div className="flex items-center justify-between gap-2"><b>{def.icon} {def.label}</b><span className="chip">{def.cost.energy ? `⚡${def.cost.energy}` : 'free'}{def.cost.cash ? ` · ${nairaShort(def.cost.cash)}` : ''}</span></div>
-            <div className="text-xs opacity-75 mt-0.5">{enabled ? <>{def.blurb} <span className="opacity-70">→ {BENEFIT[def.id] ?? ''}</span></> : <span className="text-yellow-300">{reason}</span>}</div>
+            <div className="text-xs opacity-75 mt-0.5">{closed ? <span className="text-yellow-300">Closed until {fmtClock(opensAt(placeId))}.</span> : enabled ? <>{def.blurb} <span className="opacity-70">→ {BENEFIT[def.id] ?? ''}</span></> : <span className="text-yellow-300">{reason}</span>}</div>
             {remaining !== undefined && enabled && <div className="text-[10px] opacity-50">{remaining} left this year</div>}
           </button>
         ))}
         {placeId === 'home' && (
           <button className="card-btn" style={{ borderColor: '#2fd27b' }} disabled={life.phase !== 'action' || !!life.quiz} onClick={() => { audio.sfx('good'); openSheet(null); endActions() }}>
-            <b>🌙 Sleep and end the year</b><div className="text-xs opacity-75">Age {life.character.age} → {life.character.age + 1}. Events happen, then salary, rent and fees are settled.</div>
+            <b>📅 End the year</b><div className="text-xs opacity-75">Age {life.character.age} → {life.character.age + 1}. Events happen, then salary, rent and fees are settled.</div>
           </button>
         )}
         {rows.length === 0 && !note && active && <div className="opacity-70 text-sm">Nothing to do here right now.</div>}
