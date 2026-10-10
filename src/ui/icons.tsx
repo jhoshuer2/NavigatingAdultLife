@@ -1,7 +1,7 @@
 // A small, consistent icon set (flat, rounded, two-tone). Emoji stay for content art; these are the interface.
 import type { CSSProperties } from 'react'
 
-export type IconName = 'bolt' | 'heart' | 'book' | 'star' | 'smile' | 'coin' | 'lock' | 'check' | 'chevron' | 'pin' | 'home' | 'scroll' | 'user' | 'gear' | 'trophy' | 'shell' | 'close' | 'play' | 'hourglass' | 'flag' | 'map' | 'bag' | 'people' | 'sun' | 'moon' | 'door' | 'chat' | 'wind' | 'back' | 'menu' | 'plus' | 'clock'
+export type IconName = 'bolt' | 'heart' | 'book' | 'star' | 'smile' | 'coin' | 'lock' | 'check' | 'chevron' | 'pin' | 'home' | 'scroll' | 'user' | 'gear' | 'trophy' | 'shell' | 'close' | 'play' | 'hourglass' | 'flag' | 'map' | 'bag' | 'people' | 'sun' | 'moon' | 'door' | 'chat' | 'wind' | 'back' | 'menu' | 'plus' | 'clock' | 'dice' | 'rocket' | 'up' | 'down' | 'swap' | 'pencil' | 'info' | 'share' | 'cash'
 
 const P: Record<IconName, JSX.Element> = {
   bolt: <path d="M13.2 2 5 13.4h5.6L9.8 22 19 10.2h-5.8z" />,
@@ -35,13 +35,22 @@ const P: Record<IconName, JSX.Element> = {
   wind: <path d="M3 8.5h10.5a3 3 0 1 0-3-3M3 13h15a3 3 0 1 1-3 3M3 17.5h7" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" />,
   menu: <path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />,
   plus: <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" />,
+  dice: <><rect x="3" y="3" width="18" height="18" rx="4.5" /><circle cx="8.2" cy="8.2" r="1.7" fill="#1a0f55" /><circle cx="15.8" cy="8.2" r="1.7" fill="#1a0f55" /><circle cx="12" cy="12" r="1.7" fill="#1a0f55" /><circle cx="8.2" cy="15.8" r="1.7" fill="#1a0f55" /><circle cx="15.8" cy="15.8" r="1.7" fill="#1a0f55" /></>,
+  rocket: <><path d="M12 2.5c3.6 2.2 5.4 5.8 5 10.6l-2.4 2.4H9.4L7 13.1C6.6 8.3 8.4 4.7 12 2.5z" /><circle cx="12" cy="9.4" r="2" fill="#1a0f55" fillOpacity=".7" /><path d="M7.4 14.2 4 17l1.2 3.4 3.4-1.4zM16.6 14.2 20 17l-1.2 3.4-3.4-1.4z" fillOpacity=".75" /><path d="M10 17.6h4l-2 4z" fill="#ff7a4d" /></>,
+  up: <path d="M12 4 21 15H3z" />,
+  down: <path d="M12 20 3 9h18z" />,
+  swap: <path d="M4 8h13l-3-3M20 16H7l3 3" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" />,
+  pencil: <path d="m4 20 1-4.6L16.4 4a2 2 0 0 1 2.8 0l.8.8a2 2 0 0 1 0 2.8L8.6 19z" />,
+  info: <><circle cx="12" cy="12" r="10" /><path d="M12 11v6" stroke="#1a0f55" strokeWidth="2.6" strokeLinecap="round" /><circle cx="12" cy="7.4" r="1.6" fill="#1a0f55" /></>,
+  share: <><circle cx="6" cy="12" r="3" /><circle cx="18" cy="6" r="3" /><circle cx="18" cy="18" r="3" /><path d="m8.6 10.6 6.8-3.4M8.6 13.4l6.8 3.4" stroke="currentColor" strokeWidth="2" /></>,
+  cash: <><rect x="2.5" y="6" width="19" height="12" rx="2.5" /><circle cx="12" cy="12" r="3" fill="#1a0f55" fillOpacity=".45" /></>,
   clock: <><circle cx="12" cy="12" r="10" /><path d="M12 6.4V12l3.8 2.4" fill="none" stroke="#1a0f55" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></>,
 }
 
 /** Default colours so an icon looks right without styling. */
 export const ICON_COLOR: Partial<Record<IconName, string>> = {
   bolt: '#ffd23f', heart: '#ff5a7a', book: '#5cc8ff', star: '#ffb340', smile: '#ffd84a', coin: '#ffc72c', pin: '#ff7ab8', trophy: '#ffc72c', shell: '#ffb8d1', home: '#ffc72c',
-  scroll: '#a98bff', user: '#7fe3ff', map: '#6fe0a0', flag: '#ff5a5f', bag: '#ffa94d', people: '#ff9ccf', sun: '#ffd23f', moon: '#c7b8ff', door: '#ffb35c', chat: '#6fe3ff', hourglass: '#ffd23f', clock: '#ffd23f', gear: '#c9c2ff', lock: '#9a93c9',
+  scroll: '#a98bff', user: '#7fe3ff', map: '#6fe0a0', flag: '#ff5a5f', bag: '#ffa94d', people: '#ff9ccf', sun: '#ffd23f', moon: '#c7b8ff', door: '#ffb35c', chat: '#6fe3ff', hourglass: '#ffd23f', clock: '#ffd23f', dice: '#ffffff', rocket: '#ffffff', up: '#2bd978', down: '#ff5a5f', info: '#8fe0ff', cash: '#2bd978', share: '#8fe0ff', pencil: '#ffd23f', gear: '#c9c2ff', lock: '#9a93c9',
 }
 
 export function Icon({ name, size = 24, color, className, style }: { name: IconName; size?: number; color?: string; className?: string; style?: CSSProperties }) {

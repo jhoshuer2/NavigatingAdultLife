@@ -26,7 +26,7 @@ export function Title() {
   const left = remainingSec(meta)
   const start = () => { audio.unlock(); audio.playMusic('menu') }
   return (
-    <div className="min-h-full flex flex-col relative" onPointerDown={start}>
+    <div className="screen flex flex-col relative" onPointerDown={start}>
       <div className="absolute top-0 inset-x-0 z-10 flex items-center justify-between px-3 pt-3" style={{ paddingTop: 'calc(.75rem + var(--safe-t))' }}>
         <span className="chip" style={{ background: 'rgba(10,7,34,.55)', backdropFilter: 'blur(6px)' }}><Icon name="shell" size={16} /><b className="num">{meta.cowries}</b></span>
         <button className="chip" style={{ background: 'rgba(10,7,34,.55)', backdropFilter: 'blur(6px)' }} onClick={() => useGame.getState().openSheet('paywall')} aria-label="Play time"><Icon name="clock" size={16} /><b className="num">{meta.tokens.unlimited ? '∞' : fmtTime(left)}</b></button>

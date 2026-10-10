@@ -16,7 +16,7 @@ export function RoundBtn({ icon, label, onClick, size = 44, tone = 'ghost' }: { 
   return (
     <button aria-label={label} onClick={() => { audio.sfx('click'); onClick?.() }} className="grid place-items-center rounded-full active:translate-y-0.5 transition-transform pointer-events-auto"
       style={{ width: size, height: size, background: bg, boxShadow: 'inset 0 2px 0 rgba(255,255,255,.4), 0 3px 0 rgba(0,0,0,.45), 0 8px 14px rgba(0,0,0,.35)', border: '1px solid rgba(255,255,255,.18)' }}>
-      <Icon name={icon} size={Math.round(size * 0.5)} color={tone === 'gold' ? '#3b2300' : '#fff'} />
+      <Icon name={icon} size={Math.round(size * 0.5)} color={icon === 'dice' ? '#fff' : tone === 'gold' ? '#3b2300' : '#fff'} />
     </button>
   )
 }

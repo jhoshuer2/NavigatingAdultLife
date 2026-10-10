@@ -10,11 +10,11 @@ const shot = async (n) => { await page.waitForTimeout(500); await page.screensho
 await page.goto(`${process.env.BASE ?? 'http://localhost:4173'}/?unlimited=1&debug=1`)
 await page.waitForFunction(() => window.__nal)
 await shot('01-title')
-await page.getByText('New life').first().click(); await shot('02-create-look')
-const next = async () => { await page.getByText('Next →').click(); await page.waitForTimeout(300) }
+await page.locator('button.btn:has-text("Play")').first().click(); await shot('02-create-look')
+const next = async () => { await page.getByRole('button', { name: /^Next/ }).click(); await page.waitForTimeout(450) }
 await next(); await page.getByText('Hustler').first().click().catch(() => {}); await page.getByText('Bookworm').first().click().catch(() => {}); await shot('03-create-traits')
 await next(); await page.getByText('Big Oga').first().click().catch(() => {}); await shot('04-create-dream')
-await next(); await shot('05-create-lottery-before'); await page.getByText('Spin the lottery').click().catch(() => {}); await page.waitForTimeout(1700); await shot('06-create-lottery')
+await next(); await shot('05-create-lottery-before'); await page.getByRole('button', { name: /Spin/ }).click().catch(() => {}); await page.waitForTimeout(1700); await shot('06-create-lottery')
 await next(); await page.locator('button:has-text("Ikorodu")').first().click().catch(() => {}); await shot('07-create-home')
 await next(); await page.getByPlaceholder('Your name').fill('Ada').catch(() => {}); await shot('08-create-name')
 await page.getByText('Start my life').click().catch(() => {}); await page.waitForTimeout(800); await shot('09-first-run-world')
