@@ -5,6 +5,8 @@ import { ingest } from './ingest'
 
 const PLACES = ['home', 'classroom', 'buka', 'pitch', 'market', 'church', 'workplace', 'jobcentre']
 const TASKS = ['study', 'penalty', 'chores', 'jog', 'market', 'overtime', 'chat', 'hang']
+const STORIES = ['ev_black_tax', 'ev_jamb_result', 'ev_nepa_bill', 'ev_wedding_owambe', 'ev_scholarship', 'ev_danfo_fare', 'ev_harmattan_cold']
+const TONES = ['warm', 'funny', 'flat', 'meh']
 const ACTS = ['study', 'exercise', 'socialise', 'hustle', 'rest', 'community', 'dash']
 const GEOS = [
   { c: 'NG', r: 'LA', city: 'Lagos', w: 40 }, { c: 'NG', r: 'LA', city: 'Ikeja', w: 10 }, { c: 'NG', r: 'FC', city: 'Abuja', w: 14 }, { c: 'NG', r: 'RI', city: 'Port Harcourt', w: 8 },
@@ -33,7 +35,7 @@ export async function seedPlayers(db: Db, opts: { players: number; days: number;
       const session = randomUUID(); const ev: unknown[] = []
       const e = (name: string, props: Record<string, unknown> = {}, offs = 0) => ev.push({ event_id: randomUUID(), name, ts: new Date(day.getTime() + offs * 1000).toISOString(), device_id: device, session_id: session, life_id: life, app_version: '1.0', props })
       let t = 0
-      e('session_start'); if (d === opts.days - 1 - startOffset) e('app_open', { referrer: rand() < 0.5 ? 'wa.me' : null, display_mode: 'browser' })
+      e('session_start'); if (d === opts.days - 1 - startOffset) e('app_open', { referrer: rand() < 0.5 ? 'wa.me' : null, display_mode: 'browser', load_ms: 500 + Math.floor(rand() * 7000) })
       if (!life && rand() < 0.9) { life = randomUUID(); e('create_started'); e('create_completed', { archetype: pick(['scholar', 'hustler', 'creative']), gender: pick(['male', 'female']), district: pick(['mainland', 'island']) }, 20); e('life_started', { life_index: 1 }, 30) }
       const beats = 1 + Math.floor(rand() * 12)
       for (let i = 0; i < beats; i++) {
@@ -44,6 +46,15 @@ export async function seedPlayers(db: Db, opts: { players: number; days: number;
         if (rand() < 0.1) e('map_opened', {}, t)
         if (rand() < 0.05) e('paywall_seen', {}, t)
       }
+      if (life) {
+        if (rand() < 0.5) e('year_ended', { age: 18 + Math.floor(rand() * 40), life_index: 1 }, t + 2)
+        const st = pick(STORIES); if (rand() < 0.6) { e('story_event_shown', { event_id: st }, t + 3); e('story_choice_made', { event_id: st, choice_id: pick(['a', 'b', 'c']) }, t + 4); if (rand() < 0.05) e('content_flagged', { event_id: st, reason: 'flagged' }, t + 5) }
+      }
+      if (rand() < 0.5) { const task = pick(TASKS); e('task_started', { task }, t + 1); if (rand() < 0.2) e('task_abandoned', { task, duration_s: 10 }, t + 2) }
+      if (rand() < 0.4) e('conversation_choice', { tone: pick(TONES), role: pick(['friend', 'mother', 'boss']), setting: 'street' }, t + 1)
+      if (rand() < 0.06) e('error', { message: pick(['TypeError: x is undefined', 'Failed to fetch', 'WebGL context lost']) }, t + 1)
+      if (rand() < 0.08) e('slow_device_detected', {}, t + 1)
+      if (rand() < 0.02) e('webgl_unavailable', {}, t + 1)
       if (life && rand() < 0.08) { e('life_ended', { age: 30 + Math.floor(rand() * 60), ending_id: pick(['peaceful', 'legacy', 'broke']) }, t + 5); life = null }
       await ingest(db, { v: 1, events: ev, ctx: { consent_version: '1', language: 'en-NG', tz: geo.c === 'NG' ? 'Africa/Lagos' : 'UTC', screen_band: 'xs' } }, headers, new Date(day.getTime() + (t + 10) * 1000))
     }

@@ -18,7 +18,8 @@ export interface Admin { admin_id: string; email: string; role: Role }
 /** What each role may do (PRD section 2 and FR-S2). */
 export const CAN = {
   overview: ['owner', 'analyst', 'engineer'],
-  aggregates: ['owner', 'analyst'],            // geography, engagement, features
+  aggregates: ['owner', 'analyst'],            // geography, engagement, features, funnels, content
+  quality: ['owner', 'analyst', 'engineer'],   // errors, performance, live view
   playersList: ['owner', 'analyst', 'support'],
   playerDetail: ['owner', 'support'],
   playerErase: ['owner', 'support'],

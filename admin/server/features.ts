@@ -31,3 +31,42 @@ export function playtimeBucket(screen: unknown, mode: unknown): 'world' | 'menu_
   if (screen === 'play') return mode === 'menu' ? 'menu_mode' : 'world'
   return 'menus'
 }
+
+/** Funnel steps (Funnels page), in order. */
+export const FUNNEL_STEPS = [
+  { id: 'landing', label: 'Opened the game' },
+  { id: 'created', label: 'Created a character' },
+  { id: 'walk', label: 'Walked into a place' },
+  { id: 'task', label: 'Finished a first task' },
+  { id: 'year', label: 'Ended a first year' },
+  { id: 'return', label: 'Came back another day' },
+  { id: 'paywall', label: 'Saw the paywall' },
+  { id: 'topup', label: 'Topped up' },
+] as const
+
+export function milestoneOf(e: Pick<TelemetryEvent, 'name' | 'props'>): string | null {
+  switch (e.name) {
+    case 'session_start': case 'app_open': case 'title_viewed': return 'landing'
+    case 'create_completed': return 'created'
+    case 'place_entered': return 'walk'
+    case 'task_completed': return 'task'
+    case 'year_ended': return 'year'
+    case 'paywall_seen': return 'paywall'
+    case 'topup_completed': return e.props.currency === 'MOCK' ? null : 'topup' // mock top-ups are not revenue
+    default: return null
+  }
+}
+
+/** Story / content / task-flow counters (Content page). */
+export function contentOf(e: Pick<TelemetryEvent, 'name' | 'props'>): { kind: string; item: string; choice: string } | null {
+  const p = e.props, s = (k: string) => (p[k] === undefined || p[k] === null ? '' : String(p[k]).slice(0, 60))
+  switch (e.name) {
+    case 'story_event_shown': return s('event_id') ? { kind: 'shown', item: s('event_id'), choice: '' } : null
+    case 'story_choice_made': return s('event_id') ? { kind: 'choice', item: s('event_id'), choice: s('choice_id') } : null
+    case 'content_flagged': return s('event_id') ? { kind: 'flag', item: s('event_id'), choice: s('reason') } : null
+    case 'conversation_choice': return s('tone') ? { kind: 'tone', item: s('tone'), choice: s('role') } : null
+    case 'task_started': return s('task') ? { kind: 'task_started', item: s('task'), choice: '' } : null
+    case 'task_abandoned': return s('task') ? { kind: 'task_abandoned', item: s('task'), choice: '' } : null
+    default: return null
+  }
+}

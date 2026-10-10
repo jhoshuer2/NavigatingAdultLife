@@ -85,4 +85,22 @@ CREATE FUNCTION audit_log_immutable() RETURNS trigger AS $$ BEGIN IF TG_OP = 'DE
 CREATE TRIGGER audit_log_no_update BEFORE UPDATE OR DELETE ON audit_log FOR EACH ROW EXECUTE FUNCTION audit_log_immutable();
 `,
   },
+  {
+    id: 2,
+    sql: `
+-- Phase C: funnels, content, quality and live view
+ALTER TABLE devices ADD COLUMN last_screen text, ADD COLUMN last_heartbeat_at timestamptz;
+ALTER TABLE lives ADD COLUMN last_age int;
+
+-- First time each device reached each funnel step (survives the 90 day raw-event purge)
+CREATE TABLE device_milestones (device_id uuid NOT NULL, step text NOT NULL, first_at timestamptz NOT NULL, is_test boolean NOT NULL DEFAULT false, PRIMARY KEY (device_id, step));
+
+-- Story events, choices, flags, conversation tones and task starts/abandons. Keyed by device so erasure removes a player's share.
+CREATE TABLE content_days (day date NOT NULL, device_id uuid NOT NULL, kind text NOT NULL, item_id text NOT NULL, choice_id text NOT NULL DEFAULT '', n int NOT NULL DEFAULT 0, is_test boolean NOT NULL DEFAULT false, PRIMARY KEY (day, device_id, kind, item_id, choice_id));
+CREATE INDEX content_days_kind ON content_days (kind, day);
+
+CREATE TABLE quality_days (day date NOT NULL, device_id uuid NOT NULL, device_type text, os text, app_version text, slow int NOT NULL DEFAULT 0, webgl_fail int NOT NULL DEFAULT 0, errors int NOT NULL DEFAULT 0, load_ms int, is_test boolean NOT NULL DEFAULT false, PRIMARY KEY (day, device_id));
+CREATE TABLE error_days (day date NOT NULL, device_id uuid NOT NULL, message text NOT NULL, app_version text NOT NULL DEFAULT '', device_type text, n int NOT NULL DEFAULT 0, is_test boolean NOT NULL DEFAULT false, PRIMARY KEY (day, device_id, message, app_version));
+`,
+  },
 ]

@@ -16,6 +16,7 @@ import type { NpcRole } from '@engine/core/types'
 import { audio } from '@platform/audio'
 import { HERITAGE_LABEL } from '@content/names'
 import { addFlag } from '@platform/feedback'
+import { track } from '@platform/analytics'
 
 const RISK = { safe: ['🟢', 'Safe'], risky: ['🟠', 'Risky'], gamble: ['🔴', 'Gamble'] } as const
 const TIER_LABEL = { critSuccess: ['🌟', 'Brilliant!'], success: ['✅', 'It worked'], fail: ['😬', 'Not great'], critFail: ['💥', 'Disaster'] } as const
@@ -34,7 +35,7 @@ export function EventModal() {
           <div className="text-[11px] font-extrabold uppercase tracking-wider opacity-60">Age {life.character.age} · event {life.after === 'summary' ? '' : '(milestone) '}{queueLeft > 1 ? `· ${queueLeft - 1} more` : ''}</div>
           <h2 className="font-display text-3xl text-danfo leading-tight">{cur.event.title}</h2>
         </div>
-        <button className="chip shrink-0" aria-label="Flag this event for the playtest feedback log" title="Flag this (playtest feedback)" onClick={() => { const note = window.prompt(`Feedback on "${cur.event.title}" (wrong, offensive, inaccurate, or could be funnier?)`); if (note) { addFlag({ contentId: cur.event.id, kind: 'event', age: life.character.age, note }); useGame.getState().toast('Thanks, feedback saved') } }}>🚩</button>
+        <button className="chip shrink-0" aria-label="Flag this event for the playtest feedback log" title="Flag this (playtest feedback)" onClick={() => { const note = window.prompt(`Feedback on "${cur.event.title}" (wrong, offensive, inaccurate, or could be funnier?)`); if (note) { track('content_flagged', { event_id: cur.event.id, reason: 'flagged' }); addFlag({ contentId: cur.event.id, kind: 'event', age: life.character.age, note }); useGame.getState().toast('Thanks, feedback saved') } }}>🚩</button>
         {npc && <div className="text-center shrink-0"><div className="w-12 h-12 rounded-full grid place-items-center text-xl font-black" style={{ background: '#3a3358' }}>{npc.name[0]}</div><div className="text-[10px] opacity-70 mt-0.5">{npc.name}</div></div>}
       </div>
       <p className="mt-2 leading-relaxed">{cur.text}</p>

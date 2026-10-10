@@ -120,6 +120,7 @@ export function createClient(d: Deps) {
 const ENDPOINT = (import.meta.env?.VITE_COLLECTOR_URL as string | undefined) ?? ''
 const qs = () => { try { return new URLSearchParams(location.search) } catch { return new URLSearchParams() } }
 const band = () => { const w = innerWidth; return w < 480 ? 'xs' : w < 768 ? 'sm' : w < 1200 ? 'md' : 'lg' }
+const loadMs = () => { try { const n = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined; const v = n ? Math.round(n.domContentLoadedEventEnd) : 0; return v > 0 ? v : null } catch { return null } }
 const displayMode = () => { try { return matchMedia('(display-mode: standalone)').matches ? 'standalone' : 'browser' } catch { return 'browser' } }
 
 let client: ReturnType<typeof createClient> | null = null
@@ -146,7 +147,7 @@ export const analyticsAvailable = () => !!ENDPOINT
 export function setAnalyticsConsent(granted: boolean) {
   try {
     const c = get(); const was = c.consent
-    if (granted && !was) { c.setConsent(true); const q = qs(); track('app_open', { referrer: document.referrer ? new URL(document.referrer).host : null, utm_source: q.get('utm_source'), utm_medium: q.get('utm_medium'), utm_campaign: q.get('utm_campaign'), display_mode: displayMode() }) }
+    if (granted && !was) { c.setConsent(true); const q = qs(); track('app_open', { referrer: document.referrer ? new URL(document.referrer).host : null, utm_source: q.get('utm_source'), utm_medium: q.get('utm_medium'), utm_campaign: q.get('utm_campaign'), display_mode: displayMode(), load_ms: loadMs() }) }
     else if (!granted && was) c.setConsent(false)
   } catch { /* ignore */ }
 }

@@ -2,6 +2,7 @@
 import { audit, authenticate, can, COOKIE, createAdmin, idFor, IDLE_MS, login, logout, ROLES, type Admin, type Role } from './auth'
 import { getDb, type Db } from './db'
 import * as Q from './queries'
+import * as Q2 from './queries2'
 import { eraseDevice } from './ingest'
 import { json } from './http'
 import { EVENT_PROPS } from '../../shared/events'
@@ -65,6 +66,15 @@ async function get(db: Db, me: Admin, parts: string[], url: URL, req: Request, n
     case 'geography': return can(me, 'aggregates') ? json(await Q.geography(db, f)) : forbidden()
     case 'engagement': return can(me, 'aggregates') ? json(await Q.engagement(db, f)) : forbidden()
     case 'features': return can(me, 'aggregates') ? json(await Q.features(db, f)) : forbidden()
+    case 'funnels': {
+      if (!can(me, 'aggregates')) return forbidden()
+      const by = url.searchParams.get('by'); const asOf = now.toISOString().slice(0, 10)
+      const [fu, ret, drop] = await Promise.all([Q2.funnel(db, f), Q2.retention(db, f, by === 'country' || by === 'device_type' ? by : 'week', asOf), Q2.dropoff(db, f, asOf)])
+      return json({ funnel: fu, retention: ret, dropoff: drop })
+    }
+    case 'content': return can(me, 'aggregates') ? json(await Q2.content(db, f)) : forbidden()
+    case 'quality': return can(me, 'quality') ? json(await Q2.quality(db, f)) : forbidden()
+    case 'live': return can(me, 'quality') ? json(await Q2.live(db, now, (id) => idFor(me, id))) : forbidden()
     case 'players': case 'players.csv': {
       const csvOut = parts[0] === 'players.csv'
       if (!can(me, csvOut ? 'export' : 'playersList')) return forbidden()
@@ -90,6 +100,7 @@ async function get(db: Db, me: Admin, parts: string[], url: URL, req: Request, n
       if (!can(me, 'admin')) return forbidden()
       if (parts[1] === 'users') return json({ users: (await db.query('SELECT admin_id, email, role, disabled, created_at FROM admin_users ORDER BY created_at')).rows })
       if (parts[1] === 'audit') return json({ rows: (await db.query('SELECT id, admin_email, action, target, detail, at, ip_hash FROM audit_log ORDER BY id DESC LIMIT 200')).rows })
+      if (parts[1] === 'summary') return json(await Q2.weeklySummary(db, now))
       if (parts[1] === 'schema') return json({ events: EVENT_PROPS, retention: RETENTION, definitions: Q.DEFINITIONS, ingest: (await db.query('SELECT day::text, accepted, duplicate, invalid, rate_limited FROM ingest_stats ORDER BY day DESC LIMIT 14')).rows })
       return json({ error: 'Not found' }, 404)
     }

@@ -2,7 +2,7 @@
 import { createHash } from 'node:crypto'
 import { batchSchema, parseEvent, type TelemetryEvent } from '../../shared/events'
 import type { Db } from './db'
-import { featureOf, playtimeBucket } from './features'
+import { contentOf, featureOf, milestoneOf, playtimeBucket } from './features'
 import { geoFromHeaders } from './geo'
 import { parseUa } from './ua'
 
@@ -125,12 +125,13 @@ export async function ingest(db: Db, body: unknown, headers: Headers, now = new 
     for (const [lid, list] of byLife) {
       const create = list.find((e) => e.name === 'create_completed'), end = list.find((e) => e.name === 'life_ended')
       await t.query(
-        `INSERT INTO lives (life_id, device_id, started_at, ended_at, age_reached, ending_id, archetype, gender, district, is_test) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+        `INSERT INTO lives (life_id, device_id, started_at, ended_at, age_reached, ending_id, archetype, gender, district, is_test, last_age) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
          ON CONFLICT (life_id) DO UPDATE SET started_at = LEAST(lives.started_at, EXCLUDED.started_at), ended_at = COALESCE(EXCLUDED.ended_at, lives.ended_at),
            age_reached = COALESCE(EXCLUDED.age_reached, lives.age_reached), ending_id = COALESCE(EXCLUDED.ending_id, lives.ending_id),
-           archetype = COALESCE(EXCLUDED.archetype, lives.archetype), gender = COALESCE(EXCLUDED.gender, lives.gender), district = COALESCE(EXCLUDED.district, lives.district)`,
+           last_age = GREATEST(lives.last_age, EXCLUDED.last_age), archetype = COALESCE(EXCLUDED.archetype, lives.archetype), gender = COALESCE(EXCLUDED.gender, lives.gender), district = COALESCE(EXCLUDED.district, lives.district)`,
         [lid, deviceId, ts(list[0]), end ? ts(end) : null, end ? Number(end.props.age) || null : null, end ? (end.props.ending_id as string | null) ?? null : null,
-          (create?.props.archetype as string | undefined) ?? null, (create?.props.gender as string | undefined) ?? null, (create?.props.district as string | undefined) ?? null, isTest])
+          (create?.props.archetype as string | undefined) ?? null, (create?.props.gender as string | undefined) ?? null, (create?.props.district as string | undefined) ?? null, isTest,
+          list.reduce<number | null>((m, e) => { const a = (e.name === 'year_ended' || e.name === 'life_ended') ? Number(e.props.age) : NaN; return isNaN(a) ? m : Math.max(m ?? 0, a) }, null)])
     }
 
     // per-day aggregates
@@ -165,6 +166,44 @@ export async function ingest(db: Db, body: unknown, headers: Headers, now = new 
         [v.day, v.feature, deviceId, v.uses, v.sum, v.n, isTest])
     }
 
+
+    // funnel milestones, content counters, quality and live state
+    for (const e of news) {
+      const m = milestoneOf(e)
+      if (m) await t.query('INSERT INTO device_milestones (device_id, step, first_at, is_test) VALUES ($1,$2,$3,$4) ON CONFLICT (device_id, step) DO UPDATE SET first_at = LEAST(device_milestones.first_at, EXCLUDED.first_at)', [deviceId, m, ts(e), isTest])
+    }
+    const content = new Map<string, { day: string; kind: string; item: string; choice: string; n: number }>()
+    for (const e of news) {
+      const c = contentOf(e); if (!c) continue
+      const day = utcDay(ts(e)), k = `${day}|${c.kind}|${c.item}|${c.choice}`
+      const v = content.get(k) ?? content.set(k, { day, ...c, n: 0 }).get(k)!; v.n++
+    }
+    for (const v of content.values()) await t.query('INSERT INTO content_days (day, device_id, kind, item_id, choice_id, n, is_test) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (day, device_id, kind, item_id, choice_id) DO UPDATE SET n = content_days.n + EXCLUDED.n', [v.day, deviceId, v.kind, v.item, v.choice, v.n, isTest])
+
+    const qual = new Map<string, { slow: number; webgl: number; errors: number; load: number | null }>()
+    const errs = new Map<string, { day: string; message: string; version: string; n: number }>()
+    for (const e of news) {
+      const day = utcDay(ts(e)); const q = qual.get(day) ?? qual.set(day, { slow: 0, webgl: 0, errors: 0, load: null }).get(day)!
+      if (e.name === 'slow_device_detected') q.slow++
+      else if (e.name === 'webgl_unavailable') q.webgl++
+      else if (e.name === 'app_open' && typeof e.props.load_ms === 'number') q.load = Math.round(e.props.load_ms)
+      else if (e.name === 'error') {
+        q.errors++
+        const message = String(e.props.message ?? 'unknown').replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '<id>').slice(0, 80) || 'unknown'
+        const k = `${day}|${message}|${e.app_version}`; const v = errs.get(k) ?? errs.set(k, { day, message, version: e.app_version, n: 0 }).get(k)!; v.n++
+      }
+    }
+    for (const [day, q] of qual) {
+      if (!q.slow && !q.webgl && !q.errors && q.load === null) continue
+      await t.query(`INSERT INTO quality_days (day, device_id, device_type, os, app_version, slow, webgl_fail, errors, load_ms, is_test) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+        ON CONFLICT (day, device_id) DO UPDATE SET slow = quality_days.slow + EXCLUDED.slow, webgl_fail = quality_days.webgl_fail + EXCLUDED.webgl_fail, errors = quality_days.errors + EXCLUDED.errors, load_ms = COALESCE(EXCLUDED.load_ms, quality_days.load_ms)`,
+        [day, deviceId, ua.device_type, ua.os, news[news.length - 1].app_version, q.slow, q.webgl, q.errors, q.load, isTest])
+    }
+    for (const v of errs.values()) await t.query('INSERT INTO error_days (day, device_id, message, app_version, device_type, n, is_test) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (day, device_id, message, app_version) DO UPDATE SET n = error_days.n + EXCLUDED.n', [v.day, deviceId, v.message, v.version, ua.device_type, v.n, isTest])
+
+    const lastHb = hb[hb.length - 1]
+    if (lastHb) await t.query('UPDATE devices SET last_screen = $2, last_heartbeat_at = $3 WHERE device_id = $1 AND (last_heartbeat_at IS NULL OR last_heartbeat_at < $3)', [deviceId, String(lastHb.props.screen ?? ''), ts(lastHb)])
+
     // playtime split + local-time heatmap (real players only)
     if (!isTest) {
       const dev2 = await t.query<{ tz: string | null }>('SELECT tz FROM devices WHERE device_id = $1', [deviceId])
@@ -186,7 +225,7 @@ export async function ingest(db: Db, body: unknown, headers: Headers, now = new 
 export async function eraseDevice(db: Db, deviceId: string): Promise<void> {
   const id = deviceId.toLowerCase()
   await db.tx(async (t) => {
-    for (const tbl of ['raw_events', 'sessions', 'lives', 'device_days', 'feature_days', 'playtime_split', 'activity_heat', 'devices']) await t.query(`DELETE FROM ${tbl} WHERE device_id = $1`, [id])
+    for (const tbl of ['raw_events', 'sessions', 'lives', 'device_days', 'feature_days', 'playtime_split', 'activity_heat', 'device_milestones', 'content_days', 'quality_days', 'error_days', 'devices']) await t.query(`DELETE FROM ${tbl} WHERE device_id = $1`, [id])
     await t.query('DELETE FROM rate_limits WHERE key = $1', [`dev:${id}`])
     await t.query('INSERT INTO erased_devices (hash) VALUES ($1) ON CONFLICT DO NOTHING', [sha256(id)])
   })

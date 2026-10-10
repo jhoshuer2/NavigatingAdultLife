@@ -89,7 +89,7 @@ export default function World() {
     if (!el || !life) return
     const c = life.character
     let r: WorldRenderer
-    try { r = new WorldRenderer(el, district, { look: c.appearance, age: c.age, uniform: c.edu.level !== 'none' && c.age < 18, month, hour: hourRef.current, spawn: SPAWN }) } catch { setFail(true); return }
+    try { r = new WorldRenderer(el, district, { look: c.appearance, age: c.age, uniform: c.edu.level !== 'none' && c.age < 18, month, hour: hourRef.current, spawn: SPAWN }) } catch { track('webgl_unavailable'); setFail(true); return }
     rendRef.current = r
     r.onNear(setNear)
     r.onNearInside((n) => {
@@ -97,7 +97,7 @@ export default function World() {
       if (intent.current === 'sleep' && n.hotspot === 'bed') { intent.current = null; setHotId('bed') }
     })
     r.onPosition((x, z, h) => setPos({ x, z, h }))
-    r.onSlow(() => setSlow(true))
+    r.onSlow(() => { setSlow(true); track('slow_device_detected') })
     const ro = new ResizeObserver(() => r.resize()); ro.observe(el)
     r.start()
     if (new URLSearchParams(location.search).get('debug') === '1') (window as unknown as { __world?: WorldRenderer }).__world = r

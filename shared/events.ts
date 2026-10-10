@@ -9,7 +9,7 @@ export const SCHEMA_VERSION = 1
 /** Allowed prop keys per event name. Free text from players is never allowed. */
 export const EVENT_PROPS = {
   // lifecycle
-  app_open: ['referrer', 'utm_source', 'utm_medium', 'utm_campaign', 'display_mode', 'language', 'tz', 'screen_band', 'is_test'],
+  app_open: ['referrer', 'utm_source', 'utm_medium', 'utm_campaign', 'display_mode', 'language', 'tz', 'screen_band', 'is_test', 'load_ms'],
   session_start: ['display_mode'],
   session_end: ['reason', 'active_seconds'],
   heartbeat: ['active_seconds', 'screen', 'mode', 'place'],
