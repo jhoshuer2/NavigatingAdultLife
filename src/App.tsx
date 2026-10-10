@@ -9,12 +9,16 @@ import { Achievements, History, Settings, Unlocks } from './ui/screens/Misc'
 import { lazy, Suspense } from 'react'
 const Dash = lazy(() => import('./ui/screens/Dash'))
 import { audio } from '@platform/audio'
+import { analyticsAvailable, setAnalyticsContext, startAnalytics } from '@platform/analytics'
+import { ConsentScreen } from './ui/screens/Consent'
 
 export default function App() {
   const { screen, toasts, init, tick, meta, openSheet } = useGame()
   const last = useRef(Date.now())
-  useEffect(() => { init() }, [init])
+  useEffect(() => { init(); startAnalytics() }, [init])
   useEffect(() => { document.documentElement.classList.toggle('reduce-motion', meta.settings.reducedMotion) }, [meta.settings.reducedMotion])
+
+  useEffect(() => { setAnalyticsContext({ mode: meta.settings.lite ? 'menu' : 'world', screen }) }, [meta.settings.lite, screen])
 
   // Playtime token meter: only counts while the tab is visible and the player interacted in the last 60 s.
   useEffect(() => {
@@ -33,6 +37,7 @@ export default function App() {
   return (
     <div className="shell">
       <Toasts items={toasts} />
+      {analyticsAvailable() && !meta.consentAsked && screen === 'title' && <ConsentScreen />}
       {screen === 'title' && <Title />}
       {screen === 'create' && <Create />}
       {screen === 'play' && <Play />}

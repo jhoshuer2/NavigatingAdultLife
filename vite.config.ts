@@ -30,6 +30,7 @@ export default defineConfig({
       '@ui': r('./src/ui'),
       '@platform': r('./src/platform'),
       '@minigames': r('./src/minigames'),
+      '@shared': r('./shared'),
     },
   },
   build: {
