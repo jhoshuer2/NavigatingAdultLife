@@ -65,3 +65,13 @@ Playtest feedback was that the menu-driven hub did not feel like living a life. 
 4. Owner playtest: cultural review of events (use the in-game flag button), balance feedback.
 5. Choose a hosting target (Cloudflare Pages is the PRD recommendation) and add a deploy step.
 6. M2: accounts and server-side token ledger with real payments, explorable 3D districts.
+
+
+## Task tuning notes (in-world tasks)
+
+First tuning pass, based on simulation and unit tests rather than player data (please playtest and send feedback):
+
+- Penalties: swipe maps so a full-length sideways swipe goes just wide; the keeper guesses the shot side 30% of the time; high shots (above 1.8 on a 2.4 bar) beat a diving keeper. Simulated rates: random swipes about 50% goals, well-placed high corners over 90%, weak middle shots under 55%. Rules live in `src/ui/tasks/rules.ts` with tests in `tests/tuning.test.ts`.
+- Time: activities now take roughly half the in-world hours they did before, so a year's energy budget fits in about one day and places do not all close by early evening.
+- Conversations: tone now matters per person (funny wins with friends and siblings, warm with family, partners and the boss; flat is always worst).
+- Chores 40s (was 60s), jog is two laps in 32s (was one lap in 50s, too easy), worship clap window tightened to about 180 ms either side.

@@ -59,7 +59,7 @@ export function WorshipTask({ r, cash, onDone }: { r: WorldRenderer; cash: numbe
     if (phase !== 'song' || clapped.current) return
     clapped.current = true
     const p = ((performance.now() - t0.current) % 1500) / 1500
-    if (Math.abs(p - 0.5) < 0.14) { setHits((h) => h + 1); setFlash('👏 In time!'); audio.sfx('good'); r.say('player', '👏', 0.8) } else { setFlash(p < 0.5 ? 'Too early' : 'Too late'); audio.sfx('bad') }
+    if (Math.abs(p - 0.5) < 0.12) { setHits((h) => h + 1); setFlash('👏 In time!'); audio.sfx('good'); r.say('player', '👏', 0.8) } else { setFlash(p < 0.5 ? 'Too early' : 'Too late'); audio.sfx('bad') }
   }
   const answer = (i: number) => {
     const ok = i === lesson.a; setRight(ok); audio.sfx(ok ? 'good' : 'bad')
@@ -86,7 +86,7 @@ export function WorshipTask({ r, cash, onDone }: { r: WorldRenderer; cash: numbe
           <div>
             <div className="text-xs font-bold opacity-80 mb-1.5">Tap Clap when the marker is inside the green zone {flash && <span className="ml-2 text-yellow-300">{flash}</span>}</div>
             <div className="relative h-8 rounded-full overflow-hidden mb-2" style={{ background: '#2a2540' }}>
-              <div className="absolute top-0 bottom-0" style={{ left: '36%', width: '28%', background: '#2fd27b66' }} />
+              <div className="absolute top-0 bottom-0" style={{ left: '38%', width: '24%', background: '#2fd27b66' }} />
               <div className="absolute top-0 bottom-0 w-2 rounded" style={{ left: `${mark * 100}%`, background: '#ffd23f' }} />
             </div>
             <button className="btn btn-primary w-full !text-xl !min-h-14" onPointerDown={clap}>👏 Clap</button>

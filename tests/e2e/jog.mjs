@@ -16,7 +16,7 @@ await page.screenshot({ path: `${OUT}/160-jog.png` })
 const pts = [[-33, -33], [-33, -23], [-38, -23.5], [-43, -23], [-43, -33]]
 // ordering per component: corner1=(x1-2,z1-2)
 const real = [[-33, -23], [-33, -33], [-38, -33], [-43, -33], [-43, -23]]
-for (const [x, z] of real) {
+for (const [x, z] of [...real, ...real]) {
   await page.evaluate((q) => window.__world.walkTo(q[0], q[1]), [x, z])
   for (let i = 0; i < 60; i++) { await page.waitForTimeout(250); const p = await page.evaluate(() => window.__world.position); if (Math.hypot(p.x - x, p.z - z) < 1.2) break }
   await page.waitForTimeout(200)

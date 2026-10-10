@@ -4,7 +4,7 @@ import type { WorldRenderer } from '../../world/WorldRenderer'
 import { HOME_CHORES } from '../../world/interiors'
 import { audio } from '@platform/audio'
 
-const TIME = 60
+const TIME = 40
 
 export function ChoresTask({ r, motherId, onDone }: { r: WorldRenderer; motherId: string | null; onDone: (perf: number) => void }) {
   const [done, setDone] = useState<string[]>([])
@@ -15,7 +15,7 @@ export function ChoresTask({ r, motherId, onDone }: { r: WorldRenderer; motherId
 
   useEffect(() => {
     for (const c of HOME_CHORES) r.addMark(c.id, c.x, c.z, c.emoji)
-    if (motherId) r.say(motherId, 'Sweep, wash, fold. Before I count to sixty!', 4)
+    if (motherId) r.say(motherId, 'Sweep, wash, fold. Before I count to forty!', 4)
     const poll = setInterval(() => {
       const me = r.position
       for (const c of HOME_CHORES) {

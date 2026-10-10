@@ -6,7 +6,7 @@ export const OPENING: Partial<Record<PlaceId, [number, number]>> = {
 }
 
 export const ACTIVITY_HOURS: Record<string, number> = {
-  study: 3, play: 2, chores: 1.5, hustle: 4, socialise: 2.5, familyTime: 2, exercise: 1.5, community: 2, dash: 0.5, applyJob: 3, overtime: 3, treat: 1, shop: 1, tv: 2, meal: 1, groom: 0.5, chat: 0.25, quitJob: 0.5,
+  study: 1.5, play: 1, chores: 1, hustle: 2, socialise: 2, familyTime: 1.5, exercise: 1, community: 1.5, dash: 0.5, applyJob: 2, overtime: 2, treat: 0.75, shop: 0.5, tv: 1.5, meal: 0.75, groom: 0.5, chat: 0.25, quitJob: 0.5,
 }
 
 export const isOpen = (id: PlaceId, hour: number) => { const o = OPENING[id]; return !o || (hour >= o[0] && hour < o[1]) }

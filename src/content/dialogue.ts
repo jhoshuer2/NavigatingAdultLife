@@ -69,10 +69,11 @@ export function groupOf(role: string): Group {
   return (role in BY_GROUP ? role : 'friend') as Group
 }
 
+/** Which tone lands best depends on who you are talking to. */
+const FUNNY: Record<Group, number> = { friend: 1, partner: 0.7, mother: 0.5, father: 0.5, sibling: 1, child: 0.9, boss: 0.4 }
+const WARM: Record<Group, number> = { friend: 0.85, partner: 1, mother: 1, father: 1, sibling: 0.8, child: 1, boss: 1 }
 export function scoreOf(tone: Tone, group: Group): number {
-  if (tone === 'warm') return 1
-  if (tone === 'funny') return group === 'boss' ? 0.55 : group === 'father' ? 0.6 : 0.9
-  return 0.2
+  return tone === 'warm' ? WARM[group] : tone === 'funny' ? FUNNY[group] : 0.2
 }
 
 /** Pick `rounds` distinct exchanges, with place-flavoured ones first for friends. */

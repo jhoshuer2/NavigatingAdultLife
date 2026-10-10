@@ -4,19 +4,19 @@ import type { WorldRenderer } from '../../world/WorldRenderer'
 import type { Rect } from '../../world/layout'
 import { audio } from '@platform/audio'
 
-const TIME = 50
+const TIME = 32
+const LAPS = 2
 const NUMS = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣']
 
 export function JogTask({ r, pitch, onDone }: { r: WorldRenderer; pitch: Rect; onDone: (perf: number) => void }) {
   const cx = (pitch.x0 + pitch.x1) / 2, cz = (pitch.z0 + pitch.z1) / 2
-  const pts = useRef([
-    { x: pitch.x1 - 2, z: pitch.z1 - 2 }, { x: pitch.x1 - 2, z: pitch.z0 + 2 }, { x: cx, z: pitch.z0 + 2.5 }, { x: pitch.x0 + 2, z: pitch.z0 + 2 }, { x: pitch.x0 + 2, z: pitch.z1 - 2 },
-  ]).current
+  const lap = [{ x: pitch.x1 - 2, z: pitch.z1 - 2 }, { x: pitch.x1 - 2, z: pitch.z0 + 2 }, { x: cx, z: pitch.z0 + 2.5 }, { x: pitch.x0 + 2, z: pitch.z0 + 2 }, { x: pitch.x0 + 2, z: pitch.z1 - 2 }]
+  const pts = useRef(Array.from({ length: LAPS }, () => lap).flat()).current
   const [next, setNext] = useState(0)
   const [left, setLeft] = useState(TIME)
   const [stamina, setStamina] = useState(100)
   const [bumps, setBumps] = useState(0)
-  const [msg, setMsg] = useState('Run to 1️⃣, then follow the numbers. Hold Sprint for speed, but it drains your stamina. Dodge the goats!')
+  const [msg, setMsg] = useState('Run two laps: follow the numbers 1️⃣ to 5️⃣, twice. Hold Sprint for speed, but it drains your stamina. Dodge the goats!')
   const nextRef = useRef(0), stam = useRef(100), sprint = useRef(false), stun = useRef(0), bumpsRef = useRef(0), over = useRef(false)
 
   useEffect(() => {
@@ -44,7 +44,7 @@ export function JogTask({ r, pitch, onDone }: { r: WorldRenderer; pitch: Rect; o
       if (cp && Math.hypot(me.x - cp.x, me.z - cp.z) < 1.8) {
         nextRef.current++; setNext(nextRef.current); audio.sfx('good')
         if (nextRef.current >= pts.length) { r.removeMark('cp'); over.current = true; setMsg('🏁 Lap complete!'); return }
-        r.moveMark('cp', pts[nextRef.current].x, pts[nextRef.current].z); r.removeMark('cp'); r.addMark('cp', pts[nextRef.current].x, pts[nextRef.current].z, NUMS[nextRef.current]); setMsg(`✅ Checkpoint ${nextRef.current}!`)
+        r.moveMark('cp', pts[nextRef.current].x, pts[nextRef.current].z); r.removeMark('cp'); r.addMark('cp', pts[nextRef.current].x, pts[nextRef.current].z, NUMS[nextRef.current % 5]); setMsg(`✅ Checkpoint ${nextRef.current}!`)
       }
       raf = requestAnimationFrame(loop)
     }

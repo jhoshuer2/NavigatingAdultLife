@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { WorldRenderer } from '../../world/WorldRenderer'
 import type { Rect } from '../../world/layout'
 import { audio } from '@platform/audio'
+import { keeperDive, resolveShot, shotFromSwipe } from './rules'
 
 const KICKS = 5
 
@@ -31,20 +32,15 @@ export function PenaltyTask({ r, pitch, onDone }: { r: WorldRenderer; pitch: Rec
 
   const shoot = (dx: number, dy: number) => {
     if (busy || over) return
-    const power = Math.min(1.25, -dy / 190)
+    const { aim, power, ty } = shotFromSwipe(dx, dy)
     if (power < 0.18) { setMsg('Swipe upwards from the ball to shoot.'); return }
     setBusy(true)
-    const tz = gz + Math.max(-1, Math.min(1, dx / 120)) * 3.2
-    const ty = power * 2.4
+    const tz = gz + aim
     const kg = r.actorGroup('keeper')!
-    // keeper guesses a side; better guess when the shot is obvious
-    const aim = tz - gz
-    const side = Math.abs(aim) < 0.9 ? 0 : Math.sign(aim)
-    const guessRight = Math.random() < 0.38
-    const dive = guessRight ? side : ([-1, 0, 1] as const)[Math.floor(Math.random() * 3)]
+    const dive = keeperDive(aim)
     const kz = gz + dive * 1.9
-    const wide = Math.abs(aim) > 1.65, over_ = ty > 2.45
-    const saved = !wide && !over_ && Math.abs(kz - tz) < 1.15 && ty < 2.1
+    const result = resolveShot(aim, ty, dive)
+    const wide = result === 'wide', over_ = result === 'over', saved = result === 'saved'
     const t0 = performance.now(), T = 750
     audio.sfx('click')
     const loop = (now: number) => {
