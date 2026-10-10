@@ -3,7 +3,7 @@
 **Working title:** Navigating Adult Life (codename: *NAL*)
 **Version:** 1.0 (draft for review) · **Status:** Pre-development, no code written
 **Platform:** Mobile-first web browser game (installable PWA), desktop supported
-**Launch setting:** Lagos, Nigeria · **Designed to expand:** Abuja, Port Harcourt, Kano, Enugu, Ibadan, then other African cities (Accra, Nairobi, Johannesburg, …)
+**Launch setting:** Lagos, Nigeria · **Committed expansion order (owner):** Abuja → Delta State (e.g., Warri, Asaba) → Akwa Ibom State (e.g., Uyo, Eket) · **Later:** Port Harcourt, Kano, Enugu, Ibadan, then other African cities (Accra, Nairobi, Johannesburg, …)
 
 ---
 
@@ -53,7 +53,7 @@ Most life sims are Western-default. *Navigating Adult Life* makes the Nigerian (
 | Crash-free sessions | ≥ 99.5% |
 
 ### 1.6 Non-goals (v1–v3)
-- No real-time multiplayer or chat. No user-generated content in v1–v3. No real-money gambling or real-money payouts.
+- No real-time multiplayer or chat. No user-generated content in v1–v3. No real-money gambling or real-money payouts. **Paid content is limited to Playtime Tokens (3.10); no pay-to-win, no loot boxes, no purchasable Cowries.**
 - No 3D. No native app stores (PWA only) unless demand justifies it.
 - No attempt at statistically accurate Nigerian economics: the economy is *plausible and funny*, tuned for fun.
 - No real people, real political parties, or real brands as *characters*. Real Nigerian places, roads and institutions may appear **as settings** under the guardrails in Q18 (no logos, no endorsement, no defamation).
@@ -118,7 +118,7 @@ All stats clamp to their range. Cash has no hard cap. Every stat change is recor
 ### 3.2 Currencies
 - **Naira (₦) = Cash.** In-world money.
 - **Mini-game coins.** Collected in the runner. At the end of a run they convert to Cash at `coinToCash` (default ₦50 each, scaled by life stage) subject to a **per-year cap** (default 3 mini-game cash-outs/yr) to prevent grinding the economy.
-- **Cowries (meta-currency, persists across lives).** Earned from achievements, quest chains, ending Legacy Score, and daily bonus (M3). Spent on cosmetics, starting perks and unlocks (Section 8). Cowries are never purchasable with real money in v1–v3 (MAY revisit; Q8).
+- **Cowries (meta-currency, persists across lives).** Earned from achievements, quest chains, ending Legacy Score, and daily bonus (M3). Spent on cosmetics, starting perks and unlocks (Section 8). Cowries are **never** purchasable with real money; the only thing for sale is **Playtime Tokens** (3.10).
 
 ### 3.3 Energy economy (starting values)
 - `maxEnergy = 100 − agePenalty − healthPenalty − stressPenalty` (age penalty starts at 50, 0.5 per year; floor 40).
@@ -186,6 +186,36 @@ Each trait has one clear upside and one downside, both expressed as data modifie
 - All randomness uses a **seeded PRNG** (`mulberry32`) stored in the save, so runs are reproducible for testing and bug reports.
 - Check formula: `score = stat + traitBonus + itemBonus + d(−15..+15)`; tier by margin vs. difficulty (**Critical Success / Success / Fail / Critical Fail**). Choices show approximate odds ("Risky", "Safe") — never exact percentages by default (SHOULD offer an "Odds visible" accessibility setting).
 
+### 3.10 Playtime Tokens and paywall (business model)
+**Owner decision (Q8):** the game is **free for the first 2 hours**, then asks players to **top up to continue**. Daily free tokens keep players coming back, and the stored free balance is capped at **2 hours**.
+
+**Three currencies, kept strictly separate**
+| Currency | Source | Use | Purchasable? |
+|---|---|---|---|
+| **₦ Cash** | Gameplay | In-world spending | Never |
+| **Cowries** | Achievements, Legacy Score, quests | Cosmetics, starting perks, unlocks | **Never** (keeps the game free of pay-to-win) |
+| **Playtime Tokens** | Welcome grant, daily free refill, top-ups | **Time to play** | **Yes** (only thing for sale) |
+
+**Rules (all values tunable in `monetisation.json`; Q21–Q24 need confirmation)**
+1. **Unit:** 1 token = 1 minute of active play. The balance is shown as time remaining ("1h 42m left") in the HUD and Settings.
+2. **Welcome grant:** 120 tokens (2 hours) when a new player starts their first life: the "free first 2 hours".
+3. **Daily free refill:** +30 tokens at the player's first session each day, **capped so the free balance never exceeds 120 tokens**. (Default: 30/day, Q21.) Free tokens are consumed before purchased tokens.
+4. **Top-up:** paid token packs (e.g., 60 / 180 / 600 minutes; pricing Q22) add to a separate **purchased balance** that is **not capped** and **never expires** (Q22).
+5. **What counts as play time:** only while the tab is visible and the player has interacted in the last 60 s (menus, events, mini-games, and Focus Days all count; paused, hidden, idle and offline do not).
+6. **Running out of tokens never destroys progress.** On reaching 0 the game finishes the current action, **autosaves**, and shows a friendly paywall: *Top up to continue* · *Come back tomorrow for free tokens* (shows time to next refill) · *Browse profile, achievements, Garage* (read-only). A pre-warning appears at 10 and 2 minutes. Never interrupt mid mini-game; let the run finish.
+7. **Transparency:** costs are always shown in Naira before payment; no dark patterns (no fake countdowns, no hidden auto-renew; top-ups are one-off).
+8. **Payments:** Nigerian-friendly gateway (e.g., Paystack or Flutterwave): card, bank transfer, USSD. Receipts by email; refunds per policy. Payment requires **accounts and a server-side token ledger** because a client-only meter can be trivially bypassed (M2-F27).
+9. **Minors:** under-18 players need a parent/guardian-approved payment flow or a gifted-token code (Q23). No personal data collected from minors beyond what payments strictly need.
+10. **Anti-abuse:** one welcome grant per account (plus device/fingerprint heuristics); daily refill server-validated; replay and tamper detection on the ledger.
+11. **Ethics guardrail:** the free allowance must be enough to finish at least one complete life in M1-sized sessions (~25–35 min) so the player can judge the game before paying; otherwise reduce the lengths of lives, not the allowance.
+
+**Milestone placement**
+- **M1 (M1-F26):** client-side token meter, HUD display, low-balance warnings, paywall screen, and a **mock top-up** (no real payments) behind a feature flag so the full loop is playtestable. Playtest builds can set the allowance to unlimited.
+- **M2 (M2-F27):** accounts (email/magic link or phone OTP), **server-side token ledger**, real payments (Paystack/Flutterwave), receipts, restore-purchases, and basic fraud checks. Public monetised launch requires this.
+- **M3:** bundle offers, gift codes, family/guardian flows, promotions (e.g., Detty December bonus), rewarded actions that grant a few free tokens (SHOULD; Q8).
+
+**Metrics:** day-1 paywall reach rate, paywall→top-up conversion, tokens consumed per session, D7 retention of paying vs. non-paying players, refund rate.
+
 ---
 
 ## 4. Character creation
@@ -201,7 +231,7 @@ Order revised after the Lagos Life reference (5.7). One decision per screen, wit
 7. **Confirm & start:** a "your story begins" intro card.
 
 ### 4.2 Gender
-- M1 options: **Male, Female, Non-binary / Prefer not to say** (Q5: confirm this inclusion and wording for the target audience and legal/app-store context). Pronouns used in generated text: he/she/they, stored on the character. All narrative strings use template tokens (`{they}`, `{their}`) via a pronoun helper — never hard-coded.
+- Options: **Male, Female** (owner decision, Q5). Pronouns he/she stored on the character. All narrative strings use template tokens (`{they}`, `{their}`, `{them}` resolve to he/she, his/her, him/her) via a pronoun helper — never hard-coded, so more options can be added later without content rewrites.
 - Gender affects *cultural expectation events* (e.g., pressure to marry, career bias events) with humour and agency — **never** locks careers, stats, or achievements.
 
 ### 4.3 Avatar technical approach
@@ -214,7 +244,7 @@ Order revised after the Lagos Life reference (5.7). One decision per screen, wit
 
 ### 5.1 Principles
 - A **City Pack** is a data bundle: districts, locations, NPC archetypes, name pools, events, cost-of-living, music palette, slang glossary. Lagos is City Pack #1. Adding a city = adding a folder of JSON + art, not code (Section 14.2).
-- **Authenticity process:** every City Pack requires a native-reviewer pass (Q10) and a sensitivity checklist (Section 16).
+- **Authenticity process:** every City Pack is built from the cultural bible (16.3), reviewed by the owner during playtests (Q10), and checked against the sensitivity checklist (Section 16).
 
 ### 5.2 Lagos City Pack (v1)
 | District | Role in the game |
@@ -233,7 +263,7 @@ Order revised after the Lagos Life reference (5.7). One decision per screen, wit
 ### 5.3 World presentation by milestone
 - **M1:** each location is a **scene card** — a static illustrated background with tappable hotspots (activities) and NPC portraits. Navigation = a district menu. Cheap to build, still feels like a place.
 - **M2:** an **explorable third-person 3D low-poly district** (Three.js, procedural geometry, same art language as the runner; see 5.6): walk (tap-to-move / virtual stick / WASD), tap places and people for contextual panels, enter buildings (scene cards or short interior scenes), talk to NPCs, find collectibles. Moving between districts costs Cash (transport) and Energy and triggers "go-slow" micro-events. **Lite mode** (M1-style scene cards) stays available for low-end devices.
-- **M3:** multi-city travel (Lagos ↔ Abuja ↔ Port Harcourt…), seasons/festivals shown on the map (Harmattan haze, rainy-season flooding, Detty December crowds).
+- **M3:** multi-city travel (Lagos ↔ Abuja ↔ Delta ↔ Akwa Ibom…), seasons/festivals shown on the map (Harmattan haze, rainy-season flooding, Detty December crowds).
 
 ### 5.4 NPCs
 - **NPC archetypes (data):** Mama Put, Danfo conductor ("Oya enter!"), Neighbour Aunty, Strict Teacher, Best Friend, Frenemy, Oga Boss, Landlord, Area Boy (portrayed with nuance), Pastor/Imam/Elder (respectful), Market Mama, Tech Bro, Uncle from the Village, Fine Girl/Guy Next Door.
@@ -539,6 +569,8 @@ Part of M1 but listed first so agents do it in order.
 | M1-F21 | Tutorial | 90-second first-run guided first year (skippable) |
 | M1-F22 | Accessibility baseline | Colour contrast AA, keyboard navigable, tap targets ≥ 44px, scalable text |
 | M1-F23 | Analytics (privacy-light, consent) | Anonymous funnel events: `life_started`, `stage_reached`, `life_ended` (cause), `minigame_played` |
+| M1-F26 | Playtime Tokens (client-side) | Token meter per 3.10: welcome grant, daily refill (cap 120), HUD time-left, 10/2-minute warnings, paywall screen with mock top-up (feature-flagged), safe autosave at 0, read-only mode |
+| M1-F27 | Playtest feedback button | "Flag this" on events, NPC lines and place panels; logs content id + note to a local export; build-flagged (playtest builds only); see 16.3(H) |
 | M1-F25 | Pop-quiz study (SHOULD) | Study draws 1–3 questions from a bank of ≥ 120 curriculum-style questions (maths, English, science, general knowledge, ICT) by stage; correct answers boost Knowledge gain; funny feedback; text-only in M1 |
 | M1-F24 | PWA | Installable, offline-capable core game (assets cached) |
 
@@ -559,6 +591,7 @@ Part of M1 but listed first so agents do it in order.
 - **AC-M1-09** Across 3 consecutive random lives, < 30% of events repeat.
 - **AC-M1-10** First load ≤ 3 s on throttled "Fast 4G" in Lighthouse (mobile); initial JS (gzip) ≤ 250 KB for the menu/creation route; total M1 assets ≤ 6 MB; Three.js lazy-loaded only when entering a mini-game.
 - **AC-M1-11** No hard-coded content strings in engine code; the content linter passes with 0 errors.
+- **AC-M1-13** Token meter: a new profile starts with 120 tokens; daily refill adds 30 but never exceeds 120 free; the meter only ticks during active visible play (idle > 60 s and hidden tabs don't consume); reaching 0 autosaves, shows the paywall, and loses no progress; a mock top-up restores play.
 - **AC-M1-12** Lighthouse Accessibility ≥ 90, PWA installable, works offline after first load.
 
 **M1 Test plan**
@@ -591,6 +624,7 @@ Part of M1 but listed first so agents do it in order.
 | M2-F09 | Inventory & shop | Slot-based inventory, shops in Markets, item effects, gifts to NPCs |
 | M2-F25 | My Space (home builder) | Isometric cutaway home; Buy mode with catalogue tabs (Sleep, Kitchen, Bath, Comfort, Fun, Skills, Light, Design); grid placement; items grant comfort/skill effects and satisfy wishes; shareable room screenshot |
 | M2-F26 | Phone & navigation shell | Bottom nav Home · Buy · Map · Phone; Phone = contacts, messages, wallet/bank (balance, loans, ajo), jobs board, map |
+| M2-F27 | Accounts, token ledger & payments | Account sign-in (email magic link or phone OTP, guest→account upgrade), **server-side token ledger** (welcome grant, daily refill, spend by heartbeat), Paystack/Flutterwave top-ups, receipts, restore, fraud checks, guardian flow for minors (3.10) |
 | M2-F10 | Quests v2 | Branching quest chains with 30 quests; quest journal with hints; NPC-given quests |
 | M2-F11 | NYSC chain | Post-grad service year: camp, posting lottery, CDS group, side-hustle options |
 | M2-F12 | Additional career tracks | +Healthcare, +Agriculture/Agribusiness; job-hopping, side-gigs, remote work |
@@ -610,6 +644,7 @@ Part of M1 but listed first so agents do it in order.
 **Out of scope:** multi-city, generational play, cloud sync, leaderboards, Whot/Ayo.
 
 **M2 Acceptance criteria**
+- **AC-M2-12** Payments: a test-mode top-up credits the server ledger exactly once (idempotent webhooks), appears in the HUD within 5 s, survives reload and device change, and a tampered client cannot grant itself tokens; refunds and failed payments leave the ledger consistent; a minor account cannot complete a purchase without the guardian flow.
 - **AC-M2-11** A Focus Day (e.g., first lecture) runs end-to-end: arrive, discover a place, meet an NPC ("New face"), attend a live class, answer a question, finish with a summary; Energy and stat changes apply once to the year; clock and Wait behave consistently.
 - **AC-M2-01** Player can walk a district map, enter ≥ 6 building types, talk to ≥ 5 NPC archetypes per district, and leave without being stuck (pathfinding/collision verified by automated walkability tests per map).
 - **AC-M2-02** Starting a business, hiring a worker, a risk event, and selling the business all work with correct ledger totals in the year summary (ledger unit tests; sum of deltas equals net worth change).
@@ -625,7 +660,7 @@ Part of M1 but listed first so agents do it in order.
 **M2 Test plan**
 - Everything in M1 plus: navmesh/walkability validation scripts (walkable graph connected, entrances reachable), ledger invariants, NPC memory harness, integration tests for business and relationship flows, visual regression screenshots of key screens (Playwright), device-matrix manual QA, 15-person playtest with qualitative interviews on "does the world feel alive?"
 
-**M2 Definition of Done:** all MUST features; AC-M2-01…10 pass; 15-person playtest: ≥ 75% finish a life, ≥ 60% say the world "feels alive/Nigerian"; cultural review sign-off by ≥ 2 reviewers (Q10); production deploy.
+**M2 Definition of Done:** all MUST features; AC-M2-01…10 pass; 15-person playtest: ≥ 75% finish a life, ≥ 60% say the world "feels alive/Nigerian"; owner cultural sign-off from playtest feedback (Q10); production deploy.
 
 ---
 
@@ -635,7 +670,7 @@ Part of M1 but listed first so agents do it in order.
 | ID | Feature | Details |
 |---|---|---|
 | M3-F01 | Generational play | On death, choose a child/heir to continue; inheritance (wealth, property, reputation, family debts/feuds, family businesses); family tree view |
-| M3-F02 | Multi-city expansion | City Packs: Abuja (civil service/politics-lite, planned city), Port Harcourt (oil & gas, riverine culture), Kano (trade, textiles, Hausa culture), Enugu/Ibadan as small-city options; relocation events, culture shock, cost-of-living differences |
+| M3-F02 | Multi-city expansion | City Packs in owner-set order: **Abuja** (planned city, civil service, estates such as Gwarinpa/Kubwa/Wuse, transport by BRT/keke), **Delta** (Warri, Asaba, Sapele: oil and trade, riverine life; Urhobo, Itsekiri, Isoko, Ijaw and Anioma/Igbo cultures), **Akwa Ibom** (Uyo, Eket, Ikot Ekpene: Ibibio, Annang and Oron cultures, food and festivals). Relocation events, culture shock, cost-of-living differences. Port Harcourt, Kano, Enugu, Ibadan follow later (Q20) |
 | M3-F03 | Heritage depth | Heritage-specific chains: naming ceremonies, festivals, traditional titles, language flavour lines (Yoruba/Igbo/Hausa greetings) reviewed by native speakers |
 | M3-F04 | Advanced careers | Branching specialisations, mentors, certifications, promotions via networking, side-career pivots, politics-lite (community/local leadership), entertainment industry arcs, "japa" emigration branch with remittance/diaspora consequences |
 | M3-F05 | Advanced business | Multi-business empire, franchising, supply-chain events, investors, cooperatives, import/export risks, reputation-linked trust loans |
@@ -650,7 +685,7 @@ Part of M1 but listed first so agents do it in order.
 | M3-F14 | Live-ops basics | Seasonal events (calendar-driven), remote config for balance, A/B toggles, feature flags |
 | M3-F15 | Content scale | 400 events, 1,200 choices, 24 endings, 60 quests, 100+ achievements |
 | M3-F16 | Quality | Full accessibility pass (WCAG AA), screen-reader labels for narrative, performance budgets enforced in CI |
-| M3-F17 | Monetisation hooks (decision-gated, Q8) | Non-intrusive options only: cosmetic packs, optional rewarded video for bonus Cowries, "supporter" pack; no pay-to-win, no loot boxes |
+| M3-F17 | Monetisation extensions | Bundle offers, gift codes, family/guardian flows, seasonal promos, rewarded actions granting a few free tokens; **no pay-to-win, no loot boxes, Cowries stay non-purchasable** |
 
 **M3 Acceptance criteria**
 - **AC-M3-01** Heir transition: all assets, relationships and debts transfer correctly (invariants test: net family wealth conserved minus taxes/fees); play ≥ 3 generations without data corruption.
@@ -661,7 +696,7 @@ Part of M1 but listed first so agents do it in order.
 - **AC-M3-06** Perf budgets enforced in CI (initial JS ≤ 250 KB gz, per-route budgets, Lighthouse perf ≥ 80 mobile).
 - **AC-M3-07** Bot sims: 5,000 lives across 3 cities and 3 generations without exceptions; no infinite loops; diversity metric (distinct ending/path combos) ≥ 60% of defined ones reached.
 - **AC-M3-08** Localization: switching to Pidgin changes ≥ 95% of UI strings with no missing-key fallbacks in the shipped locales.
-- **AC-M3-09** Cultural/sensitivity review sign-off for each new heritage/city by at least one native reviewer.
+- **AC-M3-09** Owner sign-off (and, recommended, at least one external reviewer from the relevant heritage) for each new heritage/city before release.
 
 **M3 Definition of Done:** all MUST features; AC-M3-01…09 pass; public launch checklist complete (privacy policy, NDPA-compliant data handling, analytics consent, content rating, error monitoring, backup/restore); 30-day post-launch roadmap prepared.
 
@@ -717,9 +752,9 @@ EVENT                  YEAR SUMMARY        │ [Play Go-Slow Dash]   │
 ---
 
 ## 11. Audio and art direction (summary)
-- **Music:** original Afrobeats/Highlife/Afro-fusion-inspired loops; stems for adaptive layering in M2. No uncleared samples. Budget for a Nigerian composer/producer is strongly recommended (Q9).
+- **Music:** **placeholder** royalty-free/CC0 tracks that fit the mood (Afrobeats/Highlife/Afro-fusion-leaning, upbeat for runner, calmer for hub) are used for now; the owner will supply replacements if these are disliked. All audio is referenced by **id in an asset manifest** (`assets/manifest.json`), so swapping a file requires **no code change**. Every placeholder's source and license is recorded in `docs/ASSET_LOG.md`. No uncleared or sampled commercial tracks.
 - **SFX:** coin chime, horn honk, danfo "oya!" shouts (original voice), UI taps.
-- **Art:** commissioned or AI-assisted-then-artist-polished illustrations; must avoid generic/Western-skewed facial features and skin rendering. Art direction guide produced in Sprint 0 (palette, line weight, character proportions, architecture reference).
+- **Art:** **placeholder** art for now (procedural low-poly geometry, CSS/SVG UI and simple illustrated scene cards, CC0/royalty-free where needed); the owner will supply final art to replace it. Same manifest-by-id approach as audio. Art direction guide produced in Sprint 0 (palette, line weight, character proportions, architecture reference), avoiding Western-skewed features and skin rendering.
 
 ---
 
@@ -828,7 +863,7 @@ interface MiniGameResult { gameId: string; score: number; coins: number;
 
 ```ts
 type LifeStage = 'child' | 'teen' | 'youngAdult' | 'adult' | 'elder'
-type Gender = 'male' | 'female' | 'nonbinary'
+type Gender = 'male' | 'female'
 type Heritage = 'yoruba' | 'igbo' | 'hausa' | 'mix' | string // extensible via City/Heritage packs
 
 interface NewLifeConfig {
@@ -983,7 +1018,7 @@ interface CityPack { id: string; name: string; districts: District[]; locations:
 ## 16. Cultural authenticity, sensitivity, and writing guide
 
 ### 16.1 Process
-1. **Cultural advisors:** at least two Nigerian reviewers (ideally one per heritage in the game) review all narrative content each milestone (Q10).
+1. **Cultural review:** the **owner** reviews content during playtesting (Q10); all content is built deeply from the cultural bible (16.3) and flagged `reviewNeeded` where uncertain. External per-heritage reviewers are optional and recommended before the M3 heritage expansion.
 2. **Specificity over stereotype:** prefer concrete everyday details (a particular snack, a neighbour's habit) over broad tropes.
 3. **Agency and dignity:** poverty is a setting, not a punchline; wealth is not automatically villainous; rural/urban, ethnic and religious groups are not ranked.
 4. **Humour rules:** laugh *with* situations (NEPA, traffic, mother's calls), not *at* ethnicity, religion, disability, or gender.
@@ -993,6 +1028,63 @@ interface CityPack { id: string; name: string; districts: District[]; locations:
 
 ### 16.2 Narrator voice
 Warm, witty, a little teasing, never cruel; short paragraphs; second person ("you") with name tokens; sprinkled Pidgin/Yoruba/Igbo/Hausa expressions with context so non-speakers can follow. Example: *"Mama calls. Not texts. Calls. This is either love or a request for money. Possibly both."*
+
+### 16.3 Nigerian cultural content bible (build depth from here)
+**Owner decision (Q10):** go deep into Nigerian culture and build from it; the **owner reviews during playtesting** and gives feedback. This section is the content brief for writers and AI agents. It is a *starting* inventory drawn from general knowledge, so every item is subject to owner correction; tag uncertain material `reviewNeeded: true`. Details such as names, dates, prices and customs vary by community and region, so write them as *typical* rather than universal.
+
+**A. Life-stage cultural beats (event seeds, by stage)**
+| Stage | Beats |
+|---|---|
+| **Birth/Childhood (6–11)** | Naming ceremony stories told by relatives (Yoruba *Ìsọmọlórúkọ* ~day 7–8, Igbo *Igu aha*, Hausa *Suna*); being sent on errands and greeting elders properly; "uncle/auntie" for any elder; Common Entrance/primary exams; school assembly, break-time suya or *puff-puff*, boli at the gate; lesson teacher; Saturday chores; *Suwe*/hand-clap, *ayo*, *ludo*, *whot*, football on the street; NEPA outages at bedtime; village or grandmother visits at Christmas/Sallah; Mum's/Dad's "when I was your age" speeches; Sunday service or Friday jumu'ah; first phone call to a relative abroad |
+| **Teen (12–17)** | Junior and Senior Secondary (JSS/SSS), boarding school hardships, Federal Unity vs private schools, **WAEC/NECO**, **JAMB UTME** and Post-UTME, extra lessons, school clubs, inter-house sports, prefect politics, crush and "chatting", parents' strictness, peer pressure, owambe and church/mosque youth programmes, first small hustle (selling sachet water, assisting at the shop), rebellious hair/dress, school resumption fees and uniform sewing |
+| **Young adult (18–29)** | University/polytechnic/college admission, hostel life, *carryovers*, **ASUU-style strike** downtime (fictionalised), SIWES/industrial training, **NYSC** (call-up letter, orientation camp, platoons, CDS, PPA posting, "allowee"), job hunting with CVs and aptitude tests, "who you know" nepotism, first salary and **rent upfront**, flat-sharing, side-hustles (POS, reselling, content, tutoring), dating, relocation (the **japa** question), first car/bike, family expectations about marriage |
+| **Adult (30–59)** | Marriage preparations and ceremonies, in-laws, children and school fees, rent/ownership, **omo onile** land disputes, building a house in the village or city, promotions and office politics, cooperative societies, contributing to **ajo/esusu/adashi**, black tax, health scares, church/mosque leadership roles, community associations (town unions, landlords' associations, *egbe*), political season chatter, burial and memorial obligations |
+| **Elder (60+)** | Retirement and pension delays, being consulted as an elder, grandchildren, village titles, health and HMO, passing on land and customs, legacy projects (scholarships, community borehole), farewell/burial planning, stories told at gatherings |
+
+**B. Everyday systems that make it feel Nigerian (mechanics, not just flavour)**
+- **Rent upfront:** tenancy is typically paid **annually (or longer) upfront** plus *agent* and *legal/agreement* fees and *caution deposit*. This fits our yearly tick perfectly: year-start settlement shows "Rent due: ₦X + agent + legal"; shortfall triggers *beg landlord / borrow / downgrade* choices. (Lagos Life's weekly rent is a different style; ours is annual with an optional monthly/weekly plan at a premium.)
+- **Power:** disco/NEPA outages, estimated billing vs prepaid meter, generator fuel and noise, inverter/solar upgrades, neighbours' generators, "light don come" joy event.
+- **Water:** borehole, tanker, sachet "pure water", Mama Put with a well.
+- **Transport:** danfo, BRT, keke, okada, ride-hail, ferries, third-mainland-bridge go-slow, LASTMA-style checkpoints (fictionalised), "conductor change" arguments, fuel queues, airport travel.
+- **Money:** cash vs transfer, POS agents and charges, network failures, *esusu/ajo/adashi*, cooperative loans, microfinance-style loans with weekly repayments, dollar/naira jokes, airtime vs data, Black-tax requests, "sapa" (broke) moments, owambe spraying.
+- **Housing:** single room/"face-me-I-face-you", mini-flat, flat, duplex, boys' quarters, serviced apartment; landlord rules; agent chases; omo onile "land fees".
+- **Respect:** **greeting is a mechanic.** Greeting an elder properly (and choosing the right form) affects Reputation and relationship; skipping it triggers comic-consequence events. Kneeling/prostrating customs differ by heritage and gender and are portrayed respectfully.
+- **Food as mood:** *Sunday rice*, jollof wars, pounded yam, amala, eba, egusi, pepper soup, suya, boli, akara, moi moi, puff-puff, chin chin, zobo, kunu. Food boosts Energy/Happiness with small flavour effects; cooking and Mama Put are activities.
+- **Dress:** buba & sokoto, agbada, iro & buba, gele, aso-oke, Ankara, Adire, George wrapper, isiagu, kaftan, babban riga, hijab, school uniforms, owambe "asoebi" colours.
+- **Education system:** 6-3-3-4 (primary, JSS, SSS, university), WAEC/NECO, JAMB UTME, polytechnic (ND/HND), colleges of education (NCE), NYSC after graduation.
+
+**C. Heritage packs (M1: Yoruba, Igbo, Hausa, Naija Mix; M3: more)**
+| Heritage | Seeds (to be refined with the owner) |
+|---|---|
+| **Yoruba** | Naming ceremony, *oriki* (praise names), prostrating/kneeling greetings, **Eyo** (Lagos Island), **Osun-Osogbo**, Egungun, introduction/engagement and wedding rites, owambe culture, aso-oke/gele/agbada, amala-ewedu-gbegiri, iyan, ofada rice, *akara*, *ewa agoyin*, proverbs (*owe*), Yoruba names and their meanings |
+| **Igbo** | **New Yam (Iri ji)**, kola nut breaking, **igba nkwu** and *iku aka* (traditional marriage and introduction), *umunna* kindred, age grades, apprenticeship (*igba boi/imu ahia*) as a **real entrepreneurial path**, Ofala and masquerade festivals, Christmas "going home to the village", isiagu/george/red cap, ofe onugbu, egusi, oha, abacha, nkwobi, *isi ewu* |
+| **Hausa** | **Sallah (Eid)** and Ramadan rhythm, **Durbar**, naming ceremony (*Suna*), adashi savings, Kano markets and dye pits, kunu, tuwo and miyan kuka/taushe, *kilishi*, suya, fura da nono, babban riga, hijab and cap styles, respect and greeting formulas |
+| **Naija Mix** | Mixed family, intercity relocation, Pidgin as household language, mixed foods and celebrations |
+| **M3 additions (priority from owner's city order)** | **Delta:** Urhobo, Itsekiri, Isoko, Ijaw, Anioma (Delta Igbo); **Akwa Ibom:** Ibibio, Annang, Oron (with Efik neighbours: **edikang ikong**, **afang**); **Abuja:** a mix of all groups plus Gbagyi as host community. **Later:** Edo (Benin court, **Igue**), Tiv, Nupe, Kanuri, Fulani, Igala, and more, each reviewed |
+
+**D. Calendar (drives seasonal events and Focus Days)**
+Harmattan (dry dusty season, roughly Dec–Feb: cracked lips, hazy mornings), rainy season (floods, traffic), "ember months" (Sep–Dec) superstition and Detty December, New Year/crossover night, Ramadan/Eid, Easter, Christmas "go to the village", Independence Day (1 Oct), Democracy Day (12 June), new academic session, resumption and fees, harvest/new yam time.
+
+**E. Language and humour (use sparingly, always with context)**
+Pidgin and Nigerian English expressions such as *abeg, wahala, sapa, japa, gist, oya, chop, how far, no wahala, I dey, na so*, with gloss tooltips; proverbs; Mama's guilt trips; WhatsApp family-group drama; conductor chants; "we move" jokes. Rules: no phonetic mockery, consistent spelling via a style sheet, include a glossary entry for every non-English term.
+
+**F. Culture-driven mechanics to implement**
+- *Greeting & respect check* (elders, in-laws, bosses).
+- *Black tax, owambe overspend, aso-ebi pressure* as recurring money sinks with Reputation upsides.
+- *Esusu/ajo/adashi* with trust and default consequences (M2).
+- *Apprenticeship path* (trade/tech/fashion) as a first-class career route with a master/mentor NPC (M1 trade track, M2 depth).
+- *Introduction → engagement → wedding* chain with heritage-specific beats and costs (Q15).
+- *Festival events* with heritage-specific variants and a "going home" travel event.
+- *Faith as optional flavour*: church/mosque/traditional community life, vigils, fasting, offerings, never forced.
+
+**G. Sensitive-content rules for this section**
+Treat bride price, polygamy, traditional religion, burial rites, ethnic stereotypes, police and security, religion and politics with nuance, humour at the situation (not the group), and consequences; never present one group's practice as the Nigerian default; avoid real people and parties; keep ethnic/religious jokes out unless the owner explicitly approves in review.
+
+**H. Review loop with the owner**
+- Every event/NPC/place can carry `reviewNeeded: true` and a `cultureTag` (heritage, festival, system) to filter in review.
+- **Playtest builds include a "Flag this" button** on events, NPC lines and place panels (M1-F27): it logs `{eventId, textId, build, note}` to a local file/clipboard export (and, from M2, to the backend) so owner feedback maps to exact content ids.
+- Feedback is triaged each sprint into: wrong/offensive (fix now), inaccurate (fix next), flavour change (backlog). The `docs/CULTURE_FEEDBACK.md` log tracks decisions so changes aren't repeated.
+- Inviting external reviewers per heritage is **optional** and recommended before the M3 heritage expansion.
 
 ---
 
@@ -1021,6 +1113,8 @@ Warm, witty, a little teasing, never cruel; short paragraphs; second person ("yo
 | 17 | M1-F19/F20 | Settings, audio | M1 | P1 | M | — |
 | 18 | M1-F22/F24 | Accessibility baseline, PWA | M1 | P1 | M | — |
 | 18b | M1-F25 | Pop-quiz study | M1 | P1 | M | F07 |
+| 18d | M1-F27 | Playtest "Flag this" feedback button | M1 | P1 | S | F11 |
+| 18c | M1-F26 | Playtime Tokens (client-side) + paywall UI | M1 | P0 | M | F03 |
 | 19 | M1-F23 | Consent-gated analytics | M1 | P1 | S | — |
 | 20 | M1-X1 | Debug overlay & seed share | M1 | P1 | S | F03 |
 | 21 | M2-F01/F02 | Explorable maps + travel | M2 | P0 | L | M1 |
@@ -1036,6 +1130,7 @@ Warm, witty, a little teasing, never cruel; short paragraphs; second person ("yo
 | 31 | M2-F11/F12 | NYSC chain, new careers | M2 | P1 | M | M1 |
 | 32 | M2-F16 | Content scale to 220 events | M2 | P0 | L | — |
 | 33 | M2-F20 | Lite mode / data saver | M2 | P1 | M | F01 |
+| 33a | M2-F27 | Accounts, server ledger, payments (required for monetised launch) | M2 | P0 | L | M1-F26 |
 | 33b | M2-F21–F24 | Focus Days, lectures & quizzes, world UX kit, campus pack | M2 | P0 | L | M2-F01 |
 | 34 | M2-F17/F18/F19 | Pidgin mode, polish, history stats | M2 | P2 | M | — |
 | 35 | M3-F01 | Generational play | M3 | P0 | L | M2 |
@@ -1047,7 +1142,7 @@ Warm, witty, a little teasing, never cruel; short paragraphs; second person ("yo
 | 41 | M3-F11 | Whot!, Ayo | M3 | P2 | L | M2 F13 |
 | 42 | M3-F12 | Localization framework | M3 | P1 | M | — |
 | 43 | M3-F14 | Live-ops basics | M3 | P2 | M | F09 |
-| 44 | M3-F17 | Monetisation (decision-gated) | M3 | P2 | M | Q8 |
+| 44 | M3-F17 | Monetisation extensions | M3 | P2 | M | M2-F27 |
 | 45 | Future | Additional African cities (Accra, Nairobi, Johannesburg, Dakar…) | Post-M3 | P3 | L each | M3-F02 |
 | 46 | Future | Native wrappers (Capacitor), voice lines, community City Pack submissions | Post-M3 | P3 | L | — |
 
@@ -1065,6 +1160,8 @@ Warm, witty, a little teasing, never cruel; short paragraphs; second person ("yo
 | AI agent drift (inconsistent architecture) | Rework | Strict engine isolation, schemas, typed contracts, small tickets, mandatory tests, ADR log |
 | Scope creep from "life sim can do anything" | Never ships | Hard milestone gates, "out of scope" lists, backlog priorities |
 | Music/art licensing | Legal | Original/commissioned only; asset provenance log |
+| Paywall hurts retention or feels unfair | Churn, bad reviews | Generous welcome grant sized to finish a full life, safe autosave at zero, transparent Naira pricing, daily refill, conversion/retention dashboards, tunable values |
+| Payment fraud / token tampering | Revenue loss | Server-side ledger, idempotent webhooks, one welcome grant per account, rate limits |
 | Save corruption/migrations | Lost lives | Versioned schema, fixture-based migration tests, export/import |
 
 ---
@@ -1075,10 +1172,10 @@ Warm, witty, a little teasing, never cruel; short paragraphs; second person ("yo
 3. Health and Stress are added supporting stats (not in the brief's five) to make mortality and burnout work.
 4. Lagos only for M1–M2; additional cities arrive via City Packs in M3.
 5. Faith is optional and never required for progress; religious content is respectful and reviewed.
-6. Gender options include a non-binary/prefer-not-to-say option (pending Q5).
-7. No backend until M3; all play is local, with export/import for safety.
+6. Gender options are Male and Female (owner decision); the pronoun helper keeps the door open for more.
+7. M1 has no backend (local play, mock top-up). **Accounts, a server-side token ledger and payments arrive in M2 (M2-F27)** because the paywall can't be enforced client-side; cloud saves/leaderboards remain M3.
 8. UI art is 2D illustrated with layered portrait avatars; the runner and M2 world are procedural low-poly 3D (Three.js); scene cards in M1.
-9. Music/art are original or commissioned, not sampled.
+9. Music and art are **placeholders** (royalty-free/CC0 or procedural, licenses logged) until the owner supplies finals; swaps are manifest-driven. No uncleared samples.
 10. English is primary; Pidgin is a flavour layer in M1–M2 and a full locale in M3.
 11. Economy values are fun-first, not statistically realistic.
 12. One development team of 1–3 humans plus AI coding agents; no dedicated QA until M2.
@@ -1093,12 +1190,12 @@ Warm, witty, a little teasing, never cruel; short paragraphs; second person ("yo
 | Q2 | Target platform priority: phone-first PWA, or desktop-first? | Layout and input choices | Phone-first |
 | Q3 | Target age rating / maturity (PG-13 vs. more edgy BitLife-style)? | Event content scope | PG-13 |
 | Q4 | Final name, branding, and domain? | Share cards, store/PWA metadata | "Navigating Adult Life" |
-| Q5 | Gender options and wording (include non-binary / prefer not to say?) | Inclusivity, legal/hosting constraints, audience sensitivity | Include, as "Non-binary / Prefer not to say" |
+| Q5 | **Resolved (owner):** gender options are Male and Female. | — | — |
 | Q6 | Is death permanent per life (roguelike) or may players "Continue as heir" in M1? | Scope | Heirs in M3 only |
-| Q7 | Who produces art and music (commission, in-house, AI-assisted + artist polish)? Budget? | Schedule, quality, licensing | Placeholder-first, commissioned finals |
-| Q8 | Monetisation intent (none, cosmetics, rewarded ads, supporter pack)? | Architecture hooks, store policies | None until M3 decision |
-| Q9 | Music licensing: can we use licensed Afrobeats tracks? | Cost and risk | No — originals only |
-| Q10 | Who are the cultural advisors/reviewers (per heritage), and what is their review capacity per milestone? | Gate for M2/M3 DoD | Assume 2 reviewers |
+| Q7 | **Resolved (owner):** placeholder music and art for now; owner supplies replacements on request. Asset manifest makes swapping code-free. | — | — |
+| Q8 | **Resolved (owner):** free for the first 2 hours, then top-up to continue; daily free tokens, stored free balance capped at 2 hours. Specified in 3.10. Details still open in Q21–Q24. | — | — |
+| Q9 | **Resolved:** no licensed Afrobeats tracks; placeholder royalty-free music only, with provenance logged. | — | — |
+| Q10 | **Resolved (owner):** build deeply from Nigerian culture; the owner reviews during testing and gives feedback. Workflow in 16.3(H). | — | — |
 | Q11 | Should real-world satire (fuel price, exchange rate, japa) reference actual events, or stay generic/fictionalised? | Legal and tone | Generic/fictionalised |
 | Q12 | Do players need accounts in v1 (e.g., to share/compare)? | Backend and privacy scope | Guest only until M3 |
 | Q13 | Offline expectation: must core gameplay work fully offline? | PWA caching strategy | Yes for M1+ |
@@ -1106,8 +1203,12 @@ Warm, witty, a little teasing, never cruel; short paragraphs; second person ("yo
 | Q15 | Bride price/traditional marriage customs: depict explicitly, abstractly, or skip? | Sensitivity and reviewer approach | Abstract with reviewer-approved choices |
 | Q17 | The campus reference shows a "12 online" presence badge and Cubbes account sign-in (multiplayer/social layer). Do we want any ambient presence, friends or shared leaderboards beyond M3's leaderboards? | Scope, backend, moderation cost | No; single-player, leaderboards only (M3) |
 | Q18 | **Resolved (owner):** content must relate to real Nigerian life, so we use real Nigerian institution, place, road and landmark names. Guardrails to confirm with legal review: names as setting only (no logos, trademarks, or implied endorsement), original art, fictional people (incl. lecturers/staff), no defamatory or real-person satire, jokes target situations not institutions. | Authenticity vs legal risk | Real names with guardrails |
-| Q19 | Birth Lottery: decided once per **account** (as in the reference) or fresh **per life**? | Replay variety vs. fairness | Per life, with one re-roll and an underdog Cowries bonus |
-| Q20 | Starting city selection: Lagos only in M1, or let players pick Abuja/Port Harcourt as the reference does? | Content volume per city | Lagos only in M1, more cities via City Packs in M3 |
+| Q19 | **Resolved (owner):** the Birth Lottery is decided **fresh each life** (one re-roll, underdog Cowries bonus). | — | — |
+| Q20 | **Resolved (owner):** start with **Lagos**; then **Abuja, Delta and Akwa Ibom** (in that order). The starting-city picker appears when the second pack ships. Open detail: pull Abuja earlier (e.g., end of M2) if content capacity allows? | Content volume per city | Lagos M1–M2; Abuja, Delta, Akwa Ibom in M3 |
+| Q21 | Daily free refill amount (default 30 min/day, capped at 2 h stored)? Should it stack with the welcome 2 h, or does the welcome grant simply fill the 2 h cap? | Retention vs. revenue | 30 min/day; welcome fills the 120-minute cap |
+| Q22 | Token pack sizes and Naira prices, whether purchased tokens expire, and payment gateway (Paystack vs Flutterwave; card, transfer, USSD)? | Revenue, trust | Packs of 60/180/600 min, no expiry, Paystack |
+| Q23 | Minors: is a guardian-approved payment flow or gifted code required, and what is the minimum age to create an account? | Compliance (NDPA), ethics | Under-18s need guardian approval for purchases |
+| Q24 | Should rewarded actions (e.g., finishing the daily mission or sharing) grant a few free tokens beyond the daily refill? | Retention, fairness | Yes, small, within the 2 h cap |
 | Q16 | **Resolved (owner):** the game is about navigating life, so runner modes are **contextual and combined** (on foot where the story is on foot, driving where it is a commute or job). Both ship in M1. 3D remains the plan (as in the references) with the Canvas 2D fallback if the T18 spike fails. | Largest M1 schedule risk | Both modes in M1, sequenced F12a → F12b |
 
 ---
