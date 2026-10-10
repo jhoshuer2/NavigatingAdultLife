@@ -160,7 +160,7 @@ Starting annual salary (₦, tunable): L1 400k–1.2M, L2 1.2–3M, L3 3–8M, L
 - **Family:** parents, siblings, extended relatives with aging and death. Children (M1: count + cost + Happiness; M2: age-specific events and school choices; M3: heir play).
 - Social Reputation modifies how often NPCs offer opportunities and whether gossip events help or hurt.
 
-### 3.8 Traits (choose 2 at creation, 10 in M1)
+### 3.8 Traits (choose 2 at creation; M1 ships 14)
 Each trait has one clear upside and one downside, both expressed as data modifiers:
 
 | Trait | Upside | Downside |
@@ -175,6 +175,10 @@ Each trait has one clear upside and one downside, both expressed as data modifie
 | Frugal | −20% living costs | Lower Reputation gains from spending |
 | Lucky | +10% on random checks | Fewer "earned it" Reputation gains (success feels less deserved) |
 | Anxious | Prepared: warnings before risky choices | −Happiness baseline |
+| Foodie | Meals restore extra Energy/Happiness | Higher living costs |
+| Owambe Spirit | +Reputation and Happiness from celebrations | Overspends on invitations |
+| Night Crawler | Bonus from nightlife/creative events | Less Energy from morning activities |
+| Musical | Faster Creativity growth; runner rhythm bonus | Lower Knowledge growth in school |
 
 *Design note:* no trait disables achievements. Traits shape play style only.
 
@@ -190,7 +194,7 @@ Each trait has one clear upside and one downside, both expressed as data modifie
 Order revised after the Lagos Life reference (5.7). One decision per screen, with a progress indicator and Back.
 1. **Look:** gender, hairstyle (afro, low cut, cornrows, braids, twists, locs, bun, ponytail, shaved, bald; gele/hijab/cap as outfit options), face shape (4), facial hair (M), skin tone (10 curated swatches), hair colour, outfit type (casual, hoodie, office, chill, owambe, site work, traditional: buba & sokoto, agbada, iro & buba, boubou, kaftan), **fabric** (plain, Ankara, Adire, Aso-oke), top/bottom colours. Live preview with **drag-to-rotate**. School uniform is applied automatically in school.
 2. **Personality:** pick **2 of 10+ traits** as cards with a witty name and a one-line perk (3.8).
-3. **Dream:** pick one big life goal with a measurable target (8.5). Changeable once, at age 18.
+3. **Dream:** pick one big life goal with a measurable target (8.4). Changeable once, at age 18.
 4. **Birth Lottery:** a **reveal** of your starting circumstances as a named archetype with explicit perks and constraints (e.g., a small starting loan with weekly repayments but faster skill learning; a comfortable start with family expectations). Sets starting Cash, school type, parental support and debts. **One re-roll** per life; hard starts earn the underdog Cowries bonus, and every achievement stays earnable from any start. Per life vs per account: Q19.
 5. **Home:** choose a starting home in your city from 2–3 options tagged *Hard start / Balanced / Big spender* with start cash and rent; a higher tier is shown **locked** ("work your way here"). Lagos only in M1 (Q20).
 6. **Heritage & name:** Yoruba · Igbo · Hausa · "Naija Mix" (M1; M3 adds Edo, Ijaw, Efik/Ibibio, Tiv, Kanuri, Fulani, etc.) affecting name pools, food/event flavour and family events; first name (pool suggestions, free text with profanity filter), nickname (optional).
@@ -469,7 +473,7 @@ choices:
 - **Storage:** inventory with slots (M2); in M1 items are *flags with effects* (no inventory UI) — a simple "Owned" list.
 - **Unlockables with Cowries:** extra clothing, hairstyles, runner skins, starting perks (+₦ start money, +1 Energy cap for first 5 years, "Big Family" with a stronger safety net), new backgrounds (M2+) and cities (M3).
 
-### 8.5 Dreams (chosen at creation)
+### 8.4 Dreams (chosen at creation)
 A **Dream** is a measurable long-term goal that shapes quests, event odds and the ending. Progress is shown on the profile and in the obituary; achieving it adds to the Legacy Score and grants Cowries. Names and targets below are our own (inspired by the Lagos Life reference):
 
 | Dream | Target (tunable) | Typical path |
@@ -485,7 +489,7 @@ A **Dream** is a measurable long-term goal that shapes quests, event odds and th
 
 M1 ships the first five; Dreams can be changed once at age 18. All five must be completable by bots in the sim harness to avoid dead-end goals.
 
-### 8.4 Legacy Score (end of life)
+### 8.5 Legacy Score (end of life)
 `legacy = wealthTier*20 + happinessAvg*0.3 + knowledge*0.2 + reputation*0.3 + relationshipsScore + achievementsThisLife*5 + underdogBonus`. Converted to Cowries (`floor(legacy / 10)`). Tunable in config.
 
 ---
