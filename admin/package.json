@@ -6,13 +6,14 @@
   "scripts": {
     "dev": "tsx scripts/dev.ts",
     "dev:ui": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && node scripts/build-api.mjs && vite build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "migrate": "tsx scripts/migrate.ts",
     "create-user": "tsx scripts/create-user.ts",
     "seed": "tsx scripts/seed.ts",
-    "bench": "tsx scripts/bench.ts"
+    "bench": "tsx scripts/bench.ts",
+    "build:api": "node scripts/build-api.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "0.2.12",
@@ -28,6 +29,7 @@
     "@types/react": "18.3.12",
     "@types/react-dom": "18.3.1",
     "@vitejs/plugin-react": "4.3.3",
+    "esbuild": "0.21.5",
     "tsx": "4.19.2",
     "typescript": "5.6.3",
     "vite": "5.4.10",
