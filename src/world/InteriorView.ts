@@ -33,8 +33,10 @@ export interface InteriorState { light: boolean; tv: boolean; fan: boolean; hour
 export class InteriorView {
   readonly scene = new THREE.Scene()
   readonly def: Interior
-  readonly nav: Nav
-  readonly blockers: Rect[]
+  nav: Nav
+  blockers: Rect[]
+  private installed: Set<string>
+  private applObjs = new Map<string, THREE.Object3D[]>()
   private hemi = new THREE.HemisphereLight(0xfff2d8, 0x4a3a4a, 1)
   private tvLight = new THREE.PointLight(0x7aa8ff, 0, 9)
   private tvScreen?: THREE.Mesh
@@ -54,14 +56,15 @@ export class InteriorView {
   private zzz?: THREE.Sprite
   private textCache = new Map<string, THREE.SpriteMaterial>()
   private boardCtx?: CanvasRenderingContext2D
-  private icons: THREE.Sprite[] = []
+  private icons: { s: THREE.Sprite; needs?: string }[] = []
   private boardTex?: THREE.CanvasTexture
 
-  constructor(id: PlaceId) {
+  constructor(id: PlaceId, installed?: Set<string>) {
     const def = INTERIORS[id]
     if (!def) throw new Error(`no interior for ${id}`)
     this.def = def
-    this.blockers = interiorBlockers(def)
+    this.installed = installed ?? new Set(def.objs.map((o) => o.appl).filter(Boolean) as string[])
+    this.blockers = interiorBlockers(def, this.installed)
     this.nav = buildNavFor(this.blockers, def.bounds, 0.5)
     this.scene.background = new THREE.Color(0x1b1830)
     this.scene.add(this.hemi, this.tvLight)
@@ -89,7 +92,16 @@ export class InteriorView {
     W.box(d.door.x - 0.8, d.door.x + 0.8, 0.02, 0.06, b.z1 - 1.2, b.z1 - 0.3, 0xc4562a)
     // partitions (half walls so the camera can see over them)
     for (const w of d.walls) W.box(w.x0, w.x1, 0, 1.4, w.z0, w.z1, shade(d.wallColor, 0.95)), W.box(w.x0 - 0.04, w.x1 + 0.04, 1.4, 1.5, w.z0 - 0.04, w.z1 + 0.04, shade(d.wallColor, 0.7))
-    for (const o of d.objs) this.obj(W, o)
+    for (const o of d.objs) {
+      if (!o.appl) { this.obj(W, o); continue }
+      // appliances are separate meshes so they can appear when delivered
+      const A = new Batch(); const before = this.scene.children.length
+      this.obj(A, o)
+      const mesh = A.mesh(); this.scene.add(mesh)
+      const extras = [mesh, ...this.scene.children.slice(before).filter((c) => c !== mesh)]
+      this.applObjs.set(o.appl, [...(this.applObjs.get(o.appl) ?? []), ...extras])
+    }
+    this.applyInstalled()
     this.scene.add(W.mesh())
     // north-wall windows (colour follows the time of day)
     for (const w of d.windowsAt) { const win = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 1.6), this.windowMat); win.position.set(w.x, 2.1, d.bounds.z0 + 0.03); this.scene.add(win); const fr = new THREE.Mesh(new THREE.BoxGeometry(2.5, 1.9, 0.06), new THREE.MeshLambertMaterial({ color: 0xffffff })); fr.position.set(w.x, 2.1, d.bounds.z0 + 0.0); this.scene.add(fr) }
@@ -107,9 +119,26 @@ export class InteriorView {
       this.setBoard(['Class is in session', 'Sit down and open your books'])
     }
     // hotspot icons
-    for (const h of d.hotspots) { const s = this.emoji(h.icon, 1.5); s.position.set(h.x, 2.6, h.z); this.scene.add(s); this.icons.push(s) }
+    for (const h of d.hotspots) { const s = this.emoji(h.icon, 1.5); s.position.set(h.x, 2.6, h.z); this.scene.add(s); this.icons.push({ s, needs: h.needs }) }
   }
 
+  private iconsOn = true
+  private applyInstalled() {
+    for (const i of this.icons) i.s.visible = this.iconsOn && (!i.needs || this.installed.has(i.needs))
+    for (const [k, list] of this.applObjs) for (const o of list) o.visible = this.installed.has(k)
+    if (!this.installed.has('tv')) { this.tvMat.color.setHex(0x0b0b10); this.tvLight.intensity = 0 }
+  }
+  /** Appliances that have been delivered appear (and start blocking movement). */
+  setInstalled(set: Set<string>) {
+    this.installed = set
+    this.applyInstalled()
+    this.blockers = interiorBlockers(this.def, set)
+    this.nav = buildNavFor(this.blockers, this.def.bounds, 0.5)
+  }
+  applianceSpot(appl: string): { x: number; z: number } | null {
+    const o = this.def.objs.find((x) => x.appl === appl); if (!o) return null
+    return { x: (o.rect.x0 + o.rect.x1) / 2, z: (o.rect.z0 + o.rect.z1) / 2 }
+  }
   private emoji(text: string, size: number): THREE.Sprite {
     let m = this.textCache.get(text)
     if (!m) {
@@ -169,6 +198,7 @@ export class InteriorView {
       case 'cubicle': W.box(r.x0, r.x1, 0, h, r.z0, r.z0 + 0.12, c); W.box(r.x0, r.x0 + 0.12, 0, h, r.z0, r.z1, c); W.box(r.x1 - 0.12, r.x1, 0, h, r.z0, r.z1, c); break
       case 'plant': W.cyl(cx, 0.25, cz, 0.28, 0.5, 0x8a5a32); W.cyl(cx, 0.9, cz, 0.38, 0.9, 0x2f9a4a, 6); break
       case 'rug': W.box(r.x0, r.x1, 0.02, 0.06, r.z0, r.z1, c); break
+      case 'ac': W.box(r.x0, r.x1, 2.3, 2.85, r.z0, r.z1, c); W.box(r.x0 + 0.1, r.x1 - 0.1, 2.38, 2.45, r.z1 - 0.02, r.z1 + 0.02, 0x9fb4c8); break
       case 'shelf': W.box(r.x0, r.x1, 0, h, r.z0, r.z1, c); for (let y = 0.5; y < h; y += 0.6) W.box(r.x0 - 0.02, r.x1 + 0.02, y, y + 0.05, r.z0, r.z1, shade(c, 0.6)); break
       case 'cooler': W.box(r.x0, r.x1, 0, h * 0.7, r.z0, r.z1, 0xe8e8ee); W.box(r.x0 + 0.1, r.x1 - 0.1, h * 0.7, h, r.z0 + 0.1, r.z1 - 0.1, c); break
       default: W.box(r.x0, r.x1, 0, h, r.z0, r.z1, c)
@@ -185,9 +215,10 @@ export class InteriorView {
     this.hemi.groundColor.setHex(on ? 0x6a5a5a : day ? 0x6a6a7a : 0x14142e)
     this.bulbMat.color.setHex(on ? 0xfff2a8 : 0x444444)
     this.windowMat.color.setHex(L.sky)
-    this.tvMat.color.setHex(s.tv ? 0x6fa4ff : 0x0b0b10)
-    this.tvLight.intensity = s.tv ? 1.1 : 0
-    this.fanOn = s.fan
+    const tvOk = this.installed.has('tv')
+    this.tvMat.color.setHex(s.tv && tvOk ? 0x6fa4ff : 0x0b0b10)
+    this.tvLight.intensity = s.tv && tvOk ? 1.1 : 0
+    this.fanOn = s.fan && this.installed.has('fan')
     ;(this.scene.background as THREE.Color).setHex(on ? 0x2a2540 : 0x15122a)
   }
 
@@ -219,7 +250,7 @@ export class InteriorView {
     ls.forEach((l, i) => g.fillText(l, 512, 128 + (i - (ls.length - 1) / 2) * (fs + 14), 980))
     t.needsUpdate = true
   }
-  showIcons(v: boolean) { for (const s of this.icons) s.visible = v; for (const p of this.people.values()) p.sprite.visible = v && p.parts.group.visible }
+  showIcons(v: boolean) { this.iconsOn = v; for (const i of this.icons) i.s.visible = v && (!i.needs || this.installed.has(i.needs)); for (const p of this.people.values()) p.sprite.visible = v && p.parts.group.visible }
   hidePerson(id: string, hidden: boolean) { const p = this.people.get(id); if (p) { p.parts.group.visible = !hidden; p.sprite.visible = !hidden } }
   personInfo(id: string) { const p = this.people.get(id); return p ? { id: p.id, name: p.name, line: p.line, role: p.role, persistent: p.persistent, npcId: p.persistent, prole: p.prole, x: p.x, z: p.z } : null }
   debugPeople() { return [...this.people.values()].map((p) => ({ id: p.id, act: p.act, vis: p.parts.group.visible, x: +p.x.toFixed(1), z: +p.z.toFixed(1), seat: p.seat?.id ?? null, moving: p.moving })) }

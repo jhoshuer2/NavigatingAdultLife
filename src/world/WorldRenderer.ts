@@ -270,9 +270,10 @@ export class WorldRenderer {
 
   // ---------- interiors ----------
   get inside(): PlaceId | null { return this.interior?.def.id ?? null }
-  enterInterior(place: PlaceId, people: { id: string; name: string; gender: Gender; role: string }[], state: InteriorState, outsideAt?: { x: number; z: number }): boolean {
+  enterInterior(place: PlaceId, people: { id: string; name: string; gender: Gender; role: string }[], state: InteriorState, outsideAt?: { x: number; z: number }, installed?: Set<string>): boolean {
     let view: InteriorView
-    try { view = new InteriorView(place) } catch { return false }
+    try { view = new InteriorView(place, installed) } catch { return false }
+    this.installedSet = installed ?? null
     this.interior?.dispose()
     this.outside = outsideAt ?? { x: this.px, z: this.pz }
     this.interior = view
@@ -295,6 +296,9 @@ export class WorldRenderer {
     this.lastNear = { place: null, npc: null }
   }
   setInteriorState(s: InteriorState) { this.istate = s; this.interior?.setState(s) }
+  private installedSet: Set<string> | null = null
+  setInstalled(set: Set<string>) { this.installedSet = set; this.interior?.setInstalled(set); this.interior?.setState(this.istate) }
+  applianceSpot(a: string) { return this.interior?.applianceSpot(a) ?? null }
   claimSeat(kind: 'sofa' | 'table' | 'rug') { return this.interior?.claimSeat(kind, 'player') ?? null }
   releaseSeat() { this.interior?.releaseSeat('player') }
   setSleeping(on: boolean, zzz = true) {
@@ -522,7 +526,7 @@ export class WorldRenderer {
       if (this.posT > 0.1) {
         this.posT = 0
         let hot: string | null = null, bd = 1e9
-        for (const h of iv.def.hotspots) { const d = Math.hypot(h.x - this.px, h.z - this.pz); if (d <= h.r && d < bd) { bd = d; hot = h.id } }
+        for (const h of iv.def.hotspots) { if (h.needs && this.installedSet && !this.installedSet.has(h.needs)) continue; const d = Math.hypot(h.x - this.px, h.z - this.pz); if (d <= h.r && d < bd) { bd = d; hot = h.id } }
         let person: string | null = null, pd = 2.3
         for (const p of iv.allPeople()) { const d = Math.hypot(p.x - this.px, p.z - this.pz); if (d < pd) { pd = d; person = p.id } }
         const exit = Math.hypot(iv.def.door.x - this.px, iv.def.door.z - this.pz) < 1.9

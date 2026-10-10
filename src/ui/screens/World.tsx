@@ -22,6 +22,8 @@ import { DineTask } from '../tasks/DineTask'
 import { TalkTask, type Partner } from '../tasks/TalkTask'
 import type { Exchange, Setting } from '@content/dialogue'
 import { placeActive, suggest } from '../../world/guide'
+import { installedSet } from '@content/appliances'
+import { ITEM_BY_ID } from '@content/items'
 import { outdoorAnchor, presenceAt, type Activity } from '../../world/residents'
 import { audio } from '@platform/audio'
 import { track, setAnalyticsContext } from '@platform/analytics'
@@ -146,6 +148,32 @@ export default function World() {
   const lastText = life?.lastAction?.text
   useEffect(() => { if (!lastText) return; setFlash(lastText); const t = setTimeout(() => setFlash(null), 3800); return () => clearTimeout(t) }, [lastText])
 
+  const installed = useMemo(() => installedSet(life?.character.housing.type ?? 'family', life?.flags ?? {}), [life?.character.housing.type, life?.flags])
+  useEffect(() => { rendRef.current?.setInstalled(installed) }, [installed, inside])
+
+  // a loader arrives with a delivery: walk in with the box, set it down, and the appliance appears
+  useEffect(() => {
+    const d = g.deliveredNow; if (!d) return
+    const names = d.ids.map((id) => ITEM_BY_ID[id]?.name ?? id).join(', ')
+    g.toast(`📦 Delivered to your home: ${names}`)
+    const r = rendRef.current
+    if (!r || r.inside !== 'home' || task) return
+    const def = INTERIORS.home!
+    d.ids.forEach((id, i) => {
+      const spot = r.applianceSpot(id); if (!spot) return
+      const lid = `loader${i}`
+      setTimeout(() => {
+        r.addActor(lid, { name: 'Loader', gender: 'male', x: def.door.x, z: def.door.z })
+        r.moveActor(lid, spot.x, Math.min(spot.z + 1.8, def.bounds.z1 - 1.5))
+        r.say(lid, `Oga, your ${ITEM_BY_ID[id]?.name ?? 'delivery'} don land!`, 3.5)
+        setTimeout(() => { r.addMark(`box${i}`, spot.x, spot.z, '📦') }, 2200)
+        setTimeout(() => { r.removeMark(`box${i}`); r.setInstalled(installed); r.moveActor(lid, def.door.x, def.door.z) }, 4600)
+        setTimeout(() => r.removeActor(lid), 8200)
+      }, i * 500)
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [g.deliveredNow])
+
   // people inside a building follow their own routines (and arrive or leave as the clock moves)
   const residentMap = (place: PlaceId): Record<string, Activity | null> => {
     const m: Record<string, Activity | null> = {}
@@ -155,6 +183,8 @@ export default function World() {
       if (n.role === 'boss' && !life.character.job) { m[n.role] = null; continue }
       if (n.role === 'child' && n.id !== life.character.childrenIds[0]) { m[n.role] = null; continue }
       const pr = presenceAt(n.role, hour, n.id)
+      const familyRole = n.role === 'mother' || n.role === 'father' || n.role === 'sibling'
+      if (place === 'home' && familyRole && life.character.housing.type !== 'family') { m[n.role] = null; continue }
       m[n.role] = (place === 'home' ? pr.where === 'home' : pr.where === `place:${place}`) ? pr.activity : null
     }
     return m
@@ -209,7 +239,7 @@ export default function World() {
       const dark = isNight(hour)
       const st = { light: dark, tv: place === 'home' && hour >= 17.5 && hour < 23, fan: place === 'home' && hour >= 11 && hour < 23, hour }
       setAppl({ light: st.light, tv: st.tv, fan: st.fan })
-      if (r.enterInterior(place, people, st, { x: p.door.x, z: p.door.z })) {
+      if (r.enterInterior(place, people, st, { x: p.door.x, z: p.door.z }, installed)) {
         r.setResidents(residentMap(place), true)
         setInside(place); setNearIn({ hotspot: null, person: null, exit: false }); setNear({ place: null, npc: null })
         if (then) setTimeout(then, 60)
@@ -568,7 +598,7 @@ export default function World() {
       {task?.kind === 'cook' && rendRef.current && <CookTask r={rendRef.current} free={life.character.housing.type === 'family'} onDone={(perf, sp) => endTask(perf, 0, sp)} />}
       {task?.kind === 'dine' && rendRef.current && <DineTask r={rendRef.current} cash={life.character.stats.cash} onDone={(perf, sp) => endTask(sp ? perf : undefined, 0, sp)} />}
       {task?.kind === 'jog' && rendRef.current && <JogTask r={rendRef.current} pitch={district.places.find((p) => p.id === 'pitch')!.rect} onDone={(perf) => endTask(perf)} />}
-      {task?.kind === 'shop' && rendRef.current && <ShopTask r={rendRef.current} items={getShopItems(life)} cash={life.character.stats.cash} energy={life.character.stats.energy} onBuy={(itemId, pricePct) => g.act('shop', { itemId, pricePct })} onDone={() => endTask()} />}
+      {task?.kind === 'shop' && rendRef.current && <ShopTask r={rendRef.current} items={getShopItems(life)} cash={life.character.stats.cash} energy={life.character.stats.energy} onBuy={(itemId, pricePct) => g.act('shop', { itemId, pricePct })} onDeliver={(id, mode) => g.orderDelivery(id, mode === 'loader' ? 2 : 0, mode === 'loader' ? 3000 : 0)} onDone={() => endTask()} />}
       {task?.kind === 'service' && rendRef.current && <WorshipTask r={rendRef.current} cash={life.character.stats.cash} onDone={(perf, don) => endTask(perf, don)} />}
       {task?.kind === 'overtime' && rendRef.current && <OvertimeTask r={rendRef.current} onDone={(perf) => endTask(perf)} />}
       {task?.kind === 'market' && rendRef.current && <MarketTask r={rendRef.current} spot={{ x: district.places.find((p) => p.id === 'market')!.door.x, z: district.places.find((p) => p.id === 'market')!.door.z + 2.1 }} onDone={(perf) => endTask(perf)} />}
@@ -602,7 +632,7 @@ export default function World() {
           <Modal onClose={() => setHotId(null)}>
             <div className="flex items-center gap-3"><div className="text-4xl">{h.icon}</div><div className="font-display text-3xl text-danfo leading-none">{h.name}</div></div>
             <div className="grid gap-2 mt-3">
-              {h.actions.map((a) => {
+              {h.actions.filter((a) => !a.needs || installed.has(a.needs)).map((a) => {
                 const isAct = a.cmd.startsWith('act:'); const ar = isAct ? acts.find((x) => x.def.id === a.cmd.slice(4)) : null
                 const tg = a.cmd.startsWith('toggle:') ? appl[a.cmd.slice(7) as 'light' | 'tv' | 'fan'] : null
                 const isSleep = a.cmd === 'sleep'

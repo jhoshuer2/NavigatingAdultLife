@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { GameState, NewLifeConfig, Lifestyle, QuizQuestion } from '@engine/core/types'
-import { createNewLife, doActivity, setClock, submitQuizAnswer, finishActions, chooseOption, continueAfterEvent, advanceYear, setLifestyle, applyDashResult, type ActivityArgs, type MiniGameResult } from '@engine/api'
+import { createNewLife, doActivity, setClock, setFlag, payCash, submitQuizAnswer, finishActions, chooseOption, continueAfterEvent, advanceYear, setLifestyle, applyDashResult, type ActivityArgs, type MiniGameResult } from '@engine/api'
 import { ACHIEVEMENT_BY_ID } from '@content/achievements'
 import { defaultMeta, mergeEnding, UNLOCKABLES, type MetaProfile, type Settings } from '@platform/meta'
 import { loadLife, loadMeta, saveLife, saveMeta, importSave, exportSave } from '@platform/storage'
@@ -32,6 +32,9 @@ interface Store {
   hour: number
   day: number
   taskActive: boolean
+  deliveredNow: { ids: string[]; n: number } | null
+  orderDelivery: (itemId: string, hoursLater: number, fee: number) => void
+  deliverDue: () => void
   setTaskActive: (v: boolean) => void
   talkReq: { kind: 'chat' | 'hang' | 'family' | 'food'; role: string; n: number } | null
   startTalk: (kind: 'chat' | 'hang' | 'family' | 'food', role: string) => void
@@ -109,17 +112,30 @@ export const useGame = create<Store>((set, get) => {
   }
   const setMeta = (meta: MetaProfile) => { saveMeta(meta); set({ meta }); audio.configure(meta.settings) }
   return {
-    screen: 'title', life: null, meta: defaultMeta(), sheet: null, toasts: [], quizFeedback: null, dashMode: 'foot', lastDash: null, endingRecorded: false, placeId: null, npcId: null, walkReq: null, hour: 8, day: 0, enterReq: null, taskActive: false, talkReq: null, penaltyReq: null, marketReq: null, startChoresReq: null, startShopReq: null, jogReq: null,
+    screen: 'title', life: null, meta: defaultMeta(), sheet: null, toasts: [], quizFeedback: null, dashMode: 'foot', lastDash: null, endingRecorded: false, placeId: null, npcId: null, walkReq: null, hour: 8, day: 0, enterReq: null, taskActive: false, deliveredNow: null, talkReq: null, penaltyReq: null, marketReq: null, startChoresReq: null, startShopReq: null, jogReq: null,
     startJog: () => set((st) => ({ jogReq: { n: (st.jogReq?.n ?? 0) + 1 }, sheet: null })),
     startShop: () => set((st) => ({ startShopReq: { n: (st.startShopReq?.n ?? 0) + 1 }, sheet: null })),
     startChores: () => set((st) => ({ startChoresReq: { n: (st.startChoresReq?.n ?? 0) + 1 }, sheet: null })),
     startMarket: () => set((st) => ({ marketReq: { n: (st.marketReq?.n ?? 0) + 1 }, sheet: null })),
+    orderDelivery: (itemId, hoursLater, fee) => {
+      const st = get(); let life = st.life; if (!life) return
+      if (fee) life = payCash(life, fee, 'Loader')
+      life = setFlag(life, `dlv:${itemId}`, st.day * 24 + st.hour + hoursLater)
+      commit(life)
+      if (hoursLater <= 0) get().deliverDue()
+    },
+    deliverDue: () => {
+      const st = get(); let life = st.life; if (!life) return
+      const abs = st.day * 24 + st.hour; const ids: string[] = []
+      for (const [k, v] of Object.entries(life.flags)) if (k.startsWith('dlv:') && Number(v) <= abs) { const id = k.slice(4); life = setFlag(setFlag(life, k, null), `inst:${id}`, 1); ids.push(id) }
+      if (ids.length) { commit(life); set({ deliveredNow: { ids, n: (st.deliveredNow?.n ?? 0) + 1 } }) }
+    },
     setTaskActive: (v) => set({ taskActive: v }),
     startTalk: (kind, role) => set((st) => ({ talkReq: { kind, role, n: (st.talkReq?.n ?? 0) + 1 }, sheet: null })),
     startPenalty: (act) => set((st) => ({ penaltyReq: { act, n: (st.penaltyReq?.n ?? 0) + 1 }, sheet: null })),
     enterPlace: (id, intent) => set((st) => ({ enterReq: { place: id, intent, n: (st.enterReq?.n ?? 0) + 1 }, sheet: null })),
     advance: (hours) => { const { hour, day } = get(); let h = hour + hours, d = day; while (h >= 24) { h -= 24; d++ }; get().setHourTo(h, d - day) },
-    setHourTo: (h, dayAdd = 0) => { const st = get(); const day = st.day + dayAdd; set({ hour: h, day }); if (st.life) { const l = setClock(st.life, h, day); saveLife(l); set({ life: l }) } },
+    setHourTo: (h, dayAdd = 0) => { const st = get(); const day = st.day + dayAdd; set({ hour: h, day }); if (st.life) { const l = setClock(st.life, h, day); saveLife(l); set({ life: l }) }; get().deliverDue() },
     openPlace: (id) => set({ placeId: id, sheet: 'place' }),
     openNpc: (id) => set({ npcId: id, sheet: 'npc' }),
     goToPlace: (id) => set((st) => ({ walkReq: { place: id, n: (st.walkReq?.n ?? 0) + 1 }, sheet: null })),

@@ -8,6 +8,8 @@ export interface ItemDef {
   price: number
   minAge: number
   effects?: Effect[]
+  appliance?: boolean
+  light?: boolean // light enough to carry home yourself
   passive?: { studyBonus?: number; hustleMult?: number; hireBonus?: number; yearlyHappiness?: number; yearlyStress?: number; yearlyRep?: number; examBonus?: number }
 }
 
@@ -21,6 +23,10 @@ export const ITEMS: ItemDef[] = [
   { id: 'sewing', name: 'Sewing machine / toolkit', icon: '🧵', desc: 'Tools of the trade. Side hustles pay more.', price: 220000, minAge: 14, passive: { hustleMult: 1.25 } },
   { id: 'instrument', name: 'Mic & keyboard', icon: '🎹', desc: 'Make music. The neighbours may disagree.', price: 280000, minAge: 14, passive: { yearlyHappiness: 2 }, effects: [{ stat: 'happiness', delta: 3 }] },
   { id: 'bike', name: 'Bicycle', icon: '🚲', desc: 'Free transport, free exercise.', price: 90000, minAge: 8, passive: { yearlyHappiness: 1 }, effects: [{ stat: 'health', delta: 3 }] },
+  { id: 'tv', name: 'Flat-screen TV', icon: '📺', desc: 'Football, Nollywood and the news you cannot fix. Needs delivery.', price: 280000, minAge: 14, appliance: true, passive: { yearlyHappiness: 1 } },
+  { id: 'fridge', name: 'Fridge-freezer', icon: '🧊', desc: 'Cold water and food that lasts. Needs a loader.', price: 450000, minAge: 16, appliance: true, passive: { yearlyStress: -1 } },
+  { id: 'fan', name: 'Standing fan', icon: '🌀', desc: 'Survive the heat. Light enough to carry home.', price: 45000, minAge: 12, appliance: true, light: true, passive: { yearlyStress: -1 } },
+  { id: 'ac', name: 'Air conditioner', icon: '❄️', desc: 'Cool nights, hot electricity bills. Needs a loader.', price: 550000, minAge: 18, appliance: true, passive: { yearlyStress: -2 } },
   { id: 'medCover', name: 'Health plan (HMO)', icon: '🩺', desc: 'Hospital bills hurt less for the rest of your life.', price: 250000, minAge: 18, effects: [{ stat: 'health', delta: 4 }] },
 ]
 export const ITEM_BY_ID = Object.fromEntries(ITEMS.map((i) => [i.id, i]))

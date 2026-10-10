@@ -1,3 +1,4 @@
+import { BASE_BY_HOUSING } from '@content/appliances'
 import type { ActivityDef, NpcRole, StatDelta, TrackId } from '../core/types'
 import type { Ctx } from './ctx'
 import { ACTIVITIES, ACTIVITY_BY_ID } from '@content/activities'
@@ -237,7 +238,8 @@ export function answerQuiz(ctx: Ctx, optionIndex: number): { correct: boolean; f
 
 export function shopItems(ctx: Ctx) {
   const c = ctx.s.character
-  return ITEMS.filter((i) => c.age >= i.minAge && !c.items.includes(i.id)).map((i) => ({ item: i, affordable: c.stats.cash >= i.price }))
+  const base = new Set(BASE_BY_HOUSING[c.housing.type] ?? [])
+  return ITEMS.filter((i) => c.age >= i.minAge && !c.items.includes(i.id) && !(i.appliance && base.has(i.id))).map((i) => ({ item: i, affordable: c.stats.cash >= i.price }))
 }
 
 export function jobOptions(ctx: Ctx) {
