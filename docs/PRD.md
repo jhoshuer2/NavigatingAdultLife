@@ -17,7 +17,7 @@ This PRD is written to be consumed by a human team *and* by AI coding agents. Co
 - Numbers in this document (salaries, costs, probabilities) are **starting values for tuning**, not final balance. They live in data files (Section 14), never hard-coded.
 - Section 19 lists **assumptions** I made and Section 20 lists **open questions** that need a human decision.
 
-> **Note on the reference sites.** The three examples (danfo.horpey.dev, lagoslife.app, campuslife.cubbes.app) could not be opened from the sandbox (DNS lookup failed). A screen recording of **danfo.horpey.dev** was later supplied and reviewed; it drove the revision of Section 7.1. **lagoslife.app and campuslife.cubbes.app have not been reviewed.** The rest is derived from the brief and general knowledge of those genres (Lagos life sim, campus-life sim). Send screenshots or notes on the other two and the PRD will be reconciled against them (see Q1).
+> **Note on the reference sites.** The three examples (danfo.horpey.dev, lagoslife.app, campuslife.cubbes.app) could not be opened from the sandbox (DNS lookup failed). Screen recordings of **danfo.horpey.dev** (drove Section 7.1) and **campuslife.cubbes.app** (drove Section 5.6 and the M2 world scope) were later supplied and reviewed. **lagoslife.app has not been reviewed.** The rest is derived from the brief and the two recordings. Send a recording or screenshots of lagoslife.app and the PRD will be reconciled against it (see Q1).
 
 ---
 
@@ -199,7 +199,7 @@ Each trait has one clear upside and one downside, both expressed as data modifie
 - Gender affects *cultural expectation events* (e.g., pressure to marry, career bias events) with humour and agency — **never** locks careers, stats, or achievements.
 
 ### 4.3 Avatar technical approach
-- **Layered 2D sprites** composited in a single `<Avatar>` component (SVG/PNG layers: body, head, hair-back, face, hair-front, outfit, accessory). Tinting via CSS/Canvas for skin tone. Same layer set drives the Phaser mini-game sprite via pre-rendered spritesheet (generated at runtime from the avatar config on a hidden canvas, or a simplified silhouette-with-colours in M1).
+- **Layered 2D sprites** composited in a single `<Avatar>` component (SVG/PNG layers: body, head, hair-back, face, hair-front, outfit, accessory). Tinting via CSS/Canvas for skin tone. Same config drives the Three.js low-poly character in the runner/world; the 2D layer set drives the mini-game sprite via pre-rendered spritesheet (generated at runtime from the avatar config on a hidden canvas, or a simplified silhouette-with-colours in M1).
 - Aging: 5 life-stage variants of body/face proportion (child, teen, adult, mid-age, elder) with grey-hair overlay and wrinkle layer. (M1 MAY ship with 3 stages.)
 
 ---
@@ -226,7 +226,7 @@ Each trait has one clear upside and one downside, both expressed as data modifie
 
 ### 5.3 World presentation by milestone
 - **M1:** each location is a **scene card** — a static illustrated background with tappable hotspots (activities) and NPC portraits. Navigation = a district menu. Cheap to build, still feels like a place.
-- **M2:** an **explorable 2D top-down district map** (Phaser + Tiled tilemaps): walk (tap-to-move / WASD / D-pad), enter buildings (switch to scene cards), talk to NPCs, find collectibles. Moving between districts costs Cash (transport) and Energy and triggers "go-slow" micro-events.
+- **M2:** an **explorable third-person 3D low-poly district** (Three.js, procedural geometry, same art language as the runner; see 5.6): walk (tap-to-move / virtual stick / WASD), tap places and people for contextual panels, enter buildings (scene cards or short interior scenes), talk to NPCs, find collectibles. Moving between districts costs Cash (transport) and Energy and triggers "go-slow" micro-events. **Lite mode** (M1-style scene cards) stays available for low-end devices.
 - **M3:** multi-city travel (Lagos ↔ Abuja ↔ Port Harcourt…), seasons/festivals shown on the map (Harmattan haze, rainy-season flooding, Detty December crowds).
 
 ### 5.4 NPCs
@@ -238,6 +238,29 @@ Each trait has one clear upside and one downside, both expressed as data modifie
 NEPA/PHCN "light don go" and generators · fuel queues and go-slow · JAMB/WAEC nerves · school "sir, I was sleeping" · owambe & asoebi pressure · jollof wars · mama's guilt-trip calls · "when are you getting married?" · POS charges and network failures · NYSC camp & posting · Detty December · Harmattan · "japa" dream and visa interview · cousin who needs "small something" · landlord's rent hike · Nollywood auditions · Afrobeats gig · generator vs. solar upgrade · airtime vs. data bundles · market haggling · wedding negotiations (handled respectfully) · church/mosque/community events · naming ceremony · burial/memorial traditions · village return trip.
 
 Sensitive topics (scams, police, religion, politics) follow the rules in Section 16.
+
+### 5.6 Lessons from the Campus Life reference (campuslife.cubbes.app)
+Observed in the recording (a third-person, low-poly 3D walk-around of a real Lagos university campus):
+
+| Observed | What we do with it |
+|---|---|
+| Third-person 3D walk-around of a campus; roads, hostels, lecture halls, trees; ambient students with speech bubbles ("Shuuu, queue don long") | M2 explorable districts (M2-F01) in the same low-poly language as the runner; ambient NPC chatter lines are data (`ambientLines`) |
+| Persistent HUD: profile chip ("Fresher · Visiting …"), **Energy**, **Vibe** (mood), **Pocket money (₦)**, a counter (6/27), time-of-day chip (Morning, 11:24 AM), minimap | Our stats map directly: Energy, Happiness (surfaced as **Vibe** in copy), Cash (**Pocket money** for under-18s), plus a **time-of-day chip** in Focus Days and a minimap in M2. The meaning of the extra counter was not clear from the recording (Q17) |
+| Left menu: Explore · Campus tour · People & events · Become a student | M2 side menu: Explore · Tour · People & Events · Quests |
+| Discovery toasts ("Found Jaja & Moremi Halls"), place signs | **Place discovery** log (M2); first visit grants small Reputation/Knowledge/Cowries |
+| "Talk to Femi — *New face*" proximity prompts | NPC proximity prompts with a *New face* tag until met; tied to relationship meters |
+| **Contextual "next thing to do" card** ("Sit in on a real lecture… Go") | **Suggested-next-action** card driven by quests and location; always dismissible |
+| Bottom shortcuts: Tour · Map · Main Gate · **Wait** | Fast travel (Map, Home/Main Gate), guided Tour, and **Wait** (advance time / recover Energy) |
+| Place panel: "Arts Theatre — *Front row for the serious, back row for the network*", "4 people you can meet", live class card ("Dr. Ghost · CSC 101 — *Class may or may not hold*" · LIVE), action rows with costs/benefits ("Sit in on CSC 101: −6 Energy, +2 Vibe") | **Place panel** pattern for every location: witty one-liner, who is here, live events, and action rows with **Energy cost and stat-benefit chips** (generalises M1 activity cards) |
+| **Lecturer card** with quirk and favourite quote, *Enter class / Not now* | NPC intro cards for recurring characters (lecturer, boss, landlord, auntie) with a catchphrase |
+| In-class 3D scene; lecturer picks you mid-lecture with a question; funny feedback tied to relationships ("Correct! A few people actually clapped. +4 relationship"); **Class over**; **after-class revision quiz** | **Pop-quiz mechanic** (M1 text version, M2 in-scene): study draws 1–3 questions from a bank; correct answers raise Knowledge and sometimes relationships/Reputation; wrong answers are funny, not punishing |
+
+**Design decisions taken from this reference**
+1. **Focus Days (M2-F21).** The macro unit stays the year, but key moments (first day at university, first day at a job, owambe, market day, NYSC camp) play as **day-scale vignettes** in the 3D world with a clock. A Focus Day spends part of that year's Energy and then rejoins the normal year loop, giving campus-style moment-to-moment play without simulating 80 years day by day.
+2. **One renderer.** Both references are low-poly 3D, so the runner and the world share one lazy-loaded Three.js module. The M1 scene-card UI doubles as **Lite mode** on low-end devices.
+3. **Place panels everywhere** (scene cards in M1, 3D world in M2) so the UI grammar is learned once.
+4. **University campus pack (M2-F24).** A **fictional** campus (Q18) with live classes, quirky lecturers, hostel life, societies, exam weeks, a JAMB-to-admission storyline and NYSC follow-on.
+5. **Humour through specificity.** Place blurbs, lecturer quirks and ambient lines are the most shareable content; budget writing time for them.
 
 ---
 
@@ -348,8 +371,8 @@ choices:
 
 **Rendering approach (decision for the T18 spike; recommendation below)**
 - **Recommended:** **Three.js** (tree-shaken, lazy-loaded), **procedural low-poly/voxel geometry** (instanced boxes + flat/vertex colours; no texture-heavy assets). This matches the reference's look, keeps the mini-game's asset payload tiny (~< 1 MB incl. audio), and is feasible on mid-range Android if draw calls ≤ ~150, instancing is used, shadows are baked/fake, and pixel ratio is capped (≤ 1.5) with an automatic **quality governor** (drops effects/resolution when FPS < 45 for 2 s).
-- **Fallback if the spike misses 55 FPS on the reference device:** a 2.5D pseudo-3D renderer in Phaser (scaled sprites along a road projection) using the **same engine logic**. The runner **simulation is a pure TypeScript module** (lanes, patterns, speed, collisions, scoring, missions) with no rendering imports, so the renderer is swappable and the sim is unit-testable and replayable from `seed + inputLog` (needed for M3 leaderboard validation).
-- Phaser remains the choice for the M2 top-down district map; both are lazy-loaded and never in the initial bundle.
+- **Fallback if the spike misses 55 FPS on the reference device:** a Canvas 2D pseudo-3D renderer (scaled sprites along a road projection) using the **same simulation logic**. The runner **simulation is a pure TypeScript module** (lanes, patterns, speed, collisions, scoring, missions) with no rendering imports, so the renderer is swappable and the sim is unit-testable and replayable from `seed + inputLog` (needed for M3 leaderboard validation).
+- The M2 explorable world reuses the same Three.js chunk, materials and low-poly kit, so the 3D renderer is paid for once (see 5.6). Phaser is **no longer in the stack**.
 
 **Controls & accessibility**
 - Touch: swipe left/right (lane), up (jump/hop), down (slide/brake), tap-hold to brake at stops; on-screen buttons alternative. Keyboard: ←/→, ↑, ↓, Space = horn. Gamepad MAY.
@@ -397,7 +420,7 @@ The three milestones are **vertical slices**: each is playable end-to-end, deplo
 Part of M1 but listed first so agents do it in order.
 
 - `M1-F00` Repo bootstrap: Vite + React + TypeScript (strict), ESLint, Prettier, Vitest, Playwright, GitHub Actions (lint, typecheck, test, build, deploy preview), Tailwind, path aliases.
-- `M1-F00b` Folder layout from Section 12.2; engine package has **no** React/Phaser imports (enforced via ESLint `no-restricted-imports`).
+- `M1-F00b` Folder layout from Section 12.2; engine package has **no** React/Three.js imports (enforced via ESLint `no-restricted-imports`).
 - `M1-F00c` Content pipeline: schemas (Zod), loader, linter script `npm run content:lint`.
 - `M1-F00d` Seeded RNG, save/load with versioned schema + migration stub.
 - `M1-F00e` Deployed hello-world to production URL (so deployment is never the last step).
@@ -434,6 +457,7 @@ Part of M1 but listed first so agents do it in order.
 | M1-F21 | Tutorial | 90-second first-run guided first year (skippable) |
 | M1-F22 | Accessibility baseline | Colour contrast AA, keyboard navigable, tap targets ≥ 44px, scalable text |
 | M1-F23 | Analytics (privacy-light, consent) | Anonymous funnel events: `life_started`, `stage_reached`, `life_ended` (cause), `minigame_played` |
+| M1-F25 | Pop-quiz study (SHOULD) | Study draws 1–3 questions from a bank of ≥ 120 curriculum-style questions (maths, English, science, general knowledge, ICT) by stage; correct answers boost Knowledge gain; funny feedback; text-only in M1 |
 | M1-F24 | PWA | Installable, offline-capable core game (assets cached) |
 
 **Out of scope for M1:** explorable map, inventory UI, businesses, skills system, loans/ajo, NYSC chain, multiple cities, cloud saves, leaderboards, voice acting, full localization.
@@ -451,7 +475,7 @@ Part of M1 but listed first so agents do it in order.
 - **AC-M1-07** ≥ 8 different endings are reachable (verified via bot + hand-crafted seeded scenarios) and each shows a distinct obituary.
 - **AC-M1-08** Save → close → reopen resumes at the right year with identical state and RNG sequence; export/import round-trips.
 - **AC-M1-09** Across 3 consecutive random lives, < 30% of events repeat.
-- **AC-M1-10** First load ≤ 3 s on throttled "Fast 4G" in Lighthouse (mobile); initial JS (gzip) ≤ 250 KB for the menu/creation route; total M1 assets ≤ 6 MB; Phaser lazy-loaded only when entering a mini-game.
+- **AC-M1-10** First load ≤ 3 s on throttled "Fast 4G" in Lighthouse (mobile); initial JS (gzip) ≤ 250 KB for the menu/creation route; total M1 assets ≤ 6 MB; Three.js lazy-loaded only when entering a mini-game.
 - **AC-M1-11** No hard-coded content strings in engine code; the content linter passes with 0 errors.
 - **AC-M1-12** Lighthouse Accessibility ≥ 90, PWA installable, works offline after first load.
 
@@ -474,7 +498,7 @@ Part of M1 but listed first so agents do it in order.
 
 | ID | Feature | Details |
 |---|---|---|
-| M2-F01 | Explorable district maps | 4 Lagos districts (Surulere, Yaba, Lagos Island, Lekki/VI) as Phaser tilemaps; tap-to-move + D-pad; buildings enter scene cards; collectible spawns; day-night tint |
+| M2-F01 | Explorable 3D districts | 4 Lagos districts (Surulere, Yaba, Lagos Island, Lekki/VI) as low-poly 3D third-person scenes (procedural kit: buildings, roads, kiosks, umbrellas, trees, pedestrians); tap-to-move/stick; navmesh walkability; buildings open place panels/interiors; collectibles; time-of-day lighting (see 5.6) |
 | M2-F02 | Travel & transport | Costs (Cash/Energy) and "go-slow" micro-events; danfo/BRT/okada/ride-hail choices, each with trade-offs |
 | M2-F03 | Persistent NPC system | NPCs live in locations, have schedules by life stage, remember interactions, show relationship emotes; 40 named-archetype NPC templates |
 | M2-F04 | Deep relationships | Dating pipeline, traditional + white wedding options and costs, in-law events, child-raising events by age, parenting style choice, sibling/parent aging and care |
@@ -493,11 +517,16 @@ Part of M1 but listed first so agents do it in order.
 | M2-F17 | Pidgin & glossary | Pidgin flavour toggle ("Naija Pidgin mode") for narration; in-game glossary |
 | M2-F18 | UX polish | Animated transitions, juicy number popups, haptics (Vibration API), richer audio, 5 new music tracks |
 | M2-F19 | Local profile & stats screen | Lives history (last 20 lives), lifetime stats, best runs, share cards |
-| M2-F20 | Performance & data-saver mode | Lazy-load per district, texture compression, "lite mode" (static scene cards only) for low-end devices |
+| M2-F20 | Performance & data-saver mode | Lazy-load per district, geometry instancing, quality governor, lite mode (scene cards only) for low-end devices |
+| M2-F21 | Focus Days | Day-scale 3D vignettes with a clock for key life moments; spend part of the year's Energy; place panels, NPC proximity prompts, suggested-next card, Wait |
+| M2-F22 | Lectures & in-scene quizzes | Live classes, lecturer cards, mid-lecture questions, class-over summary, after-class revision quiz feeding Knowledge and relationships |
+| M2-F23 | World UX kit | Minimap, fast travel (Map/Home/Main Gate), guided Tour, place-discovery log, ambient chatter, "New face" tags |
+| M2-F24 | University campus pack | Fictional campus district: halls, lecture theatres, hostels, societies, exam weeks, JAMB-to-admission chain (5.6, Q18) |
 
 **Out of scope:** multi-city, generational play, cloud sync, leaderboards, Whot/Ayo.
 
 **M2 Acceptance criteria**
+- **AC-M2-11** A Focus Day (e.g., first lecture) runs end-to-end: arrive, discover a place, meet an NPC ("New face"), attend a live class, answer a question, finish with a summary; Energy and stat changes apply once to the year; clock and Wait behave consistently.
 - **AC-M2-01** Player can walk a district map, enter ≥ 6 building types, talk to ≥ 5 NPC archetypes per district, and leave without being stuck (pathfinding/collision verified by automated walkability tests per map).
 - **AC-M2-02** Starting a business, hiring a worker, a risk event, and selling the business all work with correct ledger totals in the year summary (ledger unit tests; sum of deltas equals net worth change).
 - **AC-M2-03** NPCs persist and remember: an NPC you helped in Year X references it in an event ≥ Year X+3 in ≥ 80% of seeded scenarios (checked by test harness).
@@ -510,7 +539,7 @@ Part of M1 but listed first so agents do it in order.
 - **AC-M2-10** Content lint passes; events/quests/achievements counts met.
 
 **M2 Test plan**
-- Everything in M1 plus: tilemap validation scripts (walkable graph connected, entrances reachable), ledger invariants, NPC memory harness, integration tests for business and relationship flows, visual regression screenshots of key screens (Playwright), device-matrix manual QA, 15-person playtest with qualitative interviews on "does the world feel alive?"
+- Everything in M1 plus: navmesh/walkability validation scripts (walkable graph connected, entrances reachable), ledger invariants, NPC memory harness, integration tests for business and relationship flows, visual regression screenshots of key screens (Playwright), device-matrix manual QA, 15-person playtest with qualitative interviews on "does the world feel alive?"
 
 **M2 Definition of Done:** all MUST features; AC-M2-01…10 pass; 15-person playtest: ≥ 75% finish a life, ≥ 60% say the world "feels alive/Nigerian"; cultural review sign-off by ≥ 2 reviewers (Q10); production deploy.
 
@@ -563,7 +592,7 @@ Part of M1 but listed first so agents do it in order.
 - **Plain, warm, funny copy.** Written in a distinct narrator voice (see Section 16.2).
 
 ### 10.2 Visual style
-- Bold flat 2D illustration with Ankara/Adire-inspired patterns as UI trim; warm saturated palette (deep green, gold, terracotta, indigo) with accessible contrast. Avoid copying Western-default iconography; use cowries, calabash, danfo yellow-and-black stripes, ankara motifs.
+- **Two layers, one palette.** (1) 2D UI, portraits and scene cards: bold flat illustration with Ankara/Adire-inspired trim. (2) 3D runner and world: **procedural low-poly** (flat-shaded boxes/prisms, warm dusk lighting, saturated umbrellas, yellow-and-black danfo livery), as in both reference games. Palette: deep green, gold, terracotta, indigo with accessible contrast. Use cowries, calabash, danfo stripes and ankara motifs rather than Western-default iconography. Low-poly characters are parameterised from the same `AvatarConfig` as the 2D portrait (skin tint, hair mesh, outfit colours).
 - **Placeholder-first asset strategy:** colour-block SVG placeholders in early builds so every screen is playable before art lands; final assets slotted by id without code changes.
 
 ### 10.3 Key screens and wireframes (M1)
@@ -599,7 +628,7 @@ EVENT                  YEAR SUMMARY        │ [Play Go-Slow Dash]   │
 - **Onboarding:** first-year tutorial with coach marks (explain Energy, stats, activities, events).
 - **Error handling:** autosave failure shows a non-blocking toast with "Export save" option; offline banner.
 - **Localisation-ready:** no text baked into images; strings via keys even in M1.
-- **Accessibility:** semantic HTML for the sim UI (Phaser only for maps/mini-games), focus management on modals, ARIA live region announcing stat changes (can be toggled), dyslexia-friendly font option (M2).
+- **Accessibility:** semantic HTML for the sim UI (Three.js only for the world and mini-games), focus management on modals, ARIA live region announcing stat changes (can be toggled), dyslexia-friendly font option (M2).
 
 ---
 
@@ -620,7 +649,7 @@ EVENT                  YEAR SUMMARY        │ [Play Go-Slow Dash]   │
 | Build | **Vite** | Fast dev loop, simple config, code splitting |
 | UI | **React 18 + Tailwind CSS** | Declarative menus/HUD/event cards; huge ecosystem; accessible DOM for text-heavy UI |
 | State | **Zustand** (+ immer) wrapping a **pure engine** | Simple, serialisable; engine remains framework-agnostic |
-| Mini-games & maps | **Three.js** (runner, lazy-loaded, procedural low-poly) + **Phaser 3** (M2 district maps, lazy-loaded) | Three.js matches the 3D lane-runner look at tiny asset cost; Phaser gives tilemaps/touch for top-down maps. Runner sim is pure TS so the renderer is swappable (see 7.1) |
+| Mini-games & world | **Three.js** (lazy-loaded; procedural low-poly; shared by the runner and the M2 3D district) | Both reference games are low-poly 3D third-person; procedural geometry keeps assets tiny and one renderer serves runner + world. Simulation logic stays pure TS so the renderer is swappable (7.1) |
 | Content validation | **Zod** + custom linter | Runtime schema checks for JSON/YAML content |
 | Persistence | **localStorage → IndexedDB (via `idb`)** with versioned saves | Small saves; IndexedDB for MetaProfile growth |
 | Audio | **Howler.js** | Reliable cross-browser audio incl. mobile unlock behaviour |
@@ -633,13 +662,13 @@ EVENT                  YEAR SUMMARY        │ [Play Go-Slow Dash]   │
 | Error monitoring | **Sentry** (browser, sampled) | Crash visibility |
 | M3 backend (optional) | **Supabase** (Auth + Postgres + RLS) *or* **Cloudflare Workers + D1/KV** | Cloud saves, leaderboards, remote config; no server to run |
 
-*Alternatives considered:* Godot/Unity WebGL (heavy bundle sizes, poor on low-end devices); Pixi/Kaplay (lighter than Phaser but fewer built-ins for tilemaps/physics); Next.js (SSR unnecessary for a static game). The recommendation is deliberately boring: static site, no backend until M3.
+*Alternatives considered:* Godot/Unity WebGL (heavy bundle sizes, poor on low-end devices); Phaser/Pixi (strong 2D, but the references are 3D and a second renderer costs bundle size); Next.js (SSR unnecessary for a static game). The recommendation is deliberately boring: static site, no backend until M3.
 
 ### 12.2 Repository layout
 
 ```
 /src
-  /engine            # PURE TypeScript. No DOM, React, or Phaser imports.
+  /engine            # PURE TypeScript. No DOM, React, or Three.js imports.
     /core            # rng.ts, state.ts, reducer.ts, time.ts, stats.ts
     /systems         # education.ts, career.ts, money.ts, relationships.ts, events.ts,
                      # quests.ts, achievements.ts, business.ts (M2), family.ts (M3)
@@ -652,7 +681,7 @@ EVENT                  YEAR SUMMARY        │ [Play Go-Slow Dash]   │
   /ui                # React components, screens, hooks
     /screens         # Title, Create, Hub, Event, Summary, Ending, Achievements, Settings
     /components      # Avatar, StatBar, ChoiceCard, Toast, Modal, Tooltip
-  /minigames         # Renderers (Three.js/Phaser) + pure sims; each exports a MiniGame (Section 12.4)
+  /minigames         # Three.js renderers + pure sims; each exports a MiniGame (Section 12.4)
     /go-slow-dash
   /world             # (M2) map scenes, pathfinding, NPC controllers
   /platform          # save.ts, storage.ts, audio.ts, analytics.ts, share.ts, pwa.ts
@@ -694,7 +723,7 @@ interface MiniGameResult { gameId: string; score: number; coins: number;
 
 ### 12.5 Performance and compatibility
 - Targets: Chrome Android (last 3 years), Safari iOS 15+, desktop evergreen. Minimum screen 320 px.
-- Budgets: initial JS ≤ 250 KB gz; menu route interactive ≤ 3 s on Fast 4G; images WebP/AVIF; audio as OGG/MP3 ≤ 2 MB total in M1 (stream music, preload SFX); sprite atlases ≤ 1 MB; runner chunk (Three.js + sim + HUD) ≤ 350 KB gz, Phaser map chunk (M2) ≤ 350 KB gz.
+- Budgets: initial JS ≤ 250 KB gz; menu route interactive ≤ 3 s on Fast 4G; images WebP/AVIF; audio as OGG/MP3 ≤ 2 MB total in M1 (stream music, preload SFX); sprite atlases ≤ 1 MB; shared 3D chunk (Three.js tree-shaken) ≤ 200 KB gz, runner module ≤ 150 KB gz, district module ≤ 200 KB gz (M2), 3D assets ≤ 1.5 MB per district.
 - Data-saver: respect `navigator.connection.saveData`; "lite mode" (M2).
 - Avoid layout shifts and long main-thread tasks (>50 ms) during year resolution (engine work < 10 ms typical).
 
@@ -907,6 +936,7 @@ Warm, witty, a little teasing, never cruel; short paragraphs; second person ("yo
 | 16 | M1-F21 | Tutorial | M1 | P1 | S | F04 |
 | 17 | M1-F19/F20 | Settings, audio | M1 | P1 | M | — |
 | 18 | M1-F22/F24 | Accessibility baseline, PWA | M1 | P1 | M | — |
+| 18b | M1-F25 | Pop-quiz study | M1 | P1 | M | F07 |
 | 19 | M1-F23 | Consent-gated analytics | M1 | P1 | S | — |
 | 20 | M1-X1 | Debug overlay & seed share | M1 | P1 | S | F03 |
 | 21 | M2-F01/F02 | Explorable maps + travel | M2 | P0 | L | M1 |
@@ -922,6 +952,7 @@ Warm, witty, a little teasing, never cruel; short paragraphs; second person ("yo
 | 31 | M2-F11/F12 | NYSC chain, new careers | M2 | P1 | M | M1 |
 | 32 | M2-F16 | Content scale to 220 events | M2 | P0 | L | — |
 | 33 | M2-F20 | Lite mode / data saver | M2 | P1 | M | F01 |
+| 33b | M2-F21–F24 | Focus Days, lectures & quizzes, world UX kit, campus pack | M2 | P0 | L | M2-F01 |
 | 34 | M2-F17/F18/F19 | Pidgin mode, polish, history stats | M2 | P2 | M | — |
 | 35 | M3-F01 | Generational play | M3 | P0 | L | M2 |
 | 36 | M3-F02/F13 | Multi-city packs + content tools | M3 | P0 | L | M2 |
@@ -945,7 +976,7 @@ Warm, witty, a little teasing, never cruel; short paragraphs; second person ("yo
 | Content volume (90 → 400 events) is the long pole | Stale/repetitive game | Content pipeline + linter early; templated generators; AI-assisted drafting **with human cultural review**; track repeat-rate metric |
 | Cultural missteps | Reputation, trust | Advisors, review gates, sensitivity checklist, ability to hot-patch content (remote config M3) |
 | Balance/exploits (infinite money, trivial strategies) | Boring game | Bot sims in CI, caps on mini-game income, diminishing returns |
-| Low-end device performance / data costs | Churn | Budgets enforced in CI, lazy-load Phaser, lite mode, PWA caching |
+| Low-end device performance / data costs | Churn | Budgets enforced in CI, lazy-load Three.js, lite mode, quality governor, PWA caching |
 | Art production bottleneck | Delays | Placeholder-first, layered avatar reuse, limited scene count in M1 |
 | AI agent drift (inconsistent architecture) | Rework | Strict engine isolation, schemas, typed contracts, small tickets, mandatory tests, ADR log |
 | Scope creep from "life sim can do anything" | Never ships | Hard milestone gates, "out of scope" lists, backlog priorities |
@@ -962,7 +993,7 @@ Warm, witty, a little teasing, never cruel; short paragraphs; second person ("yo
 5. Faith is optional and never required for progress; religious content is respectful and reviewed.
 6. Gender options include a non-binary/prefer-not-to-say option (pending Q5).
 7. No backend until M3; all play is local, with export/import for safety.
-8. Art is 2D illustrated; layered avatars; scene cards in M1, tilemaps in M2.
+8. UI art is 2D illustrated with layered portrait avatars; the runner and M2 world are procedural low-poly 3D (Three.js); scene cards in M1.
 9. Music/art are original or commissioned, not sampled.
 10. English is primary; Pidgin is a flavour layer in M1–M2 and a full locale in M3.
 11. Economy values are fun-first, not statistically realistic.
@@ -974,7 +1005,7 @@ Warm, witty, a little teasing, never cruel; short paragraphs; second person ("yo
 
 | # | Question | Why it matters | Default if unanswered |
 |---|---|---|---|
-| Q1 | What do you like about lagoslife.app and campuslife.cubbes.app (look, tone, systems)? Only the danfo.horpey.dev recording has been reviewed. | Aligns visual/system direction | Use this PRD as written |
+| Q1 | What do you like about lagoslife.app (look, tone, systems)? Only the danfo.horpey.dev and campuslife.cubbes.app recordings have been reviewed. | Aligns visual/system direction | Use this PRD as written |
 | Q2 | Target platform priority: phone-first PWA, or desktop-first? | Layout and input choices | Phone-first |
 | Q3 | Target age rating / maturity (PG-13 vs. more edgy BitLife-style)? | Event content scope | PG-13 |
 | Q4 | Final name, branding, and domain? | Share cards, store/PWA metadata | "Navigating Adult Life" |
@@ -989,7 +1020,9 @@ Warm, witty, a little teasing, never cruel; short paragraphs; second person ("yo
 | Q13 | Offline expectation: must core gameplay work fully offline? | PWA caching strategy | Yes for M1+ |
 | Q14 | Language scope for launch: English + Pidgin flavour only, or Yoruba/Igbo/Hausa UI? | Localization cost | English + Pidgin flavour |
 | Q15 | Bride price/traditional marriage customs: depict explicitly, abstractly, or skip? | Sensitivity and reviewer approach | Abstract with reviewer-approved choices |
-| Q16 | Runner scope for M1: ship **On Foot + Danfo-driving** modes, or On Foot first and driving in M2? Is 3D (Three.js) acceptable given performance risk on low-end phones? | Largest single M1 schedule risk | On Foot in M1; driving if the T18 spike passes; Phaser pseudo-3D fallback |
+| Q17 | The campus reference's HUD shows a "6/27" counter beside pocket money; its meaning wasn't clear from the recording. Do we want a similar secondary counter (meals, attendance, days left in semester)? | HUD and campus loop | Attendance-style counter in the campus pack only |
+| Q18 | Real institution and place names versus fictional equivalents? The reference uses real names. | Trademark/sensitivity | Fictional names with recognisable nods |
+| Q16 | Runner scope for M1: ship **On Foot + Danfo-driving** modes, or On Foot first and driving in M2? Is 3D (Three.js) acceptable given performance risk on low-end phones? | Largest single M1 schedule risk | On Foot in M1; driving if the T18 spike passes; Canvas 2D pseudo-3D fallback |
 
 ---
 
@@ -1002,14 +1035,14 @@ Warm, witty, a little teasing, never cruel; short paragraphs; second person ("yo
 5. **Test with every change.** New system → unit tests + at least one sim assertion. New content → linter must pass.
 6. **Small PRs** (< ~400 changed lines excluding content/data). Reference requirement IDs (e.g., "implements M1-F07").
 7. **Determinism rules.** No `Math.random()`/`Date.now()` in `/engine`. All RNG via injected PRNG.
-8. **Performance rules.** Respect budgets in 12.5; import Three.js/Phaser only inside `/minigames` and `/world` via dynamic import.
+8. **Performance rules.** Respect budgets in 12.5; import Three.js only inside `/minigames` and `/world` via dynamic import.
 9. **Accessibility rules.** Every interactive element reachable by keyboard; no information by colour alone.
 10. **Content rules.** Follow Section 16; mark any culturally uncertain content with `reviewNeeded: true` in the data so reviewers can filter it.
 11. **Document decisions.** Add an ADR (`/docs/adr/NNN-title.md`) for any deviation from this PRD.
 12. **Definition of Done per ticket:** typecheck, lint, tests, content lint, build, and (where UI) a Playwright check or screenshot attached.
 
 ### Suggested M1 ticket sequence (copy into your tracker)
-`T01` repo+CI+deploy · `T02` RNG + state + serialization + tests · `T03` stats/energy/money settlement · `T04` condition/effect evaluator + schemas + linter · `T05` event picker (weights, cooldowns, follow-ups) · `T06` yearly loop + debug UI · `T07` bot sim harness · `T08` education + exams · `T09` careers · `T10` relationships + family obligation · `T11` quests + achievements + MetaProfile · `T12` endings + obituary + legacy · `T13` save/load/export · `T14` React shell: title, settings, HUD · `T15` avatar layers + character creation · `T16` scene cards + activity UI · `T17` event/summary/ending screens · `T18` Go-Slow Dash **renderer spike (Three.js vs Phaser fallback on a real mid-range Android, gate: ≥ 55 FPS)** → prototype page → pattern generator tests → integration · `T19` content passes (30 → 60 → 90 events) with balance via sims · `T20` audio, tutorial, accessibility, PWA · `T21` share card · `T22` Lighthouse/perf budgets · `T23` playtest + bug bash.
+`T01` repo+CI+deploy · `T02` RNG + state + serialization + tests · `T03` stats/energy/money settlement · `T04` condition/effect evaluator + schemas + linter · `T05` event picker (weights, cooldowns, follow-ups) · `T06` yearly loop + debug UI · `T07` bot sim harness · `T08` education + exams · `T09` careers · `T10` relationships + family obligation · `T11` quests + achievements + MetaProfile · `T12` endings + obituary + legacy · `T13` save/load/export · `T14` React shell: title, settings, HUD · `T15` avatar layers + character creation · `T16` scene cards + activity UI · `T17` event/summary/ending screens · `T18` Go-Slow Dash **renderer spike (Three.js vs Canvas 2D fallback on a real mid-range Android, gate: ≥ 55 FPS)** → prototype page → pattern generator tests → integration · `T19` content passes (30 → 60 → 90 events) with balance via sims · `T20` audio, tutorial, accessibility, PWA · `T21` share card · `T22` Lighthouse/perf budgets · `T23` playtest + bug bash.
 
 ---
 
