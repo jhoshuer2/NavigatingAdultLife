@@ -623,23 +623,20 @@ export default function World() {
       )}
       {coopPick && (
         <Modal onClose={() => setCoopPick(null)}>
-          <div className="font-display text-3xl text-danfo">Do the chores together?</div>
-          <div className="text-sm opacity-75 mb-3">Working as a team is faster, and it brings you closer.</div>
-          <div className="grid gap-2">
-            {coopPick.map((h) => <button key={h.role} className="card-btn" onClick={() => { const f = pendingChores.current; setCoopPick(null); f?.(h) }}><b>🤝 With {h.name}</b><div className="text-xs opacity-75">{h.role}</div></button>)}
-            <button className="card-btn" onClick={() => { const f = pendingChores.current; setCoopPick(null); f?.() }}><b>🧍 On my own</b></button>
+          <div className="font-display text-[26px] text-white leading-none">Team up?</div>
+          <div className="grid grid-cols-2 gap-2.5 mt-3">
+            {coopPick.map((h) => <button key={h.role} className="tile" onClick={() => { audio.sfx('click'); const f = pendingChores.current; setCoopPick(null); f?.(h) }}><span className="text-[32px] leading-none">🤝</span><span className="font-display text-[15px] uppercase">{h.name}</span><span className="chip chip-green !py-0.5">Faster</span></button>)}
+            <button className="tile" onClick={() => { audio.sfx('click'); const f = pendingChores.current; setCoopPick(null); f?.() }}><span className="text-[32px] leading-none">🧍</span><span className="font-display text-[15px] uppercase">Solo</span></button>
           </div>
         </Modal>
       )}
       {destPick && (
         <Modal onClose={() => setDestPick(null)}>
-          <div className="font-display text-3xl text-danfo">Where to?</div>
-          <div className="text-sm opacity-75 mb-3">You and {life.npcs[destPick.npcId]?.name} will walk there together and talk.</div>
-          <div className="grid gap-2">
-            <button className="card-btn" onClick={() => startHang('pitch')}><b>⚽ {district.places.find((p) => p.id === 'pitch')?.name}</b><div className="text-xs opacity-75">Fresh air, a ball and the neighbourhood.</div></button>
-            <button className="card-btn" onClick={() => startHang('mamaput')} disabled={!isOpen('mamaput', hour)}><b>🍲 {district.places.find((p) => p.id === 'mamaput')?.name}</b><div className="text-xs opacity-75">{isOpen('mamaput', hour) ? 'Sit down, eat and gist.' : `Closed until ${fmtClock(opensAt('mamaput'))}.`}</div></button>
+          <div className="font-display text-[26px] text-white leading-none">Where to, with {life.npcs[destPick.npcId]?.name}?</div>
+          <div className="grid grid-cols-2 gap-2.5 mt-3">
+            <button className="tile" onClick={() => { audio.sfx('click'); startHang('pitch') }}><span className="text-[32px] leading-none">⚽</span><span className="font-display text-[15px] uppercase text-center">{district.places.find((p) => p.id === 'pitch')?.name}</span></button>
+            <button className="tile" onClick={() => { audio.sfx('click'); startHang('mamaput') }} disabled={!isOpen('mamaput', hour)}><span className="text-[32px] leading-none">{isOpen('mamaput', hour) ? '🍲' : '🔒'}</span><span className="font-display text-[15px] uppercase text-center">{district.places.find((p) => p.id === 'mamaput')?.name}</span>{!isOpen('mamaput', hour) && <span className="chip chip-gold !py-0.5">{fmtClock(opensAt('mamaput'))}</span>}</button>
           </div>
-          <button className="btn w-full mt-3" onClick={() => setDestPick(null)}>Cancel</button>
         </Modal>
       )}
 
@@ -657,24 +654,23 @@ export default function World() {
         const acts = getActivities(life)
         return (
           <Modal onClose={() => setHotId(null)}>
-            <div className="flex items-center gap-3"><div className="text-4xl">{h.icon}</div><div className="font-display text-3xl text-danfo leading-none">{h.name}</div></div>
-            <div className="grid gap-2 mt-3">
+            <div className="flex items-center gap-3"><div className="w-14 h-14 rounded-[18px] grid place-items-center text-3xl" style={{ background: 'radial-gradient(circle at 30% 20%, #8a5cff, #3b22a8)', boxShadow: 'inset 0 0 0 2px rgba(255,255,255,.25)' }}>{h.icon}</div><div className="font-display text-[26px] text-white leading-none">{h.name}</div></div>
+            <div className="grid grid-cols-3 gap-2.5 mt-3">
               {h.actions.filter((a) => !a.needs || installed.has(a.needs)).map((a) => {
                 const isAct = a.cmd.startsWith('act:'); const ar = isAct ? acts.find((x) => x.def.id === a.cmd.slice(4)) : null
                 const tg = a.cmd.startsWith('toggle:') ? appl[a.cmd.slice(7) as 'light' | 'tv' | 'fan'] : null
                 const isSleep = a.cmd === 'sleep'
                 const dis = (isAct && (!ar?.enabled || life.phase !== 'action')) || (isSleep && life.phase !== 'action')
                 return (
-                  <button key={a.label} className="card-btn" disabled={dis} onClick={() => runCmd(a)}>
-                    <div className="flex items-center justify-between gap-2"><b>{a.icon} {a.label}</b>{tg !== null ? <span className="chip">{tg ? 'ON' : 'OFF'}</span> : ar ? <span className="chip">{ar.def.cost.energy ? `⚡${ar.def.cost.energy}` : 'free'}</span> : null}</div>
-                    {isAct && ar && !ar.enabled && <div className="text-xs text-yellow-300 mt-0.5">{ar.reason}</div>}
-                    {isSleep && <div className="text-xs opacity-75 mt-0.5">{hour >= 19 || hour < 5 ? 'Switch things off first. Appliances left on cost money and spoil your rest.' : 'Take a nap. Wake whenever you like.'}</div>}
+                  <button key={a.label} className={`tile ${tg ? 'is-on' : ''}`} disabled={dis} onClick={() => runCmd(a)}>
+                    <span className="text-[32px] leading-none">{dis && isAct && !ar?.enabled ? '🔒' : a.icon}</span>
+                    <span className="font-display text-[14px] leading-tight text-center uppercase">{a.label}</span>
+                    {tg !== null ? <span className={`chip !py-0.5 ${tg ? 'chip-green' : ''}`}>{tg ? 'ON' : 'OFF'}</span> : ar ? (ar.enabled ? <span className="chip !py-0.5">{ar.def.cost.energy ? <><Icon name="bolt" size={12} color="#ffd23f" />{ar.def.cost.energy}</> : 'free'}</span> : <span className="text-[11px] font-bold text-yellow-300 text-center leading-tight">{ar.reason}</span>) : null}
                   </button>
                 )
               })}
-              {h.id === 'bed' && (appl.tv || appl.fan || appl.light) && <div className="card p-2 text-xs opacity-80">Still on: {[appl.light && '💡 light', appl.tv && '📺 TV', appl.fan && '🌀 fan'].filter(Boolean).join(', ')}. Turn them off before sleeping to save NEPA bill.</div>}
             </div>
-            <button className="btn w-full mt-3" onClick={() => setHotId(null)}>Close</button>
+            {h.id === 'bed' && (appl.tv || appl.fan || appl.light) && <div className="hud-glass rounded-2xl px-3 py-2 mt-3 text-sm">Still on: {[appl.light && '💡', appl.tv && '📺', appl.fan && '🌀'].filter(Boolean).join(' ')}. Switch off before sleeping.</div>}
           </Modal>
         )
       })()}
