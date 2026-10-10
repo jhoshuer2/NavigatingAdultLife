@@ -133,3 +133,6 @@ html.big-text { font-size: 18px; }
 .kbd-hint { display: none; } @media (pointer: fine) { .kbd-hint { display: inline-grid; } }
 .joy { background: radial-gradient(circle at 50% 40%, rgba(255, 255, 255, .22), rgba(255, 255, 255, .08) 70%); border: 2px solid rgba(255, 255, 255, .45); box-shadow: inset 0 0 22px rgba(106, 61, 245, .55), 0 10px 22px rgba(0, 0, 0, .35); }
 .joy-knob { background: radial-gradient(circle at 35% 25%, #fff7c2, #ffc72c 60%, #e8960c); border: 3px solid #1a0f55; box-shadow: 0 5px 0 rgba(0, 0, 0, .35), inset 0 2px 0 rgba(255, 255, 255, .6); }
+
+/* Brand rule: titles are white with a soft shadow; gold is reserved for rewards. */
+.text-danfo { color: #fff; text-shadow: 0 2px 0 rgba(0, 0, 0, .4); }
