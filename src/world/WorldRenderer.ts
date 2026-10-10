@@ -92,6 +92,7 @@ export class WorldRenderer {
   private camLook = new THREE.Vector3()
   // scene directing (used by in-world tasks: class, penalties, conversations)
   frozen = false
+  speedMul = 1
   private sitting = false
   private camOverride: { pos: [number, number, number]; look: [number, number, number]; shift?: number } | null = null
   private viewShift = 0
@@ -236,6 +237,7 @@ export class WorldRenderer {
     this.scene.add(ring, arrow)
     this.highlight = { place: null, ring, arrow }
   }
+  setLabelsVisible(v: boolean) { for (const l of this.labelSprites.values()) l.visible = v }
   setHighlight(place: PlaceId | null) { if (this.highlight) this.highlight.place = place }
   setInteriorMarker(id: string | null) { this.interior?.setMarker(id) }
 
@@ -340,6 +342,7 @@ export class WorldRenderer {
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthTest: false })); sp.renderOrder = 9
     sp.scale.set(1.7, 1.7, 1); sp.position.set(x, 1.5, z); this.root().add(sp); this.marks.set(id, sp)
   }
+  moveMark(id: string, x: number, z: number) { const s = this.marks.get(id); if (s) { s.position.x = x; s.position.z = z } }
   removeMark(id: string) { const s = this.marks.get(id); if (s) { s.parent?.remove(s); s.material.map?.dispose(); s.material.dispose(); this.marks.delete(id) } }
   clearMarks() { for (const id of [...this.marks.keys()]) this.removeMark(id) }
   setStall(p: { x: number; z: number } | null) {
@@ -392,7 +395,7 @@ export class WorldRenderer {
     this.actors.clear()
     for (const b of this.bubbles) { b.scene.remove(b.sprite); b.sprite.material.map?.dispose(); b.sprite.material.dispose() }
     this.bubbles = []
-    this.setBall(null); this.setStall(null); this.clearMarks(); this.camOverride = null; this.frozen = false; this.sitting = false
+    this.setBall(null); this.setStall(null); this.clearMarks(); this.speedMul = 1; this.camOverride = null; this.frozen = false; this.sitting = false
     for (const o of this.npcs.values()) { o.parts.group.visible = true; o.label.visible = true }
     this.player.group.position.y = 0; this.player.legL.rotation.x = this.player.legR.rotation.x = 0
   }
@@ -453,7 +456,7 @@ export class WorldRenderer {
 
   private step(dt: number) {
     this.time += dt
-    const speed = 5.6
+    const speed = 5.6 * this.speedMul
     const iv = this.interior
     const blockers = iv ? iv.blockers : this.district.blockers
     const bounds: Rect = iv ? iv.def.bounds : { x0: -WORLD.half, x1: WORLD.half, z0: -WORLD.half, z1: WORLD.half }

@@ -15,6 +15,7 @@ import { ChoresTask } from '../tasks/ChoresTask'
 import { OvertimeTask } from '../tasks/OvertimeTask'
 import { WorshipTask } from '../tasks/WorshipTask'
 import { ShopTask } from '../tasks/ShopTask'
+import { JogTask } from '../tasks/JogTask'
 import { TalkTask, type Partner } from '../tasks/TalkTask'
 import type { Setting } from '@content/dialogue'
 import { npcSpot, placeActive, suggest } from '../../world/guide'
@@ -41,6 +42,7 @@ export default function World() {
     | { kind: 'overtime' }
     | { kind: 'service' }
     | { kind: 'shop' }
+    | { kind: 'jog' }
     | { kind: 'talk'; partner: Partner; role: NpcRole; setting: Setting; rounds: number; title: string; actId: string; hidden?: string }
   const [task, setTask] = useState<Task | null>(null)
   const [hang, setHang] = useState<{ role: NpcRole; npcId: string; name: string; gender: 'male' | 'female'; dest: PlaceId } | null>(null)
@@ -62,7 +64,7 @@ export default function World() {
   const district = useMemo<District>(() => buildDistrict(districtId), [districtId])
   const age = life?.character.age ?? 6
   const ageBand = age < 12 ? 0 : age < 18 ? 1 : 2
-  const modalOpen = !!g.sheet || life?.phase !== 'action' || (!!life?.quiz && !task) || (!!task && task.kind !== 'chores' && task.kind !== 'shop') || !!destPick || !!hotId || !!sleep || fade || mapOpen
+  const modalOpen = !!g.sheet || life?.phase !== 'action' || (!!life?.quiz && !task) || (!!task && task.kind !== 'chores' && task.kind !== 'shop' && task.kind !== 'jog') || !!destPick || !!hotId || !!sleep || fade || mapOpen
 
   const month = useMemo(() => {
     if (!life) return 0
@@ -207,6 +209,7 @@ export default function World() {
 
   // ---------- in-world tasks ----------
   const enabledAct = (id: string) => { const a = life ? getActivities(life).find((x) => x.def.id === id) : null; return a?.enabled ? null : (a?.reason ?? 'Not available right now.') }
+  useEffect(() => { rendRef.current?.setLabelsVisible(!task) }, [task])
   useEffect(() => { g.setTaskActive(!!task && task.kind === 'study'); return () => g.setTaskActive(false) }, [task])
   const startStudy = (mode: StudyMode) => {
     const why = enabledAct('study'); if (why) { g.toast(why); return }
@@ -219,6 +222,14 @@ export default function World() {
     setTimeout(() => { if (r.inside) { r.exitInterior(); setInside(null); setHotId(null) } setTask({ kind: 'penalty', act: actId }); setFade(false) }, 280)
   }
   useEffect(() => { if (g.penaltyReq) startPenalty(g.penaltyReq.act) /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [g.penaltyReq])
+
+  const startJog = () => {
+    const r = rendRef.current; if (!r || fade) return
+    const why = enabledAct('exercise'); if (why) { g.toast(why); return }
+    setFade(true)
+    setTimeout(() => { if (r.inside) { r.exitInterior(); setInside(null); setHotId(null) } setTask({ kind: 'jog' }); setFade(false) }, 280)
+  }
+  useEffect(() => { if (g.jogReq) startJog() /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [g.jogReq])
 
   const startShop = () => {
     const r = rendRef.current; if (!r || fade) return
@@ -316,6 +327,7 @@ export default function World() {
     if (!t) return
     if (t.kind === 'penalty') { if (perf !== undefined) g.act(t.act, { perf }) }
     else if (t.kind === 'chores') { if (perf !== undefined) g.act('chores', { perf }) }
+    else if (t.kind === 'jog') { if (perf !== undefined) g.act('exercise', { perf }) }
     else if (t.kind === 'service') { if (perf !== undefined) g.act('community', { perf, donation }) }
     else if (t.kind === 'overtime') { if (perf !== undefined) g.act('overtime', { perf }) }
     else if (t.kind === 'market') { if (perf !== undefined) g.act('hustle', { perf }) }
@@ -505,6 +517,7 @@ export default function World() {
       {task?.kind === 'study' && rendRef.current && <StudyTask r={rendRef.current} mode={task.mode} onDone={() => setTask(null)} />}
       {task?.kind === 'penalty' && rendRef.current && <PenaltyTask r={rendRef.current} pitch={district.places.find((p) => p.id === 'pitch')!.rect} onDone={(perf) => endTask(perf)} />}
       {task?.kind === 'chores' && rendRef.current && <ChoresTask r={rendRef.current} motherId={INTERIORS.home?.people.find((p) => p.persistent === 'mother')?.id ?? null} onDone={(perf) => endTask(perf)} />}
+      {task?.kind === 'jog' && rendRef.current && <JogTask r={rendRef.current} pitch={district.places.find((p) => p.id === 'pitch')!.rect} onDone={(perf) => endTask(perf)} />}
       {task?.kind === 'shop' && rendRef.current && <ShopTask r={rendRef.current} items={getShopItems(life)} cash={life.character.stats.cash} energy={life.character.stats.energy} onBuy={(itemId, pricePct) => g.act('shop', { itemId, pricePct })} onDone={() => endTask()} />}
       {task?.kind === 'service' && rendRef.current && <WorshipTask r={rendRef.current} cash={life.character.stats.cash} onDone={(perf, don) => endTask(perf, don)} />}
       {task?.kind === 'overtime' && rendRef.current && <OvertimeTask r={rendRef.current} onDone={(perf) => endTask(perf)} />}
@@ -526,7 +539,7 @@ export default function World() {
       )}
 
       {/* joystick */}
-      {(!task || task.kind === 'chores' || task.kind === 'shop') && <div className="absolute left-4 bottom-[5.2rem] w-28 h-28 rounded-full touch-none" style={{ background: '#ffffff22', border: '3px solid #ffffff55', touchAction: 'none' }}
+      {(!task || task.kind === 'chores' || task.kind === 'shop' || task.kind === 'jog') && <div className="absolute left-4 bottom-[5.2rem] w-28 h-28 rounded-full touch-none" style={{ background: '#ffffff22', border: '3px solid #ffffff55', touchAction: 'none' }}
         onPointerDown={onJoyDown} onPointerMove={onJoyMove} onPointerUp={onJoyUp} onPointerCancel={onJoyUp} aria-label="Movement joystick">
         <div className="absolute w-12 h-12 rounded-full" style={{ left: 'calc(50% - 24px)', top: 'calc(50% - 24px)', transform: `translate(${knob.x}px, ${knob.y}px)`, background: knob.on ? '#ffd23f' : '#ffffffaa', border: '3px solid #1c1b22' }} />
       </div>}
