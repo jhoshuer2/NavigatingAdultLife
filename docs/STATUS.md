@@ -17,7 +17,7 @@ _Last updated alongside the M1 build. Source of truth for requirements: `docs/PR
 | M1-F08 | Careers (5 tracks x 4 levels) | Done |
 | M1-F09 | Money (yearly settlement, tax, rent, lifestyle, black tax events) | Done |
 | M1-F10 | Relationships (basic, marriage, children) | Done |
-| M1-F11 | Events (107, branching, flags, follow-ups, templating) | Done (see content gaps) |
+| M1-F11 | Events (138, branching, flags, follow-ups, templating) | Done (see content gaps) |
 | M1-F12 | Go-Slow Dash, On Foot and Danfo modes (3D, Three.js) | Done |
 | M1-F13 | Coins to cash with yearly cap | Done |
 | M1-F14 | Quests (8) | Done |
@@ -31,7 +31,7 @@ _Last updated alongside the M1 build. Source of truth for requirements: `docs/PR
 | M1-F22 | Accessibility baseline | Partly: labels, keyboard on forms, reduced motion, large text; no full audit yet |
 | M1-F23 | Consent-gated analytics | Done (local counters only) |
 | M1-F24 | PWA | Done (installable, precached) |
-| M1-F25 | Pop-quiz study (SHOULD) | Done (~40 written questions plus generated maths; target was 120) |
+| M1-F25 | Pop-quiz study (SHOULD) | Done (89 written questions plus generated maths; answer order shuffled) |
 | M1-F26 | Playtime Tokens (client side, mock top-up) | Done |
 | M1-F27 | Playtest feedback button | Done |
 
@@ -47,17 +47,17 @@ _Last updated alongside the M1 build. Source of truth for requirements: `docs/PR
 | AC-M1-06 runner >= 55 FPS on mid-range Android | **Not verified.** Software-rendered headless run only. Needs a real-device check (quality governor is in place) |
 | AC-M1-07 >= 8 endings reachable | Met: all 9 verified by hand-built scenarios; bots reach 5 |
 | AC-M1-08 save round trip | Met (test) |
-| AC-M1-09 event repeat rate | **Not met as written.** About 80% of events overlap between two consecutive lives (107 events, ~66 seen per life). Needs more content (M2 target 220). Within a life, repeats are limited by cooldowns |
+| AC-M1-09 event repeat rate | **Not met as written.** About 75-80% of events overlap between two consecutive lives (138 events, ~70 seen per life). Needs more content (M2 target 220). Within a life, repeats are limited by cooldowns |
 | AC-M1-10 first load budget | Met on size: initial JS ~126 KB gzip; Three.js (125 KB) loads only for the runner. Lighthouse timing not measured |
 | AC-M1-11 no hard-coded content in engine | Met |
 | AC-M1-12 Lighthouse a11y >= 90 / offline | Offline precache done; Lighthouse not run |
-| AC-M1-13 token meter | Implemented; unit tests for the meter are not written yet |
+| AC-M1-13 token meter | Met: unit tests cover welcome grant, daily refill cap, spend order, unlimited mode |
 
 ## Known gaps and next steps
 
 1. Real-device performance check of Go-Slow Dash (low-end Android) and tuning of the quality governor.
 2. More events (variety), more quiz questions (to 120), per-career events in the weaker tracks.
-3. Dedicated tests for the token meter, education paths and the in-game paywall.
+3. Dedicated scenario tests for education paths and the in-game paywall UI.
 4. Owner playtest: cultural review of events (use the in-game flag button), balance feedback.
 5. Choose a hosting target (Cloudflare Pages is the PRD recommendation) and add a deploy step.
 6. M2: accounts and server-side token ledger with real payments, explorable 3D districts.
