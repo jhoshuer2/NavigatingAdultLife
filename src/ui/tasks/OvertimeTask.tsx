@@ -64,7 +64,7 @@ export function OvertimeTask({ r, onDone }: { r: WorldRenderer; onDone: (perf: n
           <>
             <div className="bar mb-2"><i style={{ width: `${Math.max(0, left) / PER * 100}%`, background: left < 2.5 ? '#ff6b5e' : '#2fd27b' }} /></div>
             <div className="card p-3 mb-2 font-bold leading-snug" style={{ background: '#f4f1e6', color: '#1c1b22', transform: 'rotate(-0.6deg)' }}>📄 {deck[i].t}</div>
-            <div className="grid grid-cols-3 gap-2">{TRAYS.map((t) => <button key={t.id} className="card-btn !p-2 text-center" onClick={() => answer(t.id)}><div className="text-3xl">{t.icon}</div><div className="text-[11px] font-bold">{t.name}</div></button>)}</div>
+            <div className="grid grid-cols-3 gap-2">{TRAYS.map((t) => <button key={t.id} className="tile !min-h-[72px] !p-1.5" onClick={() => answer(t.id)}><span className="text-3xl leading-none">{t.icon}</span><span className="font-display text-[11px] uppercase">{t.name}</span></button>)}</div>
           </>
         ) : (
           <div className="pop">

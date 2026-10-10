@@ -86,7 +86,7 @@ export function CookTask({ r, free, onDone }: { r: WorldRenderer; free: boolean;
         {phase === 'pick' && (
           <>
             <div className="text-xs font-bold opacity-80 mb-1.5">Recipe needs: {recipe.need.map((n) => SHELF.find((s) => s.id === n)!.e).join(' ')} {free ? '(the family provides the ingredients)' : '(ingredients cost ₦1,500)'}</div>
-            <div className="grid grid-cols-4 gap-2">{SHELF.map((s) => <button key={s.id} className="card-btn !p-2 text-center" disabled={added.includes(s.id)} onClick={() => add(s.id)} aria-label={s.id}><div className="text-3xl">{s.e}</div><div className="text-[10px] font-bold">{s.id}</div></button>)}</div>
+            <div className="grid grid-cols-4 gap-2">{SHELF.map((s) => <button key={s.id} className="tile !min-h-[72px] !p-1.5" disabled={added.includes(s.id)} onClick={() => add(s.id)} aria-label={s.id}><span className="text-3xl leading-none">{s.e}</span><span className="font-display text-[11px] uppercase">{s.id}</span></button>)}</div>
           </>
         )}
         {phase === 'stir' && (

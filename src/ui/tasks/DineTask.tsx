@@ -38,7 +38,7 @@ export function DineTask({ r, cash, onDone }: { r: WorldRenderer; cash: number; 
         {phase === 'menu' && (
           <div className="grid gap-2">
             <div className="text-xs font-bold opacity-80">Menu</div>
-            {MENU.map((d) => <button key={d.id} className="card-btn !py-2 flex items-center justify-between gap-2" disabled={cash < d.price} onClick={() => order(d)}><span><b>{d.e} {d.name}</b></span><span className="chip">₦{d.price.toLocaleString()}</span></button>)}
+            {MENU.map((d) => <button key={d.id} className="tile !min-h-[72px] !p-1.5" disabled={cash < d.price} onClick={() => order(d)}><span className="text-3xl leading-none">{d.e}</span><span className="font-display text-[11px] uppercase text-center leading-tight">{d.name}</span><span className="chip chip-gold !py-0 !text-[11px]">₦{d.price.toLocaleString()}</span></button>)}
           </div>
         )}
         {(phase === 'wait' || phase === 'eat') && <div className="text-center text-sm py-3">{phase === 'wait' ? 'Waiting for your food…' : `Eating ${dish?.name}…`}</div>}

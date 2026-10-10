@@ -59,7 +59,7 @@ export function TalkTask({ r, partner, role, setting, rounds, title, greet, scri
       {phase === 'ask' && ex && (
         <>
           <div className="text-xs opacity-70 mb-1.5">{partner.name} says: “{ex.npc}”</div>
-          <div className="grid gap-1.5">{order.map((k) => <button key={k} className="card-btn !py-2 text-left" onClick={() => choose(k)}>{ex.options[k].text}</button>)}</div>
+          <div className="grid gap-1.5">{order.map((k, i) => <button key={k} className="card-btn !py-2 flex items-center gap-2.5" onClick={() => choose(k)}><span className="grid place-items-center w-7 h-7 rounded-full shrink-0 font-display text-sm" style={{ background: 'var(--gold)', color: '#3b2300' }}>{'ABCD'[i]}</span><span className="font-bold text-sm">{ex.options[k].text}</span></button>)}</div>
         </>
       )}
       {(phase === 'wait' || phase === 'greet') && <div className="text-sm opacity-80 py-3 text-center">{phase === 'greet' ? 'Saying hello…' : '…'}</div>}

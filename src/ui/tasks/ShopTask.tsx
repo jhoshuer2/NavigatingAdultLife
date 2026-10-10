@@ -106,7 +106,7 @@ export function ShopTask({ r, items, cash, energy, onBuy, onDeliver, onDone }: {
           ) : (
             <div className="mt-2.5">
               <div className="text-xs font-bold opacity-80 mb-1.5">Make an offer (seller{tries ? ' is losing patience' : ''}):</div>
-              <div className="grid grid-cols-3 gap-2">{[0.7, 0.8, 0.9].map((p) => <button key={p} className="card-btn !p-2 text-center" onClick={() => offer(p)}><div className="font-black">{nairaShort(Math.round(cur.price * p))}</div><div className="text-[11px] opacity-70">{Math.round((1 - p) * 100)}% off</div></button>)}</div>
+              <div className="grid grid-cols-3 gap-2">{[0.7, 0.8, 0.9].map((p) => <button key={p} className="tile !min-h-[72px] !p-1.5" onClick={() => offer(p)}><span className="font-display text-lg">{nairaShort(Math.round(cur.price * p))}</span><span className="chip chip-green !py-0 !text-[11px]">−{Math.round((1 - p) * 100)}%</span></button>)}</div>
             </div>
           )}
         </div>

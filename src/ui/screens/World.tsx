@@ -749,7 +749,7 @@ function Minimap({ district, x, z, h, onOpen }: { district: District; x: number;
   const base = useMemo(() => {
     const c = drawBase(district, R); const g = c.getContext('2d')!; const k = R / (WORLD.half * 2)
     g.font = `${S * 0.24}px system-ui`; g.textAlign = 'center'; g.textBaseline = 'middle'
-    for (const p of district.places) { const X = (p.door.x + WORLD.half) * k, Y = (p.door.z + WORLD.half) * k; g.fillStyle = '#1c1b22cc'; g.beginPath(); g.arc(X, Y, S * 0.12, 0, Math.PI * 2); g.fill(); g.fillText(p.icon, X, Y + 1) }
+    for (const p of district.places) { const X = (p.door.x + WORLD.half) * k, Y = (p.door.z + WORLD.half) * k; g.fillStyle = '#2a1a7acc'; g.beginPath(); g.arc(X, Y, S * 0.12, 0, Math.PI * 2); g.fill(); g.fillText(p.icon, X, Y + 1) }
     return c
   }, [district])
   useEffect(() => {
@@ -759,8 +759,8 @@ function Minimap({ district, x, z, h, onOpen }: { district: District; x: number;
   }, [base, x, z, h])
   return (
     <button className="relative rounded-full pointer-events-auto shrink-0 p-0" style={{ width: S, height: S }} onClick={onOpen} aria-label="Open the full map">
-      <canvas ref={ref} width={R} height={R} className="rounded-full" style={{ width: S, height: S, border: '3px solid #1c1b22', boxShadow: '0 0 0 2px #fff8ea66' }} />
-      <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[10px] font-black px-1.5 rounded-full" style={{ background: '#ffd23f', color: '#1c1b22' }}>🗺️ MAP</span>
+      <canvas ref={ref} width={R} height={R} className="rounded-full" style={{ width: S, height: S, border: '3px solid rgba(255,255,255,.85)', boxShadow: '0 0 0 3px #3b22a8, 0 6px 16px rgba(0,0,0,.5)' }} />
+      <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 chip chip-gold !py-0 !px-1.5 !text-[10px]"><Icon name="map" size={11} color="#3b2300" />MAP</span>
     </button>
   )
 }
@@ -778,8 +778,8 @@ function MapModal({ district, x, z, h, hour, life, sugPlace, onClose, onGo }: { 
     g.font = '28px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'
     for (const p of district.places) {
       const X = (p.door.x + WORLD.half) * k, Y = (p.door.z + WORLD.half) * k, st = stateOf(p.id)
-      g.beginPath(); g.arc(X, Y, 24, 0, Math.PI * 2); g.fillStyle = st === 'open' ? '#1c1b22' : '#55555f'; g.fill()
-      g.lineWidth = p.id === sel ? 6 : p.id === sugPlace ? 5 : 2; g.strokeStyle = p.id === sel ? '#2fd27b' : p.id === sugPlace ? '#ffd23f' : '#fff8ea88'; g.stroke()
+      g.beginPath(); g.arc(X, Y, 24, 0, Math.PI * 2); g.fillStyle = st === 'open' ? '#2a1a7a' : '#55555f'; g.fill()
+      g.lineWidth = p.id === sel ? 6 : p.id === sugPlace ? 5 : 2; g.strokeStyle = p.id === sel ? '#2bd978' : p.id === sugPlace ? '#ffc72c' : '#ffffffaa'; g.stroke()
       g.fillText(st === 'closed' ? '🔒' : p.icon, X, Y + 2)
     }
     drawPlayer(g, S, x, z, h, 16)
@@ -794,20 +794,19 @@ function MapModal({ district, x, z, h, hour, life, sugPlace, onClose, onGo }: { 
   const place = district.places.find((p) => p.id === sel)
   const st = sel ? stateOf(sel) : null
   return (
-    <Modal title={`🗺️ ${DISTRICTS[life.character.housing.districtId]?.name ?? 'Your area'}`} onClose={onClose}>
-      <canvas ref={ref} width={S} height={S} className="w-full rounded-2xl touch-none" style={{ border: '3px solid #1c1b22', aspectRatio: '1 / 1' }} onPointerUp={tap} aria-label="Map. Tap a place to select it." />
-      <div className="text-[11px] opacity-70 mt-1">▲ You · yellow ring = suggested next stop · 🔒 closed right now</div>
+    <Modal title={DISTRICTS[life.character.housing.districtId]?.name ?? 'Your area'} onClose={onClose}>
+      <canvas ref={ref} width={S} height={S} className="w-full rounded-3xl touch-none" style={{ border: '3px solid rgba(255,255,255,.7)', boxShadow: '0 8px 24px rgba(0,0,0,.5)', aspectRatio: '1 / 1' }} onPointerUp={tap} aria-label="Map. Tap a place to select it." />
+      <div className="flex gap-1.5 mt-2 text-[11px] font-bold opacity-80"><span className="chip !py-0.5">▲ You</span><span className="chip chip-gold !py-0.5">Next stop</span><span className="chip !py-0.5">🔒 Closed</span></div>
       {place ? (
-        <div className="card p-3 mt-2 flex items-center gap-3">
-          <div className="text-3xl">{place.icon}</div>
-          <div className="flex-1 min-w-0"><div className="font-black leading-tight">{place.name}</div><div className="text-xs opacity-75">{st === 'closed' ? `Closed. Opens ${fmtClock(opensAt(place.id))}` : st === 'inactive' ? 'Nothing for you here right now' : place.blurb}</div></div>
-          <button className="btn btn-green !min-h-10 !px-4" onClick={() => onGo(place.id)}>🚶 Go</button>
+        <div className="hud-glass rounded-2xl p-3 mt-3 flex items-center gap-3 pop" key={place.id}>
+          <div className="w-12 h-12 rounded-2xl grid place-items-center text-3xl shrink-0" style={{ background: 'radial-gradient(circle at 30% 20%, #8a5cff, #3b22a8)' }}>{st === 'closed' ? '🔒' : place.icon}</div>
+          <div className="flex-1 min-w-0"><div className="font-display uppercase leading-tight">{place.name}</div>{st !== 'open' && <div className="text-xs text-yellow-300 font-bold">{st === 'closed' ? `Opens ${fmtClock(opensAt(place.id))}` : 'Nothing here now'}</div>}</div>
+          {st !== 'inactive' && <Btn variant="green" size="sm" onClick={() => onGo(place.id)}><Icon name="pin" size={16} /> Go</Btn>}
         </div>
-      ) : <div className="text-sm opacity-75 mt-2">Tap a place on the map to see it and walk there.</div>}
-      <div className="grid grid-cols-2 gap-1.5 mt-2">
-        {district.places.map((p) => <button key={p.id} className="chip justify-start" style={{ opacity: stateOf(p.id) === 'open' ? 1 : 0.55, outline: p.id === sel ? '2px solid #2fd27b' : 'none' }} onClick={() => setSel(p.id)}>{p.icon} {p.name}</button>)}
+      ) : <div className="text-sm opacity-70 text-center mt-3">Tap a place</div>}
+      <div className="grid grid-cols-4 gap-2 mt-3">
+        {district.places.map((p) => <button key={p.id} className={`tile !min-h-[64px] !p-1 ${p.id === sel ? 'is-on' : ''}`} style={{ opacity: stateOf(p.id) === 'open' ? 1 : 0.55 }} onClick={() => setSel(p.id)} aria-label={p.name}><span className="text-2xl leading-none">{stateOf(p.id) === 'closed' ? '🔒' : p.icon}</span></button>)}
       </div>
-      <button className="btn w-full mt-3" onClick={onClose}>Close map</button>
     </Modal>
   )
 }

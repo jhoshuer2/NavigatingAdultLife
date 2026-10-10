@@ -75,9 +75,9 @@ export function StudyTask({ r, mode, onDone }: { r: WorldRenderer; mode: StudyMo
         {q.options.map((o, i) => {
           const picked = fb && fb.picked === i, right = fb && q.answer === i
           return (
-            <button key={i} className="card-btn !py-2" disabled={!!fb} onClick={() => { audio.sfx('click'); answer(i) }}
+            <button key={i} className="card-btn !py-2 flex items-center gap-2.5" disabled={!!fb} onClick={() => { audio.sfx('click'); answer(i) }}
               style={fb ? { borderColor: right ? '#2fd27b' : picked ? '#ff6b5e' : undefined, background: right ? '#1d5a3a' : picked ? '#5a1f24' : undefined, opacity: 1 } : undefined}>
-              <span className="font-extrabold mr-2">{'ABCD'[i]}.</span>{o}
+              <span className="grid place-items-center w-7 h-7 rounded-full shrink-0 font-display text-sm bg-white/15">{'ABCD'[i]}</span><span className="font-bold text-sm">{o}</span>
             </button>
           )
         })}

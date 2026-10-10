@@ -177,7 +177,7 @@ export function MatchTask({ r, pitch, actAs, onDone }: { r: WorldRenderer; pitch
         <div className="absolute inset-x-0 bottom-0 z-30 px-3 pt-3 pb-4 safe-pad rounded-t-3xl pop" style={{ background: '#14121ff5', borderTop: '2px solid #ffffff22' }}>
           <div className="font-display text-2xl text-danfo">⚽ Find a team</div>
           <div className="text-xs opacity-75 mb-2">Three-a-side. Pick a squad that needs a player, then play 90 minutes (fast).</div>
-          <div className="grid gap-2">{TEAMS.map((tm) => <button key={tm.id} className="card-btn" onClick={() => { setTeam(tm); setPhase('play'); r.say('player', `I am in, ${tm.name}!`, 2) }}><div className="flex justify-between"><b>{tm.name}</b><span className="chip">{tm.stars}</span></div><div className="text-xs opacity-75">{tm.blurb} Teammates: {tm.mates.join(' and ')}</div></button>)}</div>
+          <div className="grid gap-2">{TEAMS.map((tm) => <button key={tm.id} className="card-btn" onClick={() => { setTeam(tm); setPhase('play'); r.say('player', `I am in, ${tm.name}!`, 2) }}><div className="flex justify-between items-center"><span className="font-display uppercase">{tm.name}</span><span className="chip chip-gold">{tm.stars}</span></div><div className="text-xs opacity-75 mt-0.5">{tm.mates.join(' · ')}</div></button>)}</div>
           <button className="btn w-full mt-2" onClick={() => onDone(-1)}>Not now</button>
         </div>
       )}
