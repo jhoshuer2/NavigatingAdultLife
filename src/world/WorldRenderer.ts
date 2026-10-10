@@ -368,7 +368,7 @@ export class WorldRenderer {
     const words = text.split(' '); const lines: string[] = []; let cur = ''
     for (const w of words) { const t = cur ? cur + ' ' + w : w; if (g.measureText(t).width > 440 && cur) { lines.push(cur); cur = w } else cur = t }
     if (cur) lines.push(cur)
-    const L = lines.slice(0, 4), lh = 46, h = L.length * lh + 36, y0 = (230 - h) / 2 + 4
+    const L = lines.slice(0, 4), lh = 46, h = L.length * lh + 36, y0 = 230 - h
     g.fillStyle = 'rgba(255,255,255,0.97)'; g.strokeStyle = '#1c1b22'; g.lineWidth = 6
     ;(g as CanvasRenderingContext2D & { roundRect: (...a: number[]) => void }).roundRect(14, y0, 484, h, 28); g.fill(); g.stroke()
     g.beginPath(); g.moveTo(236, y0 + h - 2); g.lineTo(256, y0 + h + 22); g.lineTo(276, y0 + h - 2); g.closePath(); g.fillStyle = 'rgba(255,255,255,0.97)'; g.fill()
@@ -376,7 +376,7 @@ export class WorldRenderer {
     L.forEach((l, i) => g.fillText(l, 256, y0 + 18 + lh / 2 + i * lh, 450))
     const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthWrite: false, depthTest: false })); sp.renderOrder = 10
-    sp.scale.set(7.2, 3.6, 1); return sp
+    sp.center.set(0.5, 0.03); sp.scale.set(5, 2.5, 1); return sp
   }
   /** Show a speech bubble over the player, an actor, an NPC or an interior person. */
   say(id: string, text: string, ttl = 3.2) {
@@ -419,7 +419,7 @@ export class WorldRenderer {
     for (const b of [...this.bubbles]) {
       b.t -= dt
       const w = this.whereIs(b.id)
-      if (w) { b.sprite.position.set(w.x + (b.id === 'player' ? 1.7 : -1.7), 4.9, w.z + 0.2); const f = Math.max(0.3, Math.min(1.2, this.camera.position.distanceTo(b.sprite.position) / 20)); b.sprite.scale.set(6.4 * f, 3.2 * f, 1) }
+      if (w) { b.sprite.position.set(w.x, 3.1, w.z + 0.1); const f = Math.max(0.35, Math.min(1.1, this.camera.position.distanceTo(b.sprite.position) / 22)); b.sprite.scale.set(5 * f, 2.5 * f, 1) }
       if (b.t <= 0) { b.scene.remove(b.sprite); b.sprite.material.map?.dispose(); b.sprite.material.dispose(); this.bubbles = this.bubbles.filter((x) => x !== b) }
     }
   }
