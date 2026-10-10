@@ -193,7 +193,7 @@ Each trait has one clear upside and one downside, both expressed as data modifie
 ### 4.1 Flow (≤ 120 seconds, skippable with "Randomise / Spin")
 Order revised after the Lagos Life reference (5.7). One decision per screen, with a progress indicator and Back.
 1. **Look:** gender, hairstyle (afro, low cut, cornrows, braids, twists, locs, bun, ponytail, shaved, bald; gele/hijab/cap as outfit options), face shape (4), facial hair (M), skin tone (10 curated swatches), hair colour, outfit type (casual, hoodie, office, chill, owambe, site work, traditional: buba & sokoto, agbada, iro & buba, boubou, kaftan), **fabric** (plain, Ankara, Adire, Aso-oke), top/bottom colours. Live preview with **drag-to-rotate**. School uniform is applied automatically in school.
-2. **Personality:** pick **2 of 10+ traits** as cards with a witty name and a one-line perk (3.8).
+2. **Personality:** pick **2 of 14 traits** as cards with a witty name and a one-line perk (3.8).
 3. **Dream:** pick one big life goal with a measurable target (8.4). Changeable once, at age 18.
 4. **Birth Lottery:** a **reveal** of your starting circumstances as a named archetype with explicit perks and constraints (e.g., a small starting loan with weekly repayments but faster skill learning; a comfortable start with family expectations). Sets starting Cash, school type, parental support and debts. **One re-roll** per life; hard starts earn the underdog Cowries bonus, and every achievement stays earnable from any start. Per life vs per account: Q19.
 5. **Home:** choose a starting home in your city from 2–3 options tagged *Hard start / Balanced / Big spender* with start cash and rent; a higher tier is shown **locked** ("work your way here"). Lagos only in M1 (Q20).
@@ -517,7 +517,7 @@ Part of M1 but listed first so agents do it in order.
 | ID | Feature | Details |
 |---|---|---|
 | M1-F01 | Title screen & main menu | New Life, Continue, Achievements, Settings, About/Credits |
-| M1-F02 | Character creation | Per Section 4.1: Look (incl. fabric and drag-to-rotate preview), 2 of 10 traits, Dream (5 goals), Birth Lottery (6 archetypes, 1 re-roll), Home pick, heritage/name, Randomise/Spin |
+| M1-F02 | Character creation | Per Section 4.1: Look (incl. fabric and drag-to-rotate preview), 2 of 14 traits, Dream (5 goals), Birth Lottery (6 archetypes, 1 re-roll), Home pick, heritage/name, Randomise/Spin |
 | M1-F03 | Core engine | Yearly loop, stats, Energy, seeded RNG, state reducer, undo-free (no save-scumming: autosave each year; SHOULD allow "Resume from last year" only) |
 | M1-F04 | HUD | Name/age/stage, 5 stats with deltas, Energy bar, year counter, quick access to Quests/Achievements/Settings |
 | M1-F05 | Activity system | ≥ 12 activities with stage gating (study, play, chores, work, hustle, socialise, rest, exercise, worship/community, mini-game, shop, family time) |
