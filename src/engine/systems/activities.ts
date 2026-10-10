@@ -47,7 +47,7 @@ function finish(ctx: Ctx, before: StatDelta[], text: string) {
   log(ctx.s, 'activity', text)
 }
 
-export interface ActivityArgs { target?: NpcRole; track?: TrackId; itemId?: string; hours?: number; appliancesOn?: number }
+export interface ActivityArgs { target?: NpcRole; track?: TrackId; itemId?: string; hours?: number; appliancesOn?: number; perf?: number }
 
 export function performActivity(ctx: Ctx, id: string, args: ActivityArgs = {}): boolean {
   const { s, rng } = ctx
@@ -171,6 +171,16 @@ export function performActivity(ctx: Ctx, id: string, args: ActivityArgs = {}): 
         applyEffects(ctx, def.effects, def.label)
         text = def.blurb
       }
+    }
+  }
+  if (args.perf !== undefined) {
+    // skill-based bonus from playing the task in the world (0 = poor, 1 = great)
+    const p = Math.max(0, Math.min(1, args.perf))
+    if (id === 'play' || id === 'exercise') { addStat(ctx, 'happiness', Math.round(p * 3), 'Great game'); addStat(ctx, 'health', Math.round(p * 2), 'Great game') }
+    else if (def.special === 'socialise' || def.special === 'familyTime' || def.special === 'chat') {
+      const role: NpcRole = args.target ?? (def.special === 'familyTime' ? 'mother' : 'friend')
+      addRel(ctx, role, Math.round(p * (def.special === 'chat' ? 3 : 6)))
+      addStat(ctx, 'happiness', Math.round(p * 2), 'Good conversation')
     }
   }
   finish(ctx, before, text)

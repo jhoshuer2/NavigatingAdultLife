@@ -161,7 +161,7 @@ export function JobsModal() {
 }
 
 export function PickModal({ kind }: { kind: 'social' | 'family' }) {
-  const { life, act, openSheet } = useGame()
+  const { life, openSheet, startTalk } = useGame()
   if (!life) return null
   const roles: NpcRole[] = kind === 'social' ? ['friend', 'friend2', 'partner'] : ['mother', 'father', 'sibling', 'partner', 'child']
   const entries = roles.map((r) => ({ r, n: life.npcs[life.roles[r] ?? ''] })).filter((e) => e.n && e.n.alive && (kind === 'family' || e.r !== 'partner' || true))
@@ -170,13 +170,13 @@ export function PickModal({ kind }: { kind: 'social' | 'family' }) {
     <Modal title={kind === 'social' ? 'Who do you hang out with?' : 'Family time'} onClose={() => openSheet(null)}>
       <div className="grid gap-2">
         {entries.filter((e) => e.r !== 'child').map(({ r, n }) => (
-          <button key={n.id} className="card-btn" onClick={() => act(kind === 'social' ? 'socialise' : 'familyTime', { target: r })}>
+          <button key={n.id} className="card-btn" onClick={() => startTalk(kind === 'social' ? 'hang' : 'family', r)}>
             <div className="flex justify-between"><b>{n.name} <span className="opacity-60 text-xs">({r === 'friend2' ? 'friend' : r})</span></b><span className="chip">❤ {n.closeness}</span></div>
             <div className="bar mt-1.5"><i style={{ width: `${n.closeness}%`, background: '#ff7ab8' }} /></div>
           </button>
         ))}
         {kids.length > 0 && kids.slice(0, 1).map((k) => (
-          <button key={k.id} className="card-btn" onClick={() => act('familyTime', { target: 'child' })}>
+          <button key={k.id} className="card-btn" onClick={() => startTalk('family', 'child')}>
             <div className="flex justify-between"><b>{k.name} <span className="opacity-60 text-xs">(child)</span></b><span className="chip">❤ {k.closeness}</span></div>
           </button>
         ))}

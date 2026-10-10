@@ -7,6 +7,11 @@ import { buildDistrict, DISTRICTS, SPAWN, WORLD, type District, type PlaceId } f
 import { WorldRenderer, type Near, type NearInside, type WorldNpc } from '../../world/WorldRenderer'
 import { INTERIORS, type HotAction } from '../../world/interiors'
 import { fmtClock, isNight, isOpen, opensAt } from '../../world/time'
+import type { NpcRole } from '@engine/core/types'
+import { StudyTask, type StudyMode } from '../tasks/StudyTask'
+import { PenaltyTask } from '../tasks/PenaltyTask'
+import { TalkTask, type Partner } from '../tasks/TalkTask'
+import type { Setting } from '@content/dialogue'
 import { npcSpot, placeActive, suggest } from '../../world/guide'
 import { audio } from '@platform/audio'
 
@@ -23,6 +28,13 @@ export default function World() {
   const [fade, setFade] = useState(false)
   const [sleep, setSleep] = useState<{ from: number; elapsed: number } | null>(null)
   const intent = useRef<'sleep' | null>(null)
+  type Task =
+    | { kind: 'study'; mode: StudyMode }
+    | { kind: 'penalty'; act: string }
+    | { kind: 'talk'; partner: Partner; role: NpcRole; setting: Setting; rounds: number; title: string; actId: string; hidden?: string }
+  const [task, setTask] = useState<Task | null>(null)
+  const [hang, setHang] = useState<{ role: NpcRole; npcId: string; name: string; gender: 'male' | 'female'; dest: PlaceId } | null>(null)
+  const [destPick, setDestPick] = useState<{ role: NpcRole; npcId: string } | null>(null)
   const hourRef = useRef(hour); hourRef.current = hour
   const host = useRef<HTMLDivElement>(null)
   const rendRef = useRef<WorldRenderer | null>(null)
@@ -40,7 +52,7 @@ export default function World() {
   const district = useMemo<District>(() => buildDistrict(districtId), [districtId])
   const age = life?.character.age ?? 6
   const ageBand = age < 12 ? 0 : age < 18 ? 1 : 2
-  const modalOpen = !!g.sheet || life?.phase !== 'action' || !!life?.quiz || !!hotId || !!sleep || fade || mapOpen
+  const modalOpen = !!g.sheet || life?.phase !== 'action' || (!!life?.quiz && !task) || !!task || !!destPick || !!hotId || !!sleep || fade || mapOpen
 
   const month = useMemo(() => {
     if (!life) return 0
@@ -132,7 +144,7 @@ export default function World() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modalOpen, near, nearIn, hour, fade, inside])
 
-  const enter = (place: PlaceId, want?: 'sleep') => {
+  const enter = (place: PlaceId, want?: 'sleep', then?: () => void) => {
     const r = rendRef.current; if (!r || !life || r.inside || fade) return
     const p = district.places.find((x) => x.id === place); const def = INTERIORS[place]
     if (!p || !def) { g.openPlace(place); return }
@@ -151,6 +163,7 @@ export default function World() {
       setAppl({ light: st.light, tv: st.tv, fan: st.fan })
       if (r.enterInterior(place, people, st, { x: p.door.x, z: p.door.z })) {
         setInside(place); setNearIn({ hotspot: null, person: null, exit: false }); setNear({ place: null, npc: null })
+        if (then) setTimeout(then, 60)
         if (want === 'sleep') { intent.current = 'sleep'; const b = r.hotspotPos('bed'); if (b) { r.setInteriorMarker('bed'); r.walkTo(b.x, b.z) } }
       }
       setFade(false)
@@ -181,11 +194,100 @@ export default function World() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [near, nearIn, g, hour, fade, life])
 
+
+  // ---------- in-world tasks ----------
+  const enabledAct = (id: string) => { const a = life ? getActivities(life).find((x) => x.def.id === id) : null; return a?.enabled ? null : (a?.reason ?? 'Not available right now.') }
+  useEffect(() => { g.setTaskActive(!!task && task.kind === 'study'); return () => g.setTaskActive(false) }, [task])
+  const startStudy = (mode: StudyMode) => {
+    const why = enabledAct('study'); if (why) { g.toast(why); return }
+    g.act('study'); setTask({ kind: 'study', mode })
+  }
+  const startPenalty = (actId: string) => {
+    const r = rendRef.current; if (!r || fade) return
+    const why = enabledAct(actId); if (why) { g.toast(why); return }
+    setFade(true)
+    setTimeout(() => { if (r.inside) { r.exitInterior(); setInside(null); setHotId(null) } setTask({ kind: 'penalty', act: actId }); setFade(false) }, 280)
+  }
+  useEffect(() => { if (g.penaltyReq) startPenalty(g.penaltyReq.act) /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [g.penaltyReq])
+
+  const settingHere = (): Setting => { const p = rendRef.current?.inside; return p === 'home' ? 'home' : p === 'mamaput' ? 'mamaput' : p === 'school' ? 'school' : p === 'office' ? 'office' : near.place === 'pitch' ? 'pitch' : 'street' }
+  const beginTalk = (kind: 'chat' | 'hang' | 'family', role: NpcRole) => {
+    const r = rendRef.current; if (!r || !life) return
+    const npc = life.npcs[life.roles[role] ?? ''] ?? (role === 'child' ? life.npcs[life.character.childrenIds[0]] : undefined); if (!npc) return
+    const actId = kind === 'chat' ? 'chat' : kind === 'hang' ? 'socialise' : 'familyTime'
+    const why = enabledAct(actId); if (why) { g.toast(why); return }
+    if (kind === 'hang' && !r.inside && role !== 'mother' && role !== 'father' && role !== 'sibling' && role !== 'child') { setDestPick({ role, npcId: npc.id }); return }
+    let partner: Partner; let hidden: string | undefined
+    if (r.inside) {
+      const def = INTERIORS[r.inside]; const person = def?.people.find((p) => p.persistent === role)
+      if (person) partner = { id: person.id, name: npc.name }
+      else { const me = r.position; r.addActor('buddy', { name: npc.name, gender: npc.gender, x: me.x + 1.6, z: me.z, heading: -Math.PI / 2 }); partner = { id: 'buddy', name: npc.name } }
+    } else if (r.npcPos(npc.id)) partner = { id: npc.id, name: npc.name }
+    else { const me = r.position; r.addActor('buddy', { name: npc.name, gender: npc.gender, x: me.x + 1.6, z: me.z, heading: -Math.PI / 2 }); partner = { id: 'buddy', name: npc.name } }
+    setTask({ kind: 'talk', partner, role, setting: settingHere(), rounds: kind === 'chat' ? 2 : 3, title: kind === 'chat' ? `Chatting with ${npc.name}` : kind === 'hang' ? `Hanging out with ${npc.name}` : `Time with ${npc.name}`, actId, hidden })
+  }
+  useEffect(() => { if (g.talkReq) beginTalk(g.talkReq.kind, g.talkReq.role as NpcRole) /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [g.talkReq])
+
+  const startHang = (dest: PlaceId) => {
+    const r = rendRef.current; if (!r || !destPick || !life) return
+    const npc = life.npcs[destPick.npcId]; const me = r.position
+    r.addActor('buddy', { name: npc.name, gender: npc.gender, x: me.x + 1.5, z: me.z + 0.5 })
+    r.hideNpc(npc.id, true); r.followPlayer('buddy', true)
+    setHang({ role: destPick.role, npcId: npc.id, name: npc.name, gender: npc.gender, dest }); setDestPick(null)
+    const p = district.places.find((x) => x.id === dest)
+    if (p) r.walkTo(p.door.x, p.door.z)
+    g.toast(`🚶 Walking to ${p?.name ?? 'there'} with ${npc.name}…`)
+  }
+  const cancelHang = () => { const r = rendRef.current; if (r) { r.removeActor('buddy'); r.hideNpc(hang?.npcId ?? '', false); r.followPlayer('buddy', false) } setHang(null) }
+  useEffect(() => {
+    if (!hang || task) return
+    const t = setInterval(() => {
+      const r = rendRef.current; if (!r || r.inside || fade) return
+      const d = district.places.find((x) => x.id === hang.dest); if (!d) return
+      const me = r.position
+      if (Math.hypot(me.x - d.door.x, me.z - d.door.z) > 2.2 || r.walking) return
+      clearInterval(t)
+      const npcRole = hang.role
+      if (INTERIORS[hang.dest]) {
+        r.removeActor('buddy')
+        enter(hang.dest, undefined, () => {
+          const rr = rendRef.current; if (!rr || !rr.inside) return
+          const def = INTERIORS[rr.inside]!
+          const person = def.people.find((p) => p.persistent === npcRole)
+          if (person) rr.hidePerson(person.id, true)
+          const hs = def.hotspots.find((h) => h.actions.some((a) => a.cmd === 'act:socialise')) ?? def.hotspots[0]
+          rr.placePlayer(hs.x + 0.9, hs.z + 0.6, Math.PI)
+          rr.addActor('buddy', { name: hang.name, gender: hang.gender, x: hs.x - 0.9, z: hs.z, heading: 0 })
+          setTask({ kind: 'talk', partner: { id: 'buddy', name: hang.name }, role: npcRole, setting: rr.inside === 'mamaput' ? 'mamaput' : 'street', rounds: 3, title: `Hanging out with ${hang.name}`, actId: 'socialise', hidden: person?.id })
+        })
+      } else {
+        r.followPlayer('buddy', false)
+        setTask({ kind: 'talk', partner: { id: 'buddy', name: hang.name }, role: npcRole, setting: hang.dest === 'pitch' ? 'pitch' : 'street', rounds: 3, title: `Hanging out with ${hang.name}`, actId: 'socialise' })
+      }
+    }, 300)
+    return () => clearInterval(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hang, task, fade])
+
+  const endTask = (perf?: number) => {
+    const r = rendRef.current; const t = task
+    setTask(null)
+    if (!t) return
+    if (t.kind === 'penalty') { if (perf !== undefined) g.act(t.act, { perf }) }
+    else if (t.kind === 'talk') {
+      if (r) { r.removeActor('buddy'); if (t.hidden) r.hidePerson(t.hidden, false); if (hang) r.hideNpc(hang.npcId, false) }
+      setHang(null)
+      if (perf !== undefined) g.act(t.actId, { target: t.role, perf })
+    }
+    r?.clearDirected()
+  }
+
   const toggle = (k: 'light' | 'tv' | 'fan') => { const n = { ...appl, [k]: !appl[k] }; setAppl(n); rendRef.current?.setInteriorState({ ...n, hour: sleep ? sleep.from + sleep.elapsed : hour }); audio.sfx('click') }
   const runCmd = (a: HotAction) => {
     const cmd = a.cmd
     if (cmd === 'sleep') { setHotId(null); startSleep() }
     else if (cmd.startsWith('toggle:')) toggle(cmd.slice(7) as 'light' | 'tv' | 'fan')
+    else if (cmd.startsWith('task:')) { setHotId(null); startStudy(cmd.slice(5) as StudyMode) }
     else if (cmd.startsWith('act:')) { setHotId(null); route(cmd.slice(4)) }
     else if (cmd.startsWith('chat:')) { setHotId(null); const role = cmd.slice(5); const n = Object.values(life!.npcs).find((x) => x.role === role && x.alive); if (n) g.openNpc(n.id) }
     else if (cmd === 'exit') { setHotId(null); leave() }
@@ -262,7 +364,7 @@ export default function World() {
       <div ref={host} className="absolute inset-0" onPointerDown={onCanvasDown} onPointerUp={onCanvasUp} />
 
       {/* top HUD */}
-      <div className="absolute top-2 left-2 right-2 pointer-events-none">
+      <div className={`absolute top-2 left-2 right-2 pointer-events-none ${task ? 'hidden' : ''}`}>
         <div className="flex items-start gap-2">
           <button className="card px-3 py-1.5 pointer-events-auto text-left flex-1 min-w-0" style={{ background: '#1e1a30ee' }} onClick={() => setShowHud((v) => !v)} aria-label="Toggle stats">
             <div className="flex items-baseline justify-between gap-2">
@@ -352,11 +454,29 @@ export default function World() {
         </div>
       )}
 
+      {task?.kind === 'study' && rendRef.current && <StudyTask r={rendRef.current} mode={task.mode} onDone={() => setTask(null)} />}
+      {task?.kind === 'penalty' && rendRef.current && <PenaltyTask r={rendRef.current} pitch={district.places.find((p) => p.id === 'pitch')!.rect} onDone={(perf) => endTask(perf)} />}
+      {task?.kind === 'talk' && rendRef.current && <TalkTask r={rendRef.current} partner={task.partner} role={task.role} setting={task.setting} rounds={task.rounds} title={task.title} onDone={(perf) => endTask(perf)} />}
+      {hang && !task && (
+        <div className="absolute left-3 right-3 bottom-[5.4rem] z-20 card px-3 py-2 flex items-center gap-2 pointer-events-auto" style={{ background: '#1d3a2aee' }}><span className="flex-1 text-sm font-bold">🚶 With {hang.name} → {district.places.find((p) => p.id === hang.dest)?.name}</span><button className="chip" onClick={cancelHang}>✖ Cancel</button></div>
+      )}
+      {destPick && (
+        <Modal onClose={() => setDestPick(null)}>
+          <div className="font-display text-3xl text-danfo">Where to?</div>
+          <div className="text-sm opacity-75 mb-3">You and {life.npcs[destPick.npcId]?.name} will walk there together and talk.</div>
+          <div className="grid gap-2">
+            <button className="card-btn" onClick={() => startHang('pitch')}><b>⚽ {district.places.find((p) => p.id === 'pitch')?.name}</b><div className="text-xs opacity-75">Fresh air, a ball and the neighbourhood.</div></button>
+            <button className="card-btn" onClick={() => startHang('mamaput')} disabled={!isOpen('mamaput', hour)}><b>🍲 {district.places.find((p) => p.id === 'mamaput')?.name}</b><div className="text-xs opacity-75">{isOpen('mamaput', hour) ? 'Sit down, eat and gist.' : `Closed until ${fmtClock(opensAt('mamaput'))}.`}</div></button>
+          </div>
+          <button className="btn w-full mt-3" onClick={() => setDestPick(null)}>Cancel</button>
+        </Modal>
+      )}
+
       {/* joystick */}
-      <div className="absolute left-4 bottom-[5.2rem] w-28 h-28 rounded-full touch-none" style={{ background: '#ffffff22', border: '3px solid #ffffff55', touchAction: 'none' }}
+      {!task && <div className="absolute left-4 bottom-[5.2rem] w-28 h-28 rounded-full touch-none" style={{ background: '#ffffff22', border: '3px solid #ffffff55', touchAction: 'none' }}
         onPointerDown={onJoyDown} onPointerMove={onJoyMove} onPointerUp={onJoyUp} onPointerCancel={onJoyUp} aria-label="Movement joystick">
         <div className="absolute w-12 h-12 rounded-full" style={{ left: 'calc(50% - 24px)', top: 'calc(50% - 24px)', transform: `translate(${knob.x}px, ${knob.y}px)`, background: knob.on ? '#ffd23f' : '#ffffffaa', border: '3px solid #1c1b22' }} />
-      </div>
+      </div>}
 
 
       {hotId && inside && (() => {
@@ -398,12 +518,12 @@ export default function World() {
       <div className="absolute inset-0 pointer-events-none z-40 transition-opacity duration-300" style={{ background: '#0b0a14', opacity: fade ? 1 : 0 }} />
 
       {/* bottom bar */}
-      <div className="absolute bottom-0 left-0 right-0 px-3 pt-2 pb-3 safe-pad flex gap-2" style={{ background: '#14121f', borderTop: '1px solid #ffffff14' }}>
+      {!task && <div className="absolute bottom-0 left-0 right-0 px-3 pt-2 pb-3 safe-pad flex gap-2" style={{ background: '#14121f', borderTop: '1px solid #ffffff14' }}>
         <button className="chip flex-1 justify-center !py-2.5 !text-sm" onClick={() => g.openSheet('places')}>📍 Places</button>
         <button className="chip flex-1 justify-center !py-2.5 !text-sm" onClick={() => g.openSheet('quests')}>📋 Quests</button>
         <button className="chip flex-1 justify-center !py-2.5 !text-sm" onClick={() => g.openSheet('profile')}>👤 Profile</button>
         <button className="chip flex-1 justify-center !py-2.5 !text-sm" style={{ background: '#1d5a3a' }} onClick={() => { audio.sfx('good'); if (inside) leave(); else g.goToPlace('home') }}>{inside ? '🚪 Outside' : '🏠 Home'}</button>
-      </div>
+      </div>}
     </div>
   )
 }

@@ -47,7 +47,7 @@ export const INTERIORS: Partial<Record<PlaceId, Interior>> = {
     ],
     hotspots: [
       { id: 'bed', name: 'Bed', icon: '🛏️', x: -5.4, z: -4.6, r: 1.9, actions: [{ label: 'Go to sleep', icon: '😴', cmd: 'sleep' }] },
-      { id: 'desk', name: 'Desk', icon: '📚', x: -8.6, z: 1.0, r: 1.7, actions: [{ label: 'Study at your desk', icon: '📚', cmd: 'act:study' }] },
+      { id: 'desk', name: 'Desk', icon: '📚', x: -8.6, z: 1.0, r: 1.7, actions: [{ label: 'Study at your desk', icon: '📚', cmd: 'task:desk' }] },
       { id: 'tv', name: 'TV and sofa', icon: '📺', x: 0.5, z: 1.5, r: 2.0, actions: [{ label: 'Turn the TV on/off', icon: '📺', cmd: 'toggle:tv' }, { label: 'Watch TV for a while', icon: '🍿', cmd: 'act:tv' }] },
       { id: 'fan', name: 'Standing fan', icon: '🌀', x: 2.1, z: 1.7, r: 1.8, actions: [{ label: 'Turn the fan on/off', icon: '🌀', cmd: 'toggle:fan' }] },
       { id: 'light', name: 'Light switch', icon: '💡', x: 2.4, z: 5.6, r: 1.6, actions: [{ label: 'Turn the lights on/off', icon: '💡', cmd: 'toggle:light' }] },
@@ -71,12 +71,15 @@ export const INTERIORS: Partial<Record<PlaceId, Interior>> = {
       { kind: 'desk', rect: r(-6.5, -4.5, 1.2, 2.2), h: 0.9, color: 0x9a6a3a }, { kind: 'desk', rect: r(-2.5, -0.5, 1.2, 2.2), h: 0.9, color: 0x9a6a3a }, { kind: 'desk', rect: r(1.5, 3.5, 1.2, 2.2), h: 0.9, color: 0x9a6a3a },
       { kind: 'desk', rect: r(-1.2, 1.2, -4.6, -3.8), h: 1.0, color: 0x6a4a2a },
       { kind: 'shelf', rect: r(7.4, 8.8, -5.6, -2.4), h: 2.2, color: 0x8a5a32 },
+      { kind: 'shelf', rect: r(2.2, 6.6, -5.9, -5.3), h: 2.2, color: 0x7a4a2a }, { kind: 'table', rect: r(3.4, 5.6, -4.6, -3.6), h: 0.9, color: 0xb5763a, id: 'libtable' },
     ],
     hotspots: [
-      { id: 'mydesk', name: 'Your desk', icon: '📚', x: -1.5, z: 0.3, r: 1.9, actions: [{ label: 'Sit and study (pop quiz)', icon: '📚', cmd: 'act:study' }] },
+      { id: 'mydesk', name: 'Your desk', icon: '📚', x: -1.5, z: 0.3, r: 1.9, actions: [{ label: 'Sit in class (lesson with the teacher)', icon: '🧑‍🏫', cmd: 'task:class' }] },
+      { id: 'library', name: 'Library corner', icon: '📖', x: 4.5, z: -2.7, r: 1.9, actions: [{ label: 'Study alone in the library', icon: '📖', cmd: 'task:library' }] },
       { id: 'mates', name: 'Classmates', icon: '🧑‍🤝‍🧑', x: -5.5, z: 3.6, r: 2.2, actions: [{ label: 'Hang out with a friend', icon: '🧑‍🤝‍🧑', cmd: 'act:socialise' }] },
     ],
-    people: [{ id: 'teacher', name: 'Teacher', role: 'teacher', x: -3.2, z: -3.4, line: 'Sit down! Open your books to page ten.' }, { id: 'f2', name: 'Classmate', role: 'friend2', x: -5.5, z: 3.1, line: 'Did you copy the assignment?', persistent: 'friend2' }],
+    people: [{ id: 'teacher', name: 'Teacher', role: 'teacher', x: -3.2, z: -3.4, line: 'Sit down! Open your books to page ten.' }, { id: 'f2', name: 'Classmate', role: 'friend2', x: -5.5, z: 3.1, line: 'Did you copy the assignment?', persistent: 'friend2' },
+      { id: 's1', name: 'Tunde', role: 'student', x: -5.5, z: 0.05, line: 'Shhh, the teacher is looking.' }, { id: 's2', name: 'Amaka', role: 'student', x: 2.5, z: 0.05, line: 'I did not read o.' }, { id: 's3', name: 'Ibrahim', role: 'student', x: 6, z: 0.05, line: 'Pass me your eraser.' }, { id: 's4', name: 'Ngozi', role: 'student', x: -1.5, z: 3.0, line: 'Is it break time yet?' }, { id: 's5', name: 'Femi', role: 'student', x: 2.5, z: 3.0, line: 'I am hungry.' }],
     windowsAt: [{ x: -7, z: -6 }, { x: 7, z: -6 }],
   },
   mamaput: {

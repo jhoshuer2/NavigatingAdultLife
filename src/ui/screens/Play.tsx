@@ -129,7 +129,7 @@ function Modals({ lite }: { lite: boolean }) {
     <>
       {phase === 'events' && <EventModal />}
       {phase === 'summary' && <SummaryModal />}
-      {(life.quiz || g.quizFeedback) && <QuizModal />}
+      {(life.quiz || g.quizFeedback) && !(g.taskActive && !lite) && <QuizModal />}
       {sheet === 'shop' && <ShopModal />}
       {sheet === 'jobs' && <JobsModal />}
       {(sheet === 'pick-social' || sheet === 'pick-family') && <PickModal kind={sheet === 'pick-social' ? 'social' : 'family'} />}

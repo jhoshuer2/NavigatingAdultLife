@@ -50,6 +50,9 @@ export class InteriorView {
   private bedGroup?: THREE.Group
   private zzz?: THREE.Sprite
   private textCache = new Map<string, THREE.SpriteMaterial>()
+  private boardCtx?: CanvasRenderingContext2D
+  private icons: THREE.Sprite[] = []
+  private boardTex?: THREE.CanvasTexture
 
   constructor(id: PlaceId) {
     const def = INTERIORS[id]
@@ -89,8 +92,19 @@ export class InteriorView {
     for (const w of d.windowsAt) { const win = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 1.6), this.windowMat); win.position.set(w.x, 2.1, d.bounds.z0 + 0.03); this.scene.add(win); const fr = new THREE.Mesh(new THREE.BoxGeometry(2.5, 1.9, 0.06), new THREE.MeshLambertMaterial({ color: 0xffffff })); fr.position.set(w.x, 2.1, d.bounds.z0 + 0.0); this.scene.add(fr) }
     // ceiling bulbs hint (visual only): small glowing disc near the middle
     const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.25, 8, 6), this.bulbMat); bulb.position.set((b.x0 + b.x1) / 2, 3.0, (b.z0 + b.z1) / 2); this.scene.add(bulb)
+    // chalkboard surface (school): text is set by setBoard()
+    const bo = d.objs.find((o) => o.kind === 'board')
+    if (bo && d.id === 'school') {
+      const c = document.createElement('canvas'); c.width = 1024; c.height = 256
+      const ctx = c.getContext('2d')!; this.boardCtx = ctx
+      this.boardTex = new THREE.CanvasTexture(c); this.boardTex.colorSpace = THREE.SRGBColorSpace
+      const w = bo.rect.x1 - bo.rect.x0, hh = bo.h * 0.7
+      const pl = new THREE.Mesh(new THREE.PlaneGeometry(w - 0.3, hh - 0.2), new THREE.MeshBasicMaterial({ map: this.boardTex }))
+      pl.position.set((bo.rect.x0 + bo.rect.x1) / 2, 0.9 + hh / 2, bo.rect.z1 + 0.115); this.scene.add(pl)
+      this.setBoard(['Class is in session', 'Sit down and open your books'])
+    }
     // hotspot icons
-    for (const h of d.hotspots) { const s = this.emoji(h.icon, 1.5); s.position.set(h.x, 2.6, h.z); this.scene.add(s) }
+    for (const h of d.hotspots) { const s = this.emoji(h.icon, 1.5); s.position.set(h.x, 2.6, h.z); this.scene.add(s); this.icons.push(s) }
   }
 
   private emoji(text: string, size: number): THREE.Sprite {
@@ -182,7 +196,7 @@ export class InteriorView {
       const persistent = p.persistent ? wanted.get(p.persistent) : undefined
       if (p.persistent && !persistent) continue
       const name = persistent?.name ?? p.name
-      const gender: Gender = persistent?.gender ?? (p.role === 'cook' || p.role === 'clerk' ? 'female' : 'male')
+      const gender: Gender = persistent?.gender ?? (p.role === 'cook' || p.role === 'clerk' || p.id === 's2' || p.id === 's4' ? 'female' : 'male')
       const parts = buildHuman({ look: hashLook(name, gender), age: p.role === 'child' ? 6 : p.role === 'teacher' || p.role === 'boss' || p.role === 'elder' || p.role === 'mother' || p.role === 'father' ? 45 : 24, scale: 1.1 })
       parts.group.position.set(p.x, 0, p.z); parts.group.rotation.y = Math.PI
       this.scene.add(parts.group)
@@ -190,6 +204,19 @@ export class InteriorView {
       this.people.set(p.id, { parts, sprite, id: p.id, name, line: p.line, x: p.x, z: p.z, persistent: persistent?.id })
     }
   }
+  setBoard(lines: string[] | null) {
+    const g = this.boardCtx, t = this.boardTex; if (!g || !t) return
+    g.fillStyle = '#24402f'; g.fillRect(0, 0, 1024, 256)
+    g.strokeStyle = '#ffffff22'; g.lineWidth = 6; g.strokeRect(6, 6, 1012, 244)
+    g.fillStyle = '#f4f1e6'; g.textAlign = 'center'; g.textBaseline = 'middle'
+    const ls = lines ?? []
+    const fs = ls.length > 3 ? 40 : 52
+    g.font = `700 ${fs}px "Comic Sans MS", "Chalkboard SE", cursive, sans-serif`
+    ls.forEach((l, i) => g.fillText(l, 512, 128 + (i - (ls.length - 1) / 2) * (fs + 14), 980))
+    t.needsUpdate = true
+  }
+  showIcons(v: boolean) { for (const s of this.icons) s.visible = v; for (const p of this.people.values()) p.sprite.visible = v && p.parts.group.visible }
+  hidePerson(id: string, hidden: boolean) { const p = this.people.get(id); if (p) { p.parts.group.visible = !hidden; p.sprite.visible = !hidden } }
   personInfo(id: string) { const p = this.people.get(id); return p ? { id: p.id, name: p.name, line: p.line, persistent: p.persistent, x: p.x, z: p.z } : null }
   allPeople() { return [...this.people.values()].map((p) => ({ id: p.id, x: p.x, z: p.z })) }
 

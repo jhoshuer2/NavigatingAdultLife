@@ -17,7 +17,7 @@ const BENEFIT: Record<string, string> = {
 }
 
 export function PlaceModal() {
-  const { life, placeId, openSheet, endActions, enterPlace, hour } = useGame()
+  const { life, placeId, openSheet, endActions, enterPlace, hour, startPenalty } = useGame()
   const route = useActivityRouter()
   const acts = useMemo(() => (life ? getActivities(life) : []), [life])
   if (!life || !placeId) return null
@@ -41,7 +41,7 @@ export function PlaceModal() {
           ? <button className="card-btn" style={{ borderColor: '#ffd23f' }} onClick={() => { audio.sfx('click'); enterPlace(placeId) }}><b>🚪 Go inside</b><div className="text-xs opacity-75">Open the door and walk in.</div></button>
           : <div className="card p-3 text-sm text-yellow-300">🔒 Closed. Opens at {fmtClock(opensAt(placeId))}.</div>)}
         {rows.map(({ def, enabled, reason, remaining }) => (
-          <button key={def.id} className="card-btn" disabled={!enabled || life.phase !== 'action' || closed} onClick={() => { audio.sfx('click'); if (def.id === 'rest' && placeId === 'home') { enterPlace('home', 'sleep'); return } if (def.id !== 'applyJob' && def.id !== 'socialise' && def.id !== 'familyTime' && def.id !== 'shop') openSheet(null); route(def.id) }}>
+          <button key={def.id} className="card-btn" disabled={!enabled || life.phase !== 'action' || closed} onClick={() => { audio.sfx('click'); if (def.id === 'rest' && placeId === 'home') { enterPlace('home', 'sleep'); return } if (def.id === 'study' && INTERIORS[placeId]) { enterPlace(placeId); return } if (placeId === 'pitch' && (def.id === 'play' || def.id === 'exercise')) { startPenalty(def.id); return } if (def.id !== 'applyJob' && def.id !== 'socialise' && def.id !== 'familyTime' && def.id !== 'shop') openSheet(null); route(def.id) }}>
             <div className="flex items-center justify-between gap-2"><b>{def.icon} {def.label}</b><span className="chip">{def.cost.energy ? `⚡${def.cost.energy}` : 'free'}{def.cost.cash ? ` · ${nairaShort(def.cost.cash)}` : ''}</span></div>
             <div className="text-xs opacity-75 mt-0.5">{closed ? <span className="text-yellow-300">Closed until {fmtClock(opensAt(placeId))}.</span> : enabled ? <>{def.blurb} <span className="opacity-70">→ {BENEFIT[def.id] ?? ''}</span></> : <span className="text-yellow-300">{reason}</span>}</div>
             {remaining !== undefined && enabled && <div className="text-[10px] opacity-50">{remaining} left this year</div>}
@@ -61,7 +61,7 @@ export function PlaceModal() {
 }
 
 export function NpcModal() {
-  const { life, npcId, openSheet, act } = useGame()
+  const { life, npcId, openSheet, startTalk } = useGame()
   if (!life || !npcId) return null
   const npc = life.npcs[npcId]
   if (!npc) return null
@@ -81,13 +81,13 @@ export function NpcModal() {
       </div>
       <div className="mt-3 text-xs opacity-70">Closeness {npc.closeness}/100</div><div className="bar"><i style={{ width: `${npc.closeness}%`, background: '#ff7ab8' }} /></div>
       <div className="grid gap-2 mt-3">
-        <button className="card-btn" disabled={!chat?.enabled || life.phase !== 'action'} onClick={() => { act('chat', { target: role }); close() }}>
-          <div className="flex justify-between"><b>💬 Chat</b><span className="chip">⚡3</span></div><div className="text-xs opacity-75">{chat?.enabled ? 'A quick catch-up. Small boost to your bond.' : chat?.reason}</div>
+        <button className="card-btn" disabled={!chat?.enabled || life.phase !== 'action'} onClick={() => startTalk('chat', role)}>
+          <div className="flex justify-between"><b>💬 Chat</b><span className="chip">⚡3</span></div><div className="text-xs opacity-75">{chat?.enabled ? 'Stand together and talk. Your replies shape the bond.' : chat?.reason}</div>
         </button>
         {hang && (
-          <button className="card-btn" disabled={!hangAct?.enabled || life.phase !== 'action'} onClick={() => { act(family ? 'familyTime' : 'socialise', { target: role }); close() }}>
+          <button className="card-btn" disabled={!hangAct?.enabled || life.phase !== 'action'} onClick={() => startTalk(family ? 'family' : 'hang', role)}>
             <div className="flex justify-between"><b>{family ? '👪 Spend time together' : '🧑‍🤝‍🧑 Hang out'}</b><span className="chip">⚡{hangAct?.def.cost.energy ?? 12}</span></div>
-            <div className="text-xs opacity-75">{hangAct?.enabled ? 'A real hangout: bigger bond, mood boost.' : hangAct?.reason}</div>
+            <div className="text-xs opacity-75">{hangAct?.enabled ? (family ? 'Sit down together and talk properly.' : 'Walk somewhere together: the pitch or the buka.') : hangAct?.reason}</div>
           </button>
         )}
       </div>

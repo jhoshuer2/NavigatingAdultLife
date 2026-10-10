@@ -89,6 +89,15 @@ export class WorldRenderer {
   private outside = { x: 0, z: 0 }
   private sleeping = false
   private shadow: THREE.Mesh
+  private camLook = new THREE.Vector3()
+  // scene directing (used by in-world tasks: class, penalties, conversations)
+  frozen = false
+  private sitting = false
+  private camOverride: { pos: [number, number, number]; look: [number, number, number]; shift?: number } | null = null
+  private viewShift = 0
+  private actors = new Map<string, { parts: HumanParts; x: number; z: number; tx: number; tz: number; follow: boolean; moving: boolean; locked: boolean; scene: THREE.Scene }>()
+  private bubbles: { sprite: THREE.Sprite; id: string; t: number; scene: THREE.Scene }[] = []
+  private ballMesh?: THREE.Mesh
 
   constructor(private container: HTMLElement, private district: District, opts: { look: Appearance; age: number; uniform: boolean; month: number; hour: number; spawn: { x: number; z: number } }) {
     const dpr = window.devicePixelRatio || 1
@@ -292,10 +301,105 @@ export class WorldRenderer {
   personAt(id: string) { return this.interior?.personInfo(id) ?? null }
   hotspotPos(id: string) { const h = this.interior?.def.hotspots.find((x) => x.id === id); return h ? { x: h.x, z: h.z } : null }
 
+  // ---------- scene directing ----------
+  private root(): THREE.Scene { return this.interior ? this.interior.scene : this.scene }
+  setFrozen(v: boolean) { this.frozen = v; if (v) { this.input = { x: 0, z: 0 }; this.path = null } }
+  setSitting(v: boolean) { this.sitting = v }
+  setCameraOverride(o: { pos: [number, number, number]; look: [number, number, number]; shift?: number } | null) { this.camOverride = o; this.interior?.showIcons(!o); for (const l of this.labelSprites.values()) l.visible = !o; for (const n of this.npcs.values()) n.label.visible = !o; if (o) { this.camLook.set(this.px, 1, this.pz) } }
+  placePlayer(x: number, z: number, heading = 0) {
+    this.px = this.followX = x; this.pz = this.followZ = z; this.heading = heading
+    this.player.group.position.set(x, 0, z); this.player.group.rotation.set(0, heading, 0); this.path = null
+  }
+  facePlayer(x: number, z: number) { this.heading = Math.atan2(x - this.px, z - this.pz); this.player.group.rotation.y = this.heading }
+  addActor(id: string, spec: { name: string; gender: Gender; age?: number; x: number; z: number; heading?: number; label?: boolean }) {
+    this.removeActor(id)
+    const parts = buildHuman({ look: hashLook(spec.name, spec.gender), age: spec.age ?? 22, scale: 1.12 })
+    parts.group.position.set(spec.x, 0, spec.z); parts.group.rotation.y = spec.heading ?? 0
+    const sc = this.root(); sc.add(parts.group)
+    this.actors.set(id, { parts, x: spec.x, z: spec.z, tx: spec.x, tz: spec.z, follow: false, moving: false, locked: false, scene: sc })
+  }
+  moveActor(id: string, x: number, z: number) { const a = this.actors.get(id); if (a) { a.tx = x; a.tz = z; a.follow = false } }
+  lockActor(id: string, on: boolean) { const a = this.actors.get(id); if (a) a.locked = on }
+  followPlayer(id: string, on: boolean) { const a = this.actors.get(id); if (a) a.follow = on }
+  actorGroup(id: string) { return this.actors.get(id)?.parts.group ?? null }
+  actorPos(id: string) { const a = this.actors.get(id); return a ? { x: a.x, z: a.z } : null }
+  actorArrived(id: string) { const a = this.actors.get(id); return !a || (!a.moving && Math.hypot(a.tx - a.x, a.tz - a.z) < 0.4) }
+  removeActor(id: string) { const a = this.actors.get(id); if (a) { a.scene.remove(a.parts.group); this.actors.delete(id) } }
+  hideNpc(id: string, hidden: boolean) { const o = this.npcs.get(id); if (o) { o.parts.group.visible = !hidden; o.label.visible = !hidden } }
+  hidePerson(id: string, hidden: boolean) { this.interior?.hidePerson(id, hidden) }
+  setBoard(lines: string[] | null) { this.interior?.setBoard(lines) }
+  npcPos(id: string): { x: number; z: number } | null { const o = this.npcs.get(id); if (o) return { x: o.npc.x, z: o.npc.z }; const p = this.interior?.personInfo(id); return p ? { x: p.x, z: p.z } : null }
+  setBall(p: { x: number; y: number; z: number } | null) {
+    if (!p) { if (this.ballMesh) { this.ballMesh.parent?.remove(this.ballMesh) }; this.ballMesh = undefined; return }
+    if (!this.ballMesh) { this.ballMesh = new THREE.Mesh(new THREE.SphereGeometry(0.32, 12, 10), new THREE.MeshLambertMaterial({ color: 0xffffff })); this.root().add(this.ballMesh) }
+    this.ballMesh.position.set(p.x, p.y + 0.32, p.z)
+  }
+  private bubbleSprite(text: string): THREE.Sprite {
+    const c = document.createElement('canvas'); c.width = 512; c.height = 256
+    const g = c.getContext('2d')!
+    g.font = '800 38px system-ui, "Nunito", sans-serif'
+    const words = text.split(' '); const lines: string[] = []; let cur = ''
+    for (const w of words) { const t = cur ? cur + ' ' + w : w; if (g.measureText(t).width > 440 && cur) { lines.push(cur); cur = w } else cur = t }
+    if (cur) lines.push(cur)
+    const L = lines.slice(0, 4), lh = 46, h = L.length * lh + 36, y0 = (230 - h) / 2 + 4
+    g.fillStyle = 'rgba(255,255,255,0.97)'; g.strokeStyle = '#1c1b22'; g.lineWidth = 6
+    ;(g as CanvasRenderingContext2D & { roundRect: (...a: number[]) => void }).roundRect(14, y0, 484, h, 28); g.fill(); g.stroke()
+    g.beginPath(); g.moveTo(236, y0 + h - 2); g.lineTo(256, y0 + h + 22); g.lineTo(276, y0 + h - 2); g.closePath(); g.fillStyle = 'rgba(255,255,255,0.97)'; g.fill()
+    g.fillStyle = '#1c1b22'; g.textAlign = 'center'; g.textBaseline = 'middle'
+    L.forEach((l, i) => g.fillText(l, 256, y0 + 18 + lh / 2 + i * lh, 450))
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthWrite: false, depthTest: false })); sp.renderOrder = 10
+    sp.scale.set(7.2, 3.6, 1); return sp
+  }
+  /** Show a speech bubble over the player, an actor, an NPC or an interior person. */
+  say(id: string, text: string, ttl = 3.2) {
+    for (const b of this.bubbles.filter((x) => x.id === id)) { b.scene.remove(b.sprite); b.sprite.material.map?.dispose(); b.sprite.material.dispose() }
+    this.bubbles = this.bubbles.filter((x) => x.id !== id)
+    const sc = this.root(); const sp = this.bubbleSprite(text); sc.add(sp)
+    this.bubbles.push({ sprite: sp, id, t: ttl, scene: sc })
+  }
+  private whereIs(id: string): { x: number; z: number } | null {
+    if (id === 'player') return { x: this.px, z: this.pz }
+    const a = this.actors.get(id); if (a) return { x: a.x, z: a.z }
+    return this.npcPos(id)
+  }
+  clearDirected() {
+    for (const a of this.actors.values()) a.scene.remove(a.parts.group)
+    this.actors.clear()
+    for (const b of this.bubbles) { b.scene.remove(b.sprite); b.sprite.material.map?.dispose(); b.sprite.material.dispose() }
+    this.bubbles = []
+    this.setBall(null); this.camOverride = null; this.frozen = false; this.sitting = false
+    for (const o of this.npcs.values()) { o.parts.group.visible = true; o.label.visible = true }
+    this.player.group.position.y = 0; this.player.legL.rotation.x = this.player.legR.rotation.x = 0
+  }
+  private stepDirected(dt: number) {
+    const blockers = this.interior ? this.interior.blockers : this.district.blockers
+    const bounds: Rect = this.interior ? this.interior.def.bounds : { x0: -WORLD.half, x1: WORLD.half, z0: -WORLD.half, z1: WORLD.half }
+    for (const a of this.actors.values()) {
+      if (a.locked) continue
+      if (a.follow) { const bx = Math.sin(this.heading), bz = Math.cos(this.heading); a.tx = this.px - bx * 1.9 + bz * 1.1; a.tz = this.pz - bz * 1.9 - bx * 1.1 }
+      const vx = a.tx - a.x, vz = a.tz - a.z, d = Math.hypot(vx, vz)
+      a.moving = d > 0.45
+      if (a.moving) {
+        const sp = Math.min(6.4, 2.2 + d * 1.6) * dt
+        const p = moveWithCollision(blockers, a.x, a.z, (vx / d) * sp, (vz / d) * sp, bounds); a.x = p.x; a.z = p.z
+        a.parts.group.rotation.y += this.angleDiff(Math.atan2(vx, vz), a.parts.group.rotation.y) * Math.min(1, dt * 10)
+      } else if (a.follow || !this.moving) a.parts.group.rotation.y += this.angleDiff(Math.atan2(this.px - a.x, this.pz - a.z), a.parts.group.rotation.y) * Math.min(1, dt * 4)
+      a.parts.group.position.set(a.x, a.parts.group.position.y, a.z)
+      animateHuman(a.parts, this.time + a.x, a.moving, 0.9)
+    }
+    for (const b of [...this.bubbles]) {
+      b.t -= dt
+      const w = this.whereIs(b.id)
+      if (w) { b.sprite.position.set(w.x + (b.id === 'player' ? 1.7 : -1.7), 4.9, w.z + 0.2); const f = Math.max(0.3, Math.min(1.2, this.camera.position.distanceTo(b.sprite.position) / 20)); b.sprite.scale.set(6.4 * f, 3.2 * f, 1) }
+      if (b.t <= 0) { b.scene.remove(b.sprite); b.sprite.material.map?.dispose(); b.sprite.material.dispose(); this.bubbles = this.bubbles.filter((x) => x !== b) }
+    }
+  }
+
   // ---------- control ----------
   get position() { return { x: this.px, z: this.pz } }
-  setInput(x: number, z: number) { if (this.sleeping) return; this.input.x = x; this.input.z = z; if (x || z) { this.path = null } }
-  walkTo(x: number, z: number) { if (this.sleeping) return false; const nav = this.interior ? this.interior.nav : this.nav; const p = findPath(nav, { x: this.px, z: this.pz }, { x, z }); this.path = p; return !!p }
+  setInput(x: number, z: number) { if (this.sleeping || this.frozen) return; this.input.x = x; this.input.z = z; if (x || z) { this.path = null } }
+  walkTo(x: number, z: number) { if (this.sleeping || this.frozen) return false; const nav = this.interior ? this.interior.nav : this.nav; const p = findPath(nav, { x: this.px, z: this.pz }, { x, z }); this.path = p; return !!p }
   cancelWalk() { this.path = null }
   get walking() { return !!this.path }
   onNear(cb: (n: Near) => void) { this.nearCb = cb }
@@ -330,7 +434,7 @@ export class WorldRenderer {
     const bounds: Rect = iv ? iv.def.bounds : { x0: -WORLD.half, x1: WORLD.half, z0: -WORLD.half, z1: WORLD.half }
     let dx = 0, dz = 0
     const mag = Math.hypot(this.input.x, this.input.z)
-    if (this.sleeping) { /* no movement */ }
+    if (this.sleeping || this.frozen) { /* no movement */ }
     else if (mag > 0.05) { dx = (this.input.x / Math.max(1, mag)) * speed * dt; dz = (this.input.z / Math.max(1, mag)) * speed * dt }
     else if (this.path && this.path.length) {
       const t = this.path[0]
@@ -347,7 +451,9 @@ export class WorldRenderer {
       this.player.group.position.set(this.px, 0, this.pz)
       this.player.group.rotation.y += this.angleDiff(this.heading, this.player.group.rotation.y) * Math.min(1, dt * 14)
       animateHuman(this.player, this.time, this.moving)
+      if (this.sitting) { this.player.legL.rotation.x = this.player.legR.rotation.x = -1.45; this.player.group.position.y = -0.45 } else if (this.player.group.position.y < 0) this.player.group.position.y = 0
     }
+    this.stepDirected(dt)
     if (iv) {
       iv.update(dt)
       this.posT += dt
@@ -405,7 +511,13 @@ export class WorldRenderer {
     this.followX += (this.px - this.followX) * Math.min(1, dt * 5); this.followZ += (this.pz - this.followZ) * Math.min(1, dt * 5)
     const aspect = this.camera.aspect
     const dist = (aspect < 0.8 ? 1.12 : 1) * this.zoom
-    if (iv) {
+    if (this.camOverride) {
+      const o = this.camOverride
+      this.camera.position.x += (o.pos[0] - this.camera.position.x) * Math.min(1, dt * 4); this.camera.position.y += (o.pos[1] - this.camera.position.y) * Math.min(1, dt * 4); this.camera.position.z += (o.pos[2] - this.camera.position.z) * Math.min(1, dt * 4)
+      this.camLook.x += (o.look[0] - this.camLook.x) * Math.min(1, dt * 4); this.camLook.y += (o.look[1] - this.camLook.y) * Math.min(1, dt * 4); this.camLook.z += (o.look[2] - this.camLook.z) * Math.min(1, dt * 4)
+      this.camera.lookAt(this.camLook)
+      if (!iv) for (const o2 of this.npcs.values()) { animateHuman(o2.parts, this.time, false) }
+    } else if (iv) {
       const cx = Math.max(iv.def.bounds.x0 + 4, Math.min(iv.def.bounds.x1 - 4, this.followX)), cz = Math.max(iv.def.bounds.z0 + 2, Math.min(iv.def.bounds.z1 - 3, this.followZ))
       this.camera.position.set(cx, 17 * dist, cz + 9.5 * dist); this.camera.lookAt(cx, 0, cz - 0.5)
     } else {
@@ -417,6 +529,13 @@ export class WorldRenderer {
         if (pl) { h.ring.position.set(pl.door.x, 0.12, pl.door.z); h.ring.scale.setScalar(1 + Math.sin(this.time * 4) * 0.12); h.arrow.position.set(pl.door.x, 3.2 + Math.abs(Math.sin(this.time * 3)) * 0.7, pl.door.z) }
       }
       for (const o of this.npcs.values()) { o.parts.group.rotation.y += this.angleDiff(Math.atan2(this.px - o.npc.x, this.pz - o.npc.z), o.parts.group.rotation.y) * Math.min(1, dt * 3); animateHuman(o.parts, this.time, false) }
+    }
+    const shift = this.camOverride?.shift ?? 0
+    if (shift !== this.viewShift) {
+      this.viewShift = shift
+      const w = this.container.clientWidth || 360, h = this.container.clientHeight || 640
+      if (shift) this.camera.setViewOffset(w, h, 0, h * shift, w, h); else this.camera.clearViewOffset()
+      this.camera.updateProjectionMatrix()
     }
     this.renderer.render(iv ? iv.scene : this.scene, this.camera)
     const ms = performance.now() - t0

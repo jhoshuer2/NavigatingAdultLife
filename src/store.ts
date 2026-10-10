@@ -31,6 +31,12 @@ interface Store {
   walkReq: { place: PlaceId; n: number } | null
   hour: number
   day: number
+  taskActive: boolean
+  setTaskActive: (v: boolean) => void
+  talkReq: { kind: 'chat' | 'hang' | 'family'; role: string; n: number } | null
+  startTalk: (kind: 'chat' | 'hang' | 'family', role: string) => void
+  penaltyReq: { act: string; n: number } | null
+  startPenalty: (act: string) => void
   enterReq: { place: PlaceId; intent?: 'sleep'; n: number } | null
   enterPlace: (id: PlaceId, intent?: 'sleep') => void
   advance: (hours: number) => void
@@ -86,7 +92,10 @@ export const useGame = create<Store>((set, get) => {
   }
   const setMeta = (meta: MetaProfile) => { saveMeta(meta); set({ meta }); audio.configure(meta.settings) }
   return {
-    screen: 'title', life: null, meta: defaultMeta(), sheet: null, toasts: [], quizFeedback: null, dashMode: 'foot', lastDash: null, endingRecorded: false, placeId: null, npcId: null, walkReq: null, hour: 8, day: 0, enterReq: null,
+    screen: 'title', life: null, meta: defaultMeta(), sheet: null, toasts: [], quizFeedback: null, dashMode: 'foot', lastDash: null, endingRecorded: false, placeId: null, npcId: null, walkReq: null, hour: 8, day: 0, enterReq: null, taskActive: false, talkReq: null, penaltyReq: null,
+    setTaskActive: (v) => set({ taskActive: v }),
+    startTalk: (kind, role) => set((st) => ({ talkReq: { kind, role, n: (st.talkReq?.n ?? 0) + 1 }, sheet: null })),
+    startPenalty: (act) => set((st) => ({ penaltyReq: { act, n: (st.penaltyReq?.n ?? 0) + 1 }, sheet: null })),
     enterPlace: (id, intent) => set((st) => ({ enterReq: { place: id, intent, n: (st.enterReq?.n ?? 0) + 1 }, sheet: null })),
     advance: (hours) => { const { hour, day } = get(); let h = hour + hours, d = day; while (h >= 24) { h -= 24; d++ }; get().setHourTo(h, d - day) },
     setHourTo: (h, dayAdd = 0) => { const st = get(); const day = st.day + dayAdd; set({ hour: h, day }); if (st.life) { const l = setClock(st.life, h, day); saveLife(l); set({ life: l }) } },
