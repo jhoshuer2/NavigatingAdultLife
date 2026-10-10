@@ -122,3 +122,40 @@ describe('content integrity', () => {
   })
   it('has at least 80 events', () => { expect(EVENTS.length).toBeGreaterThanOrEqual(80) })
 })
+
+import { previewEnding } from '../src/engine/api'
+import type { GameState } from '../src/engine/core/types'
+
+describe('endings', () => {
+  const base = () => { const s = createNewLife(cfg(), 77); s.character.age = 70; return s }
+  const kid = (s: GameState) => { for (const id of ['k1', 'k2']) { s.npcs[id] = { id, name: id, gender: 'male', role: 'child', birthAge: 30, alive: true, closeness: 80, contactedThisYear: false, memory: [] }; s.character.childrenIds.push(id) } }
+  it('every one of the 9 endings is reachable from a hand-built scenario', () => {
+    const got = new Set<string>()
+    let s = base(); s.character.age = 30; got.add(previewEnding(s).id)                                  // cutShort
+    s = base(); s.character.job = { trackId: 'corporate', level: 4, years: 5, salary: 1, title: 'Executive' }; got.add(previewEnding(s).id) // bigOga
+    s = base(); kid(s); for (const n of Object.values(s.npcs)) n.closeness = 90; got.add(previewEnding(s).id)                       // familyPillar
+    s = base(); s.character.stats.cash = 90000000; for (const n of Object.values(s.npcs)) n.closeness = 10; got.add(previewEnding(s).id) // lonely
+    s = base(); s.character.stats.knowledge = 95; s.character.edu.credential = 'degree'; s.character.stats.cash = 30000000; got.add(previewEnding(s).id) // scholar
+    s = base(); s.character.stats.cash = 1000000; s.character.stats.reputation = 20; s.character.stats.happiness = 20; for (const n of Object.values(s.npcs)) n.closeness = 90; got.add(previewEnding(s).id) // brokeBeloved
+    s = base(); s.character.stats.cash = 50000000; s.flags.hustleCount = 9; s.character.stats.reputation = 20; for (const n of Object.values(s.npcs)) n.closeness = 10; got.add(previewEnding(s).id) // hustler
+    s = base(); s.character.stats.cash = 50000000; s.character.stats.reputation = 80; for (const n of Object.values(s.npcs)) n.closeness = 10; got.add(previewEnding(s).id) // respected
+    s = base(); s.character.stats.cash = 50000000; s.character.stats.reputation = 30; s.character.stats.happiness = 70; for (const n of Object.values(s.npcs)) n.closeness = 10; got.add(previewEnding(s).id) // comfortable
+    expect([...got].sort()).toEqual(['bigOga', 'brokeBeloved', 'comfortable', 'cutShort', 'familyPillar', 'hustler', 'lonely', 'respected', 'scholar'])
+  })
+})
+
+describe('saves', () => {
+  it('a state survives a JSON round trip and continues identically', () => {
+    let a = createNewLife(cfg(), 123)
+    while (a.phase === 'events') a = continueAfterEvent(chooseOption(a, EVENTS.find((e) => e.id === a.eventQueue[0])!.choices[0].id))
+    const b = JSON.parse(JSON.stringify(a)) as GameState
+    const fa = finishActions(a), fb = finishActions(b)
+    expect(JSON.stringify(fa)).toBe(JSON.stringify(fb))
+  })
+})
+
+describe('no soft locks', () => {
+  it('every event has at least one choice with no requirements', () => {
+    for (const e of EVENTS) expect(e.choices.some((c) => !c.requires), e.id).toBe(true)
+  })
+})

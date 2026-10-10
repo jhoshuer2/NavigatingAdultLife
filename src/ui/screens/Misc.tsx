@@ -8,6 +8,7 @@ import { audio } from '@platform/audio'
 import { DREAM_BY_ID } from '@content/dreams'
 import type { DreamId } from '@engine/core/types'
 import { nairaShort } from '../components'
+import { clearFlags, exportFlags, loadFlags } from '@platform/feedback'
 
 function Page({ title, children, back = 'title' }: { title: string; children: React.ReactNode; back?: 'title' | 'play' }) {
   const go = useGame((s) => s.go)
@@ -117,6 +118,12 @@ export function Settings() {
         <Btn variant="ghost" onClick={download}>⬇️ Export save file</Btn>
         <Btn variant="ghost" onClick={() => file.current?.click()}>⬆️ Import save file</Btn>
         <input ref={file} type="file" accept="application/json" hidden onChange={async (e) => { const f = e.target.files?.[0]; if (!f) return; const ok = importJson(await f.text()); toast(ok ? 'Save imported' : 'That file could not be read') }} />
+      </div>
+      <h2 className="font-display text-2xl text-danfo mt-5">Playtest feedback</h2>
+      <p className="text-xs opacity-70">Tap 🚩 on any event to flag it. Flags are saved on this device ({loadFlags().length} so far).</p>
+      <div className="grid grid-cols-2 gap-2 mt-1">
+        <Btn variant="ghost" onClick={() => { const blob = new Blob([exportFlags()], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'nal-feedback.json'; a.click(); URL.revokeObjectURL(a.href) }}>⬇️ Export flags</Btn>
+        <Btn variant="ghost" onClick={() => { if (confirm('Clear all saved flags?')) { clearFlags(); toast('Flags cleared') } }}>🗑 Clear</Btn>
       </div>
       <p className="text-xs opacity-50 mt-6">Navigating Adult Life · playtest build · music and art are placeholders. Saves live in this browser only.</p>
     </Page>

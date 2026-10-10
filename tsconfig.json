@@ -13,7 +13,7 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "types": ["vite/client"],
+    "types": ["vite/client", "vite-plugin-pwa/client"],
     "baseUrl": ".",
     "paths": { "@engine/*": ["src/engine/*"], "@content/*": ["src/content/*"], "@ui/*": ["src/ui/*"], "@platform/*": ["src/platform/*"], "@minigames/*": ["src/minigames/*"] }
   },

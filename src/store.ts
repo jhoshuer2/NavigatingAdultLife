@@ -6,6 +6,7 @@ import { defaultMeta, mergeEnding, UNLOCKABLES, type MetaProfile, type Settings 
 import { loadLife, loadMeta, saveLife, saveMeta, importSave, exportSave } from '@platform/storage'
 import { addPaid, consume, refreshTokens, remainingSec } from '@platform/tokens'
 import { audio } from '@platform/audio'
+import { track } from '@platform/analytics'
 
 export type Screen = 'title' | 'create' | 'play' | 'ending' | 'achievements' | 'unlocks' | 'settings' | 'dash' | 'history'
 export type Sheet = null | 'shop' | 'jobs' | 'quests' | 'profile' | 'pick-social' | 'pick-family' | 'lifestyle' | 'paywall'
@@ -63,6 +64,7 @@ export const useGame = create<Store>((set, get) => {
     set({ life })
     if (life.phase === 'ended' && !get().endingRecorded) {
       const meta = mergeEnding(get().meta, life)
+      track(meta.consentAnalytics, 'life_ended', life.ending?.id)
       saveMeta(meta); saveLife(null)
       set({ meta, endingRecorded: true, screen: 'ending' })
     }
@@ -89,6 +91,7 @@ export const useGame = create<Store>((set, get) => {
       const seed = (Math.random() * 2 ** 32) >>> 0
       const life = createNewLife(cfg, seed)
       saveLife(life)
+      track(get().meta.consentAnalytics, 'life_started')
       set({ life, endingRecorded: false, screen: 'play', sheet: null, quizFeedback: null })
     },
     continueLife: () => { if (get().life) set({ screen: 'play' }) },

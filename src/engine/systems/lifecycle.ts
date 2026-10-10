@@ -158,6 +158,7 @@ export function finalizeYear(ctx: Ctx) {
   const story = [...advanceEducation(ctx), ...yearlyCareer(ctx)]
   lines.push(...story)
   applyPassiveItems(ctx)
+  if (c.edu.level === 'none' && c.age > 22 && !Number(s.activityCounts.study ?? 0) && c.stats.knowledge > 25) addStat(ctx, 'knowledge', -2, 'Out of practice')
   // drift & recovery
   addStat(ctx, 'stress', -5, 'Time')
   addStat(ctx, 'happiness', Math.round((55 - c.stats.happiness) * 0.12), 'Time')

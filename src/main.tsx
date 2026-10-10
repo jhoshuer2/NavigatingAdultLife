@@ -2,6 +2,9 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './ui/index.css'
 import App from './App'
+import { registerSW } from 'virtual:pwa-register'
+
+try { registerSW({ immediate: true }) } catch { /* service worker unavailable */ }
 
 if (new URLSearchParams(location.search).get('debug') === '1') {
   // Dev/e2e helper: jump a bot-played life to a given age. Not linked from the UI.

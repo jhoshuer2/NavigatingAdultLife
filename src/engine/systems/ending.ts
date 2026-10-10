@@ -11,14 +11,14 @@ const alive = (c: Ctx) => Object.values(c.s.npcs).filter((n) => n.alive && n.clo
 // Order matters: first match wins.
 const ENDINGS: EndingDef[] = [
   { id: 'cutShort', title: 'Gone Too Soon', test: (c) => c.s.character.age < 40 },
-  { id: 'bigOga', title: 'Big Oga', test: (c, nw) => (c.s.character.job?.level ?? 0) >= 4 || nw > 400000000 },
-  { id: 'scholar', title: 'The Scholar', test: (c) => c.s.character.stats.knowledge >= 88 && c.s.character.edu.credential === 'degree' },
+  { id: 'bigOga', title: 'Big Oga', test: (c, nw) => (c.s.character.job?.level ?? 0) >= 4 || nw > 400000000 || (c.s.dreamDone && ['bigOga', 'unicorn', 'star'].includes(c.s.character.dreamId)) },
   { id: 'familyPillar', title: 'Family Pillar', test: (c) => c.s.character.childrenIds.length >= 2 && alive(c) >= 3 },
-  { id: 'lonely', title: 'Lonely at the Top', test: (c, nw) => nw > 60000000 && alive(c) <= 1 },
-  { id: 'respected', title: 'Respected Elder', test: (c) => c.s.character.stats.reputation >= 70 },
-  { id: 'brokeBeloved', title: 'Broke but Beloved', test: (c, nw) => nw < 8000000 && alive(c) >= 3 },
+  { id: 'lonely', title: 'Lonely at the Top', test: (c, nw) => nw > 60000000 && alive(c) <= 1 && !c.s.character.spouseId && c.s.character.childrenIds.length === 0 },
+  { id: 'scholar', title: 'The Scholar', test: (c) => c.s.character.stats.knowledge >= 92 && c.s.character.edu.credential === 'degree' },
+  { id: 'brokeBeloved', title: 'Broke but Beloved', test: (c, nw) => nw < 15000000 && alive(c) >= 2 },
   { id: 'hustler', title: 'Hustler Till the End', test: (c) => Number(c.s.flags.hustleCount ?? 0) >= 8 },
-  { id: 'comfortable', title: 'Comfortable & Content', test: (c) => c.s.character.stats.happiness >= 55 },
+  { id: 'respected', title: 'Respected Elder', test: (c) => c.s.character.stats.reputation >= 65 },
+  { id: 'comfortable', title: 'Comfortable & Content', test: (c) => c.s.character.stats.happiness >= 45 },
 ]
 
 export function legacyScore(ctx: Ctx): number {

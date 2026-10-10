@@ -10,7 +10,11 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "content:lint": "tsx tools/content-lint.ts",
-    "sim": "tsx tools/sim.ts"
+    "sim": "tsx tools/sim.ts",
+    "e2e": "node tests/e2e/shots.mjs",
+    "e2e:dash": "node tests/e2e/dash.mjs",
+    "e2e:adult": "node tests/e2e/adult.mjs",
+    "icons": "node tools/make-icons.mjs"
   },
   "dependencies": {
     "react": "18.3.1",
@@ -32,6 +36,7 @@
     "tsx": "4.19.2",
     "typescript": "5.6.3",
     "vite": "5.4.10",
+    "vite-plugin-pwa": "0.20.5",
     "vitest": "2.1.4"
   }
 }

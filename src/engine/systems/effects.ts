@@ -26,6 +26,10 @@ export function addStat(ctx: Ctx, stat: StatKey, rawDelta: number, label?: strin
       const g = JSON.parse(arch) as Partial<Record<StatKey, number>>
       delta *= g[stat] ?? 1
     }
+    if (delta > 0 && (stat === 'knowledge' || stat === 'reputation' || stat === 'happiness' || stat === 'health')) {
+      const v = c.stats[stat]
+      delta *= Math.max(0.15, 1 - Math.max(0, v - 65) / 50) // diminishing returns near the top
+    }
     delta = Math.round(delta)
     const [lo, hi] = STAT_RANGE[stat as Exclude<StatKey, 'cash'>]
     const before = c.stats[stat]

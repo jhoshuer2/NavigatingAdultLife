@@ -162,7 +162,7 @@ export function answerQuiz(ctx: Ctx, optionIndex: number): { correct: boolean; f
   if (correct) {
     quiz.correct += 1
     c.edu.studyPoints += 1
-    const gain = 3 + studyBonus
+    const gain = 2 + studyBonus
     quiz.gained += gain
     addStat(ctx, 'knowledge', gain, 'Study')
     addStat(ctx, 'happiness', 1, 'Study')

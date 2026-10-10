@@ -82,6 +82,10 @@ export function applyDashResult(state: GameState, r: MiniGameResult): { state: G
 }
 function ageStage(age: number) { return age < 12 ? 'child' : age < 18 ? 'teen' : age < 30 ? 'youngAdult' : age < 60 ? 'adult' : 'elder' } // eslint-disable-line
 
+import { buildEnding } from './systems/ending'
+/** Compute what ending a state would get right now (used by tests and previews). */
+export function previewEnding(state: GameState) { return withCtx(state, (ctx) => buildEnding(ctx, 'Preview.')).result }
+
 export function currentEvent(state: GameState) {
   const id = state.eventQueue[0]
   const ev = id ? EVENT_BY_ID[id] : undefined
