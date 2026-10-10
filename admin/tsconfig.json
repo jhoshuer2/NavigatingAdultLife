@@ -4,5 +4,5 @@
     "jsx": "react-jsx", "strict": true, "noUnusedLocals": true, "noUnusedParameters": true, "skipLibCheck": true,
     "resolveJsonModule": true, "isolatedModules": true, "types": ["node", "vite/client"], "baseUrl": ".", "paths": { "zod": ["./node_modules/zod"] }, "allowImportingTsExtensions": false
   },
-  "include": ["api", "server", "src", "scripts", "tests", "../shared"]
+  "include": ["api-src", "server", "src", "scripts", "tests", "../shared"]
 }

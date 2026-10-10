@@ -32,7 +32,7 @@ Tests: `npm test` (collector, auth, roles, dashboards run on in-process Postgres
    - **Transaction pooler** (port 6543) for `DATABASE_URL` on Vercel.
    - Supabase's certificate is signed by its own CA. Download it from Project Settings > Database > SSL configuration and put the file's contents in `DATABASE_SSL_CA` (preferred), or set `DATABASE_SSL=no-verify` to get going (encrypted but not verified).
    - Run `DATABASE_URL='<session pooler string>' DATABASE_SSL_CA="$(cat prod-ca-2021.crt)" npm run migrate`. Any Postgres host (Neon, etc.) works the same way; only the connection string differs.
-2. **Vercel project #2**: root directory `admin`, framework Vite (its `vercel.json` installs the top-level packages as well). "Include source files outside of the Root Directory" must be on (it imports `../shared`).
+2. **Vercel project #2**: root directory `admin`, framework Vite. The four serverless functions are bundled into single files in `admin/api/*.js` (committed; regenerate with `npm run build:api` after changing anything in `server/` or `api-src/`, which `npm run build` also does). "Include source files outside of the Root Directory" must be on (it imports `../shared`).
 3. **Environment variables** (admin project):
    | Name | Purpose |
    |---|---|
