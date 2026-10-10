@@ -4,11 +4,11 @@ import { useApi } from '../hooks'
 import { Card, Loading, Table } from '../ui'
 
 export function Settings({ admin }: { admin: Admin }) {
-  const [tab, setTab] = useState<'users' | 'audit' | 'schema'>('users')
+  const [tab, setTab] = useState<'users' | 'audit' | 'schema' | 'summary'>('users')
   return (
     <>
-      <div className="seg tabs" role="group" aria-label="Settings section">{(['users', 'audit', 'schema'] as const).map((t) => <button key={t} aria-pressed={tab === t} onClick={() => setTab(t)}>{{ users: 'Users and roles', audit: 'Audit log', schema: 'Data and retention' }[t]}</button>)}</div>
-      {tab === 'users' && <Users me={admin} />}{tab === 'audit' && <Audit />}{tab === 'schema' && <Schema />}
+      <div className="seg tabs" role="group" aria-label="Settings section">{(['users', 'audit', 'schema', 'summary'] as const).map((t) => <button key={t} aria-pressed={tab === t} onClick={() => setTab(t)}>{{ users: 'Users and roles', audit: 'Audit log', schema: 'Data and retention', summary: 'Weekly summary' }[t]}</button>)}</div>
+      {tab === 'users' && <Users me={admin} />}{tab === 'audit' && <Audit />}{tab === 'schema' && <Schema />}{tab === 'summary' && <Summary />}
     </>
   )
 }
@@ -51,5 +51,17 @@ function Schema() {
       <Card title="Events the game can send" def="Only these fields are stored for each event. Anything else is dropped by the collector, and no free text from players is ever accepted."><Table cols={[{ key: 'name', label: 'Event' }, { key: 'props', label: 'Allowed fields' }]} rows={Object.entries(data.events).map(([name, props]) => ({ name, props: (props as string[]).join(', ') || '–' }))} /></Card>
       <Card title="Metric definitions"><Table cols={[{ key: 'k', label: 'Metric' }, { key: 'v', label: 'Definition' }]} rows={Object.entries(data.definitions).map(([k, v]) => ({ k, v }))} /></Card>
     </div>
+  )
+}
+
+function Summary() {
+  const { data, error } = useApi<any>('settings/summary')
+  if (!data) return <Loading error={error} />
+  return (
+    <Card title={`Weekly summary preview (${data.from} to ${data.to})`}>
+      <pre style={{ whiteSpace: 'pre-wrap', font: 'inherit', margin: 0 }}>{data.text}</pre>
+      <p className="muted small">This is the text a weekly email would contain. Sending it automatically needs an email service account, which has not been set up.</p>
+      <button className="btn" onClick={() => navigator.clipboard?.writeText(data.text)}>Copy text</button>
+    </Card>
   )
 }

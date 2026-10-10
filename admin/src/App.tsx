@@ -7,6 +7,10 @@ import { Geography } from './pages/Geography'
 import { Engagement } from './pages/Engagement'
 import { Features } from './pages/Features'
 import { Settings } from './pages/Settings'
+import { Funnels } from './pages/Funnels'
+import { Content } from './pages/Content'
+import { Quality } from './pages/Quality'
+import { Live } from './pages/Live'
 
 const PAGES: { id: string; label: string; roles: Admin['role'][]; filters: boolean }[] = [
   { id: 'overview', label: 'Overview', roles: ['owner', 'analyst', 'engineer'], filters: true },
@@ -14,6 +18,10 @@ const PAGES: { id: string; label: string; roles: Admin['role'][]; filters: boole
   { id: 'geography', label: 'Geography', roles: ['owner', 'analyst'], filters: true },
   { id: 'engagement', label: 'Engagement', roles: ['owner', 'analyst'], filters: true },
   { id: 'features', label: 'Features', roles: ['owner', 'analyst'], filters: true },
+  { id: 'funnels', label: 'Funnels', roles: ['owner', 'analyst'], filters: true },
+  { id: 'content', label: 'Content', roles: ['owner', 'analyst'], filters: true },
+  { id: 'quality', label: 'Quality', roles: ['owner', 'analyst', 'engineer'], filters: true },
+  { id: 'live', label: 'Live', roles: ['owner', 'analyst', 'engineer'], filters: false },
   { id: 'settings', label: 'Settings', roles: ['owner'], filters: false },
 ]
 
@@ -69,7 +77,7 @@ export default function App() {
   const [id, sub] = hash.split('/'); const page = allowed.find((p) => p.id === id) ?? allowed[0]
   const body = {
     overview: <Overview f={filters} />, players: <Players f={filters} admin={admin} id={sub} />, geography: <Geography f={filters} />,
-    engagement: <Engagement f={filters} />, features: <Features f={filters} />, settings: <Settings admin={admin} />,
+    engagement: <Engagement f={filters} />, features: <Features f={filters} />, funnels: <Funnels f={filters} />, content: <Content f={filters} />, quality: <Quality f={filters} />, live: <Live />, settings: <Settings admin={admin} />,
   }[page.id]
   return (
     <div className="shell">

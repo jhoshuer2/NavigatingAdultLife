@@ -50,5 +50,6 @@ Tests: `npm test` (collector, auth, roles, dashboards run on in-process Postgres
 - Login is email + password + authenticator-app code (TOTP) for every role, not email one-time code or Google SSO, because those need an email provider or Google project. Add them when you want them.
 - Geography is ranked lists and tables, not a choropleth map.
 - "Active player" is a device with at least 10 active seconds on the day (not a session of 10 seconds).
-- Not built yet (later phases): funnels and cohort retention page, errors and device quality, live view, scheduled email, revenue (payments are out of scope), consent-text versions and API keys in Settings.
-- Not tracked by the game yet: `conversation_choice`, `tokens_spent`, `door_opened`, `content_flagged`, `tutorial_step/skipped`, `webgl_unavailable`, `slow_device_detected` (the schema allows them).
+- Phase C pages: Funnels (funnel, retention cohorts by week/country/device, drop-off age, endings), Content (flags, story choices, tone mix, task completion), Quality (errors, slow and no-3D rates, load time, by version/device) and Live. The weekly summary is generated and previewable in Settings, but **not emailed**: sending needs an email service account, which has not been set up.
+- Not built yet: revenue (payments are out of scope), consent-text versions and API keys in Settings, A/B tests and alerts (Phase D).
+- Not tracked by the game yet: `tokens_spent`, `door_opened`, `tutorial_step/skipped` (the schema allows them). The flag button sends only the event id, never the player's note.
