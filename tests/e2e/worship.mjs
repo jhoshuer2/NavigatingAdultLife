@@ -1,0 +1,33 @@
+import { chromium } from 'playwright-core'
+const OUT = '/tmp/claude-0/-home-user-NavigatingAdultLife/f97bb3da-afd4-5501-b372-1bb1d534ad7b/scratchpad/shots'
+const browser = await chromium.launch({ executablePath: process.env.CHROME, args: ['--no-sandbox', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--use-gl=angle'] })
+const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
+page.setDefaultTimeout(25000)
+const errors = []; page.on('pageerror', (e) => errors.push(String(e))); page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()) })
+await page.goto('http://localhost:4173/?unlimited=1&debug=1')
+await page.waitForFunction(() => window.__nal)
+await page.evaluate(() => { const g = window.__nal.useGame; g.setState({ meta: { ...g.getState().meta, seenTutorial: true } }); window.__nal.jump(22, 'money', 3); g.getState().setHourTo(10) })
+await page.waitForTimeout(1500)
+const st = () => page.evaluate(() => { const c = window.__nal.useGame.getState().life.character.stats; return { cash: c.cash, rep: c.reputation, hap: c.happiness, en: c.energy } })
+console.log('before', await st())
+await page.evaluate(() => window.__nal.useGame.getState().enterPlace('worship'))
+for (let i = 0; i < 40; i++) { await page.waitForTimeout(300); if (await page.evaluate(() => window.__world.inside)) break }
+const p = await page.evaluate(() => window.__world.hotspotPos('pew'))
+await page.evaluate((q) => window.__world.walkTo(q.x, q.z), p)
+for (let i = 0; i < 50; i++) { await page.waitForTimeout(300); const pos = await page.evaluate(() => window.__world.position); if (Math.hypot(pos.x - p.x, pos.z - p.z) < 1.5) break }
+await page.screenshot({ path: `${OUT}/140-worship-in.png` })
+await page.keyboard.press('e'); await page.waitForTimeout(300)
+await page.getByText('Join the service').click(); await page.waitForTimeout(1500)
+await page.screenshot({ path: `${OUT}/141-intro.png` })
+await page.getByText('Begin ▶').click()
+for (let i = 0; i < 12; i++) { await page.getByRole('button', { name: /Clap/ }).click({ timeout: 2000 }).catch(() => {}); await page.waitForTimeout(1500); if (i === 2) await page.screenshot({ path: `${OUT}/142-song.png` }) }
+await page.waitForTimeout(1500)
+await page.screenshot({ path: `${OUT}/143-message.png` })
+await page.locator('.card-btn:not([disabled])').first().waitFor({ timeout: 15000 })
+await page.screenshot({ path: `${OUT}/144-quiz.png` })
+await page.locator('.card-btn:not([disabled])').first().click(); await page.waitForTimeout(2000)
+await page.getByText('₦1,000').click(); await page.waitForTimeout(1800)
+await page.screenshot({ path: `${OUT}/145-end.png` })
+await page.getByText('Finish ▶').click(); await page.waitForTimeout(800)
+console.log('after', await st(), 'errors', errors)
+await browser.close()

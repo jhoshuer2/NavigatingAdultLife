@@ -107,8 +107,9 @@ export const INTERIORS: Partial<Record<PlaceId, Interior>> = {
       { kind: 'pew', rect: r(-7, -2.6, 0.2, 1.0), h: 0.9, color: 0x8a5a32 }, { kind: 'pew', rect: r(2.6, 7, 0.2, 1.0), h: 0.9, color: 0x8a5a32 },
       { kind: 'pew', rect: r(-7, -2.6, 2.8, 3.6), h: 0.9, color: 0x8a5a32 }, { kind: 'pew', rect: r(2.6, 7, 2.8, 3.6), h: 0.9, color: 0x8a5a32 },
     ],
-    hotspots: [{ id: 'pew', name: 'Take a seat', icon: '🕊️', x: 0, z: -0.5, r: 2.6, actions: [{ label: 'Join the service', icon: '🕊️', cmd: 'act:community' }] }],
-    people: [{ id: 'elder', name: 'Elder', role: 'elder', x: 0, z: -3.6, line: 'Peace be with you, my child.' }],
+    hotspots: [{ id: 'pew', name: 'Take a seat', icon: '🕊️', x: 0, z: -0.5, r: 2.6, actions: [{ label: 'Join the service', icon: '🕊️', cmd: 'task:service' }] }],
+    people: [{ id: 'elder', name: 'Elder', role: 'elder', x: 0, z: -3.6, line: 'Peace be with you, my child.' },
+      { id: 'm1', name: 'Sister Ada', role: 'member', x: -5.2, z: -0.8, line: 'Welcome, welcome. Sit anywhere.' }, { id: 'm2', name: 'Brother Tayo', role: 'member', x: 5.2, z: -0.8, line: 'Good to see you today.' }, { id: 'm3', name: 'Mama Joy', role: 'member', x: -3.5, z: 1.9, line: 'God bless you, my child.' }, { id: 'm4', name: 'Deacon Yemi', role: 'member', x: 3.8, z: 1.9, line: 'Peace be with you.' }, { id: 'm5', name: 'Little Kemi', role: 'member', x: 6.0, z: 1.9, line: 'Are you singing today?' }],
     windowsAt: [{ x: -6, z: -7 }, { x: 6, z: -7 }],
   },
   office: {
