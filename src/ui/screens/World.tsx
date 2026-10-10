@@ -10,6 +10,7 @@ import { fmtClock, isNight, isOpen, opensAt } from '../../world/time'
 import type { NpcRole } from '@engine/core/types'
 import { StudyTask, type StudyMode } from '../tasks/StudyTask'
 import { PenaltyTask } from '../tasks/PenaltyTask'
+import { MarketTask } from '../tasks/MarketTask'
 import { TalkTask, type Partner } from '../tasks/TalkTask'
 import type { Setting } from '@content/dialogue'
 import { npcSpot, placeActive, suggest } from '../../world/guide'
@@ -31,6 +32,7 @@ export default function World() {
   type Task =
     | { kind: 'study'; mode: StudyMode }
     | { kind: 'penalty'; act: string }
+    | { kind: 'market' }
     | { kind: 'talk'; partner: Partner; role: NpcRole; setting: Setting; rounds: number; title: string; actId: string; hidden?: string }
   const [task, setTask] = useState<Task | null>(null)
   const [hang, setHang] = useState<{ role: NpcRole; npcId: string; name: string; gender: 'male' | 'female'; dest: PlaceId } | null>(null)
@@ -210,6 +212,15 @@ export default function World() {
   }
   useEffect(() => { if (g.penaltyReq) startPenalty(g.penaltyReq.act) /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [g.penaltyReq])
 
+  const startMarket = () => {
+    const r = rendRef.current; if (!r || fade) return
+    const why = enabledAct('hustle'); if (why) { g.toast(why); return }
+    if (!isOpen('market', hour)) { g.toast(`🔒 The market is closed. Opens at ${fmtClock(opensAt('market'))}.`); return }
+    setFade(true)
+    setTimeout(() => { if (r.inside) { r.exitInterior(); setInside(null); setHotId(null) } setTask({ kind: 'market' }); setFade(false) }, 280)
+  }
+  useEffect(() => { if (g.marketReq) startMarket() /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [g.marketReq])
+
   const settingHere = (): Setting => { const p = rendRef.current?.inside; return p === 'home' ? 'home' : p === 'mamaput' ? 'mamaput' : p === 'school' ? 'school' : p === 'office' ? 'office' : near.place === 'pitch' ? 'pitch' : 'street' }
   const beginTalk = (kind: 'chat' | 'hang' | 'family', role: NpcRole) => {
     const r = rendRef.current; if (!r || !life) return
@@ -274,6 +285,7 @@ export default function World() {
     setTask(null)
     if (!t) return
     if (t.kind === 'penalty') { if (perf !== undefined) g.act(t.act, { perf }) }
+    else if (t.kind === 'market') { if (perf !== undefined) g.act('hustle', { perf }) }
     else if (t.kind === 'talk') {
       if (r) { r.removeActor('buddy'); if (t.hidden) r.hidePerson(t.hidden, false); if (hang) r.hideNpc(hang.npcId, false) }
       setHang(null)
@@ -456,6 +468,7 @@ export default function World() {
 
       {task?.kind === 'study' && rendRef.current && <StudyTask r={rendRef.current} mode={task.mode} onDone={() => setTask(null)} />}
       {task?.kind === 'penalty' && rendRef.current && <PenaltyTask r={rendRef.current} pitch={district.places.find((p) => p.id === 'pitch')!.rect} onDone={(perf) => endTask(perf)} />}
+      {task?.kind === 'market' && rendRef.current && <MarketTask r={rendRef.current} spot={{ x: district.places.find((p) => p.id === 'market')!.door.x, z: district.places.find((p) => p.id === 'market')!.door.z + 2.1 }} onDone={(perf) => endTask(perf)} />}
       {task?.kind === 'talk' && rendRef.current && <TalkTask r={rendRef.current} partner={task.partner} role={task.role} setting={task.setting} rounds={task.rounds} title={task.title} onDone={(perf) => endTask(perf)} />}
       {hang && !task && (
         <div className="absolute left-3 right-3 bottom-[5.4rem] z-20 card px-3 py-2 flex items-center gap-2 pointer-events-auto" style={{ background: '#1d3a2aee' }}><span className="flex-1 text-sm font-bold">🚶 With {hang.name} → {district.places.find((p) => p.id === hang.dest)?.name}</span><button className="chip" onClick={cancelHang}>✖ Cancel</button></div>

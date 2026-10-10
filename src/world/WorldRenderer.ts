@@ -98,6 +98,7 @@ export class WorldRenderer {
   private actors = new Map<string, { parts: HumanParts; x: number; z: number; tx: number; tz: number; follow: boolean; moving: boolean; locked: boolean; scene: THREE.Scene }>()
   private bubbles: { sprite: THREE.Sprite; id: string; t: number; scene: THREE.Scene }[] = []
   private ballMesh?: THREE.Mesh
+  private stallGroup?: THREE.Group
 
   constructor(private container: HTMLElement, private district: District, opts: { look: Appearance; age: number; uniform: boolean; month: number; hour: number; spawn: { x: number; z: number } }) {
     const dpr = window.devicePixelRatio || 1
@@ -329,6 +330,17 @@ export class WorldRenderer {
   hidePerson(id: string, hidden: boolean) { this.interior?.hidePerson(id, hidden) }
   setBoard(lines: string[] | null) { this.interior?.setBoard(lines) }
   npcPos(id: string): { x: number; z: number } | null { const o = this.npcs.get(id); if (o) return { x: o.npc.x, z: o.npc.z }; const p = this.interior?.personInfo(id); return p ? { x: p.x, z: p.z } : null }
+  setStall(p: { x: number; z: number } | null) {
+    if (this.stallGroup) { this.stallGroup.parent?.remove(this.stallGroup); this.stallGroup = undefined }
+    if (!p) return
+    const g = new THREE.Group(); const lam = (c: number) => new THREE.MeshLambertMaterial({ color: c })
+    const box = (w: number, h: number, d: number, c: number, x: number, y: number, z: number) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), lam(c)); m.position.set(x, y, z); g.add(m); return m }
+    box(4.4, 0.9, 1.5, 0x8a5a32, 0, 0.45, 0); box(4.5, 0.1, 1.6, 0xf5b91c, 0, 0.95, 0)
+    ;[[-1.5, 0xd9382e], [-0.5, 0xb06ab3], [0.5, 0x8fb8d9], [1.5, 0xe6c84a]].forEach(([x, c]) => { box(0.85, 0.34, 0.7, 0x6a3b1d, x as number, 1.17, 0); box(0.75, 0.22, 0.6, c as number, x as number, 1.4, 0) })
+    for (const sx of [-2.2, 2.2]) box(0.12, 3.2, 0.12, 0x4a3320, sx, 1.6, -0.7)
+    box(4.6, 0.7, 0.12, 0xc4262e, 0, 2.6, -0.75)
+    g.position.set(p.x, 0, p.z); this.root().add(g); this.stallGroup = g
+  }
   setBall(p: { x: number; y: number; z: number } | null) {
     if (!p) { if (this.ballMesh) { this.ballMesh.parent?.remove(this.ballMesh) }; this.ballMesh = undefined; return }
     if (!this.ballMesh) { this.ballMesh = new THREE.Mesh(new THREE.SphereGeometry(0.32, 12, 10), new THREE.MeshLambertMaterial({ color: 0xffffff })); this.root().add(this.ballMesh) }
@@ -368,7 +380,7 @@ export class WorldRenderer {
     this.actors.clear()
     for (const b of this.bubbles) { b.scene.remove(b.sprite); b.sprite.material.map?.dispose(); b.sprite.material.dispose() }
     this.bubbles = []
-    this.setBall(null); this.camOverride = null; this.frozen = false; this.sitting = false
+    this.setBall(null); this.setStall(null); this.camOverride = null; this.frozen = false; this.sitting = false
     for (const o of this.npcs.values()) { o.parts.group.visible = true; o.label.visible = true }
     this.player.group.position.y = 0; this.player.legL.rotation.x = this.player.legR.rotation.x = 0
   }
@@ -376,7 +388,7 @@ export class WorldRenderer {
     const blockers = this.interior ? this.interior.blockers : this.district.blockers
     const bounds: Rect = this.interior ? this.interior.def.bounds : { x0: -WORLD.half, x1: WORLD.half, z0: -WORLD.half, z1: WORLD.half }
     for (const a of this.actors.values()) {
-      if (a.locked) continue
+      if (a.locked) { const gp = a.parts.group.position; const mv = Math.hypot(gp.x - a.x, gp.z - a.z) > 0.004; a.x = gp.x; a.z = gp.z; animateHuman(a.parts, this.time + a.x, mv, 0.9); continue }
       if (a.follow) { const bx = Math.sin(this.heading), bz = Math.cos(this.heading); a.tx = this.px - bx * 1.9 + bz * 1.1; a.tz = this.pz - bz * 1.9 - bx * 1.1 }
       const vx = a.tx - a.x, vz = a.tz - a.z, d = Math.hypot(vx, vz)
       a.moving = d > 0.45

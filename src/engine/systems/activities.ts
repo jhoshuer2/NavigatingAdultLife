@@ -176,7 +176,8 @@ export function performActivity(ctx: Ctx, id: string, args: ActivityArgs = {}): 
   if (args.perf !== undefined) {
     // skill-based bonus from playing the task in the world (0 = poor, 1 = great)
     const p = Math.max(0, Math.min(1, args.perf))
-    if (id === 'play' || id === 'exercise') { addStat(ctx, 'happiness', Math.round(p * 3), 'Great game'); addStat(ctx, 'health', Math.round(p * 2), 'Great game') }
+    if (id === 'hustle') applyEffects(ctx, [{ hustleIncome: Math.round(p * 90000) }], 'Great sales')
+    else if (id === 'play' || id === 'exercise') { addStat(ctx, 'happiness', Math.round(p * 3), 'Great game'); addStat(ctx, 'health', Math.round(p * 2), 'Great game') }
     else if (def.special === 'socialise' || def.special === 'familyTime' || def.special === 'chat') {
       const role: NpcRole = args.target ?? (def.special === 'familyTime' ? 'mother' : 'friend')
       addRel(ctx, role, Math.round(p * (def.special === 'chat' ? 3 : 6)))
