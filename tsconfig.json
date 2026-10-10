@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "types": ["vite/client"],
+    "baseUrl": ".",
+    "paths": { "@engine/*": ["src/engine/*"], "@content/*": ["src/content/*"], "@ui/*": ["src/ui/*"], "@platform/*": ["src/platform/*"], "@minigames/*": ["src/minigames/*"] }
+  },
+  "include": ["src", "tests", "tools", "vite.config.ts"]
+}
