@@ -48,12 +48,12 @@ export const INTERIORS: Partial<Record<PlaceId, Interior>> = {
       { kind: 'plant', rect: r(-2.4, -1.8, 5.6, 6.2), h: 1.4, color: 0x2f7a3a },
     ],
     hotspots: [
-      { id: 'bed', name: 'Bed', icon: '🛏️', x: -5.4, z: -4.6, r: 1.9, actions: [{ label: 'Go to sleep', icon: '😴', cmd: 'sleep' }] },
+      { id: 'bed', name: 'Bed', icon: '🛏️', x: -5.4, z: -4.6, r: 1.9, actions: [{ label: 'Lie down on the bed', icon: '🛏️', cmd: 'pose:bed' }, { label: 'Go to sleep', icon: '😴', cmd: 'sleep' }] },
       { id: 'desk', name: 'Desk', icon: '📚', x: -8.6, z: 1.0, r: 1.7, actions: [{ label: 'Study at your desk', icon: '📚', cmd: 'task:desk' }] },
-      { id: 'tv', name: 'TV and sofa', icon: '📺', x: 0.5, z: 1.5, r: 2.0, actions: [{ label: 'Turn the TV on/off', icon: '📺', cmd: 'toggle:tv' }, { label: 'Watch TV for a while', icon: '🍿', cmd: 'act:tv' }] },
+      { id: 'tv', name: 'TV and sofa', icon: '📺', x: 0.5, z: 1.5, r: 2.0, actions: [{ label: 'Sit on the sofa', icon: '🛋️', cmd: 'pose:sofa' }, { label: 'Turn the TV on/off', icon: '📺', cmd: 'toggle:tv' }, { label: 'Watch TV for a while', icon: '🍿', cmd: 'act:tv' }] },
       { id: 'fan', name: 'Standing fan', icon: '🌀', x: 2.1, z: 1.7, r: 1.8, actions: [{ label: 'Turn the fan on/off', icon: '🌀', cmd: 'toggle:fan' }] },
       { id: 'light', name: 'Light switch', icon: '💡', x: 2.4, z: 5.6, r: 1.6, actions: [{ label: 'Turn the lights on/off', icon: '💡', cmd: 'toggle:light' }] },
-      { id: 'kitchen', name: 'Kitchen', icon: '🍛', x: 7.0, z: -0.6, r: 2.3, actions: [{ label: 'Eat a meal', icon: '🍛', cmd: 'act:meal' }, { label: 'Do the household chores', icon: '🧹', cmd: 'task:chores' }] },
+      { id: 'kitchen', name: 'Kitchen', icon: '🍛', x: 7.0, z: -0.6, r: 2.3, actions: [{ label: 'Cook a meal', icon: '🍳', cmd: 'task:cook' }, { label: 'Do the household chores', icon: '🧹', cmd: 'task:chores' }] },
       { id: 'bath', name: 'Bathroom', icon: '🪥', x: 7.0, z: 4.8, r: 2.2, actions: [{ label: 'Brush teeth and freshen up', icon: '🪥', cmd: 'act:groom' }, { label: 'Take a bath', icon: '🚿', cmd: 'act:groom' }] },
     ],
     people: [
@@ -107,7 +107,7 @@ export const INTERIORS: Partial<Record<PlaceId, Interior>> = {
       { kind: 'tvunit', rect: r(5.5, 7.5, -5.6, -4.8), h: 1.6, color: 0x333333 },
     ],
     hotspots: [
-      { id: 'order', name: 'Order at the counter', icon: '🍲', x: 0, z: -2.4, r: 2.0, actions: [{ label: 'Order a plate (eat)', icon: '🍛', cmd: 'act:meal' }, { label: 'Treat yourself', icon: '🍨', cmd: 'act:treat' }] },
+      { id: 'order', name: 'Order at the counter', icon: '🍲', x: 0, z: -2.4, r: 2.0, actions: [{ label: 'Sit down and order a meal', icon: '🍛', cmd: 'task:dine' }, { label: 'Treat yourself', icon: '🍨', cmd: 'act:treat' }] },
       { id: 'table', name: 'Table by the window', icon: '🧑‍🤝‍🧑', x: -5.5, z: 3.0, r: 2.2, actions: [{ label: 'Hang out with a friend', icon: '🧑‍🤝‍🧑', cmd: 'act:socialise' }] },
     ],
     people: [{ id: 'mama', name: 'Mama Chidi', role: 'cook', x: -6.0, z: -2.8, line: 'Rice or beans? Do not stand there like a statue.' }, { id: 'friend', name: 'Friend', role: 'friend', x: -5.5, z: 2.5, line: 'Sit down, the gist is hot.', persistent: 'friend' }],

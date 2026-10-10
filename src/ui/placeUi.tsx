@@ -72,6 +72,7 @@ export function NpcModal() {
   const close = () => openSheet(null)
   const acts = getActivities(life)
   const chat = acts.find((a) => a.def.id === 'chat')
+  const meal = acts.find((a) => a.def.id === 'meal')
   const hangAct = acts.find((a) => a.def.id === (family ? 'familyTime' : 'socialise'))
   return (
     <Modal onClose={close}>
@@ -84,6 +85,11 @@ export function NpcModal() {
         <button className="card-btn" disabled={!chat?.enabled || life.phase !== 'action'} onClick={() => startTalk('chat', role)}>
           <div className="flex justify-between"><b>💬 Chat</b><span className="chip">⚡3</span></div><div className="text-xs opacity-75">{chat?.enabled ? 'Stand together and talk. Your replies shape the bond.' : chat?.reason}</div>
         </button>
+        {family && role !== 'child' && (
+          <button className="card-btn" disabled={!meal?.enabled || life.phase !== 'action'} onClick={() => startTalk('food', role)}>
+            <div className="flex justify-between"><b>🍛 Ask for food</b><span className="chip">⚡1</span></div><div className="text-xs opacity-75">{meal?.enabled ? 'Ask them to feed you. Eat together and grow closer.' : meal?.reason}</div>
+          </button>
+        )}
         {hang && (
           <button className="card-btn" disabled={!hangAct?.enabled || life.phase !== 'action'} onClick={() => startTalk(family ? 'family' : 'hang', role)}>
             <div className="flex justify-between"><b>{family ? '👪 Spend time together' : '🧑‍🤝‍🧑 Hang out'}</b><span className="chip">⚡{hangAct?.def.cost.energy ?? 12}</span></div>

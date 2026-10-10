@@ -295,10 +295,12 @@ export class WorldRenderer {
     this.lastNear = { place: null, npc: null }
   }
   setInteriorState(s: InteriorState) { this.istate = s; this.interior?.setState(s) }
-  setSleeping(on: boolean) {
+  claimSeat(kind: 'sofa' | 'table' | 'rug') { return this.interior?.claimSeat(kind, 'player') ?? null }
+  releaseSeat() { this.interior?.releaseSeat('player') }
+  setSleeping(on: boolean, zzz = true) {
     if (!this.interior) return
     this.sleeping = on
-    this.interior.setSleeping(this.player, on)
+    this.interior.setSleeping(this.player, on, zzz)
     if (!on) { const st = this.interior.bedStand(); this.px = st.x; this.pz = st.z; this.player.group.position.set(this.px, 0, this.pz) }
   }
   setResidents(map: Record<string, import('./residents').Activity | null>, instant = false) { this.interior?.setActivities(map, instant) }

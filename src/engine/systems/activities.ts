@@ -47,7 +47,7 @@ function finish(ctx: Ctx, before: StatDelta[], text: string) {
   log(ctx.s, 'activity', text)
 }
 
-export interface ActivityArgs { target?: NpcRole; track?: TrackId; itemId?: string; hours?: number; appliancesOn?: number; perf?: number; donation?: number; pricePct?: number }
+export interface ActivityArgs { target?: NpcRole; track?: TrackId; itemId?: string; hours?: number; appliancesOn?: number; perf?: number; donation?: number; pricePct?: number; spend?: number }
 
 export function performActivity(ctx: Ctx, id: string, args: ActivityArgs = {}): boolean {
   const { s, rng } = ctx
@@ -178,7 +178,11 @@ export function performActivity(ctx: Ctx, id: string, args: ActivityArgs = {}): 
   if (args.perf !== undefined) {
     // skill-based bonus from playing the task in the world (0 = poor, 1 = great)
     const p = Math.max(0, Math.min(1, args.perf))
-    if (id === 'community') {
+    if (id === 'meal') {
+      addStat(ctx, 'happiness', Math.round(p * 2), 'A good meal'); addStat(ctx, 'health', Math.round(p), 'A good meal')
+      if (args.target) addRel(ctx, args.target, Math.round(p * 2))
+      const cost = Math.max(0, Math.min(args.spend ?? 0, c.stats.cash)); if (cost > 0) addStat(ctx, 'cash', -cost, 'Food')
+    } else if (id === 'community') {
       addStat(ctx, 'happiness', Math.round(p * 2), 'Fellowship'); addStat(ctx, 'stress', -Math.round(p * 2), 'Peace of mind')
       const give = Math.max(0, Math.min(args.donation ?? 0, c.stats.cash))
       if (give > 0) { addStat(ctx, 'cash', -give, 'Offering'); addStat(ctx, 'reputation', give >= 3000 ? 2 : 1, 'Generosity'); addStat(ctx, 'happiness', 1, 'Giving') }

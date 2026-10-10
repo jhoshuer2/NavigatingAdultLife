@@ -10,8 +10,8 @@ const TONE: Record<Tone, string> = { warm: '💚 Warm', funny: '😂 Funny', meh
 
 export interface Partner { id: string; name: string }
 
-export function TalkTask({ r, partner, role, setting, rounds, title, greet, onDone }: { r: WorldRenderer; partner: Partner; role: string; setting: Setting; rounds: number; title: string; greet?: string; onDone: (perf: number) => void }) {
-  const convo = useMemo<Exchange[]>(() => buildConversation(role, setting, rounds), [role, setting, rounds])
+export function TalkTask({ r, partner, role, setting, rounds, title, greet, script, onDone }: { r: WorldRenderer; partner: Partner; role: string; setting: Setting; rounds: number; title: string; greet?: string; script?: Exchange[]; onDone: (perf: number) => void }) {
+  const convo = useMemo<Exchange[]>(() => script ?? buildConversation(role, setting, rounds), [role, setting, rounds, script])
   const [i, setI] = useState(0)
   const [phase, setPhase] = useState<'greet' | 'ask' | 'wait' | 'end'>('greet')
   const [last, setLast] = useState<{ tone: Tone } | null>(null)

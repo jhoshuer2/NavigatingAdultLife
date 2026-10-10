@@ -33,8 +33,8 @@ interface Store {
   day: number
   taskActive: boolean
   setTaskActive: (v: boolean) => void
-  talkReq: { kind: 'chat' | 'hang' | 'family'; role: string; n: number } | null
-  startTalk: (kind: 'chat' | 'hang' | 'family', role: string) => void
+  talkReq: { kind: 'chat' | 'hang' | 'family' | 'food'; role: string; n: number } | null
+  startTalk: (kind: 'chat' | 'hang' | 'family' | 'food', role: string) => void
   penaltyReq: { act: string; n: number } | null
   marketReq: { n: number } | null
   jogReq: { n: number } | null

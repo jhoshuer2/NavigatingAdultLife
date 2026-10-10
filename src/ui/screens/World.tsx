@@ -16,13 +16,17 @@ import { OvertimeTask } from '../tasks/OvertimeTask'
 import { WorshipTask } from '../tasks/WorshipTask'
 import { ShopTask } from '../tasks/ShopTask'
 import { JogTask } from '../tasks/JogTask'
+import { PoseTask } from '../tasks/PoseTask'
+import { CookTask } from '../tasks/CookTask'
+import { DineTask } from '../tasks/DineTask'
 import { TalkTask, type Partner } from '../tasks/TalkTask'
-import type { Setting } from '@content/dialogue'
+import type { Exchange, Setting } from '@content/dialogue'
 import { placeActive, suggest } from '../../world/guide'
 import { outdoorAnchor, presenceAt, type Activity } from '../../world/residents'
 import { audio } from '@platform/audio'
 import { track, setAnalyticsContext } from '@platform/analytics'
 
+const FOOD_SCRIPT: Exchange[] = [{ npc: 'You look hungry. What would you like to eat?', options: [{ text: 'Rice and stew, please. Thank you!', tone: 'warm', reply: 'Sit down, it is coming. Wash your hands first.' }, { text: 'Whatever smells like love!', tone: 'funny', reply: 'Ha! Always so easy to please. Sit down.' }, { text: 'Anything.', tone: 'meh', reply: 'Anything is not a meal! Sit down, I will decide.' }] }]
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 export default function World() {
@@ -45,7 +49,10 @@ export default function World() {
     | { kind: 'service' }
     | { kind: 'shop' }
     | { kind: 'jog' }
-    | { kind: 'talk'; partner: Partner; role: NpcRole; setting: Setting; rounds: number; title: string; actId: string; hidden?: string; greet?: string }
+    | { kind: 'pose'; mode: 'sofa' | 'bed' }
+    | { kind: 'cook' }
+    | { kind: 'dine' }
+    | { kind: 'talk'; partner: Partner; role: NpcRole; setting: Setting; rounds: number; title: string; actId: string; hidden?: string; greet?: string; script?: Exchange[] }
   const [task, setTask] = useState<Task | null>(null)
   const [hang, setHang] = useState<{ role: NpcRole; npcId: string; name: string; gender: 'male' | 'female'; dest: PlaceId } | null>(null)
   const [destPick, setDestPick] = useState<{ role: NpcRole; npcId: string } | null>(null)
@@ -297,10 +304,10 @@ export default function World() {
   useEffect(() => { if (g.startChoresReq) beginChores() /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [g.startChoresReq])
 
   const settingHere = (): Setting => { const p = rendRef.current?.inside; return p === 'home' ? 'home' : p === 'mamaput' ? 'mamaput' : p === 'school' ? 'school' : p === 'office' ? 'office' : near.place === 'pitch' ? 'pitch' : 'street' }
-  const beginTalk = (kind: 'chat' | 'hang' | 'family', role: NpcRole) => {
+  const beginTalk = (kind: 'chat' | 'hang' | 'family' | 'food', role: NpcRole) => {
     const r = rendRef.current; if (!r || !life) return
     const npc = life.npcs[life.roles[role] ?? ''] ?? (role === 'child' ? life.npcs[life.character.childrenIds[0]] : undefined); if (!npc) return
-    const actId = kind === 'chat' ? 'chat' : kind === 'hang' ? 'socialise' : 'familyTime'
+    const actId = kind === 'chat' ? 'chat' : kind === 'hang' ? 'socialise' : kind === 'food' ? 'meal' : 'familyTime'
     const why = enabledAct(actId); if (why) { g.toast(why); return }
     if (kind === 'hang' && !r.inside && role !== 'mother' && role !== 'father' && role !== 'sibling' && role !== 'child') { setDestPick({ role, npcId: npc.id }); return }
     let partner: Partner; let hidden: string | undefined
@@ -310,7 +317,7 @@ export default function World() {
       else { const me = r.position; r.addActor('buddy', { name: npc.name, gender: npc.gender, x: me.x + 1.6, z: me.z, heading: -Math.PI / 2 }); partner = { id: 'buddy', name: npc.name } }
     } else if (r.npcPos(npc.id)) partner = { id: npc.id, name: npc.name }
     else { const me = r.position; r.addActor('buddy', { name: npc.name, gender: npc.gender, x: me.x + 1.6, z: me.z, heading: -Math.PI / 2 }); partner = { id: 'buddy', name: npc.name } }
-    setTask({ kind: 'talk', partner, role, setting: settingHere(), rounds: kind === 'chat' ? 2 : 3, title: kind === 'chat' ? `Chatting with ${npc.name}` : kind === 'hang' ? `Hanging out with ${npc.name}` : `Time with ${npc.name}`, actId, hidden })
+    setTask({ kind: 'talk', partner, role, setting: settingHere(), rounds: kind === 'chat' ? 2 : kind === 'food' ? 1 : 3, script: kind === 'food' ? FOOD_SCRIPT : undefined, title: kind === 'food' ? `Asking ${npc.name} for food` : kind === 'chat' ? `Chatting with ${npc.name}` : kind === 'hang' ? `Hanging out with ${npc.name}` : `Time with ${npc.name}`, actId, hidden })
   }
   useEffect(() => { if (g.talkReq) beginTalk(g.talkReq.kind, g.talkReq.role as NpcRole) /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [g.talkReq])
 
@@ -355,13 +362,14 @@ export default function World() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hang, task, fade])
 
-  const endTask = (perf?: number, donation = 0) => {
+  const endTask = (perf?: number, donation = 0, spendAmt = 0) => {
     const r = rendRef.current; const t = task
     if (taskLog.current) { taskLog.current.perf = perf; taskLog.current.abandoned = perf === undefined && t?.kind !== 'shop' }
     setTask(null)
     if (!t) return
     if (t.kind === 'penalty') { if (perf !== undefined) g.act(t.act, { perf }) }
     else if (t.kind === 'chores') { if (perf !== undefined) g.act('chores', { perf }) }
+    else if (t.kind === 'cook' || t.kind === 'dine') { if (perf !== undefined) g.act('meal', { perf, spend: spendAmt }) }
     else if (t.kind === 'jog') { if (perf !== undefined) g.act('exercise', { perf }) }
     else if (t.kind === 'service') { if (perf !== undefined) g.act('community', { perf, donation }) }
     else if (t.kind === 'overtime') { if (perf !== undefined) g.act('overtime', { perf }) }
@@ -379,6 +387,9 @@ export default function World() {
     const cmd = a.cmd
     if (cmd === 'sleep') { setHotId(null); startSleep() }
     else if (cmd.startsWith('toggle:')) toggle(cmd.slice(7) as 'light' | 'tv' | 'fan')
+    else if (cmd === 'pose:sofa' || cmd === 'pose:bed') { setHotId(null); setTask({ kind: 'pose', mode: cmd === 'pose:sofa' ? 'sofa' : 'bed' }) }
+    else if (cmd === 'task:cook') { setHotId(null); const why = enabledAct('meal'); if (why) g.toast(why); else setTask({ kind: 'cook' }) }
+    else if (cmd === 'task:dine') { setHotId(null); const why = enabledAct('meal'); if (why) g.toast(why); else setTask({ kind: 'dine' }) }
     else if (cmd === 'task:chores') { setHotId(null); beginChores() }
     else if (cmd === 'task:service') { setHotId(null); const why = enabledAct('community'); if (why) g.toast(why); else setTask({ kind: 'service' }) }
     else if (cmd === 'task:overtime') { setHotId(null); beginOvertime() }
@@ -553,12 +564,15 @@ export default function World() {
       {task?.kind === 'study' && rendRef.current && <StudyTask r={rendRef.current} mode={task.mode} onDone={() => setTask(null)} />}
       {task?.kind === 'penalty' && rendRef.current && <PenaltyTask r={rendRef.current} pitch={district.places.find((p) => p.id === 'pitch')!.rect} onDone={(perf) => endTask(perf)} />}
       {task?.kind === 'chores' && rendRef.current && <ChoresTask r={rendRef.current} motherId={INTERIORS.home?.people.find((p) => p.persistent === 'mother')?.id ?? null} onDone={(perf) => endTask(perf)} />}
+      {task?.kind === 'pose' && rendRef.current && <PoseTask r={rendRef.current} mode={task.mode} tvOn={appl.tv} onToggleTv={() => toggle('tv')} onWatch={() => { const why = enabledAct('tv'); if (why) g.toast(why); else g.act('tv') }} onSleep={() => startSleep()} onDone={() => setTask(null)} />}
+      {task?.kind === 'cook' && rendRef.current && <CookTask r={rendRef.current} free={life.character.housing.type === 'family'} onDone={(perf, sp) => endTask(perf, 0, sp)} />}
+      {task?.kind === 'dine' && rendRef.current && <DineTask r={rendRef.current} cash={life.character.stats.cash} onDone={(perf, sp) => endTask(sp ? perf : undefined, 0, sp)} />}
       {task?.kind === 'jog' && rendRef.current && <JogTask r={rendRef.current} pitch={district.places.find((p) => p.id === 'pitch')!.rect} onDone={(perf) => endTask(perf)} />}
       {task?.kind === 'shop' && rendRef.current && <ShopTask r={rendRef.current} items={getShopItems(life)} cash={life.character.stats.cash} energy={life.character.stats.energy} onBuy={(itemId, pricePct) => g.act('shop', { itemId, pricePct })} onDone={() => endTask()} />}
       {task?.kind === 'service' && rendRef.current && <WorshipTask r={rendRef.current} cash={life.character.stats.cash} onDone={(perf, don) => endTask(perf, don)} />}
       {task?.kind === 'overtime' && rendRef.current && <OvertimeTask r={rendRef.current} onDone={(perf) => endTask(perf)} />}
       {task?.kind === 'market' && rendRef.current && <MarketTask r={rendRef.current} spot={{ x: district.places.find((p) => p.id === 'market')!.door.x, z: district.places.find((p) => p.id === 'market')!.door.z + 2.1 }} onDone={(perf) => endTask(perf)} />}
-      {task?.kind === 'talk' && rendRef.current && <TalkTask r={rendRef.current} partner={task.partner} role={task.role} setting={task.setting} rounds={task.rounds} title={task.title} greet={task.greet} onDone={(perf) => endTask(perf)} />}
+      {task?.kind === 'talk' && rendRef.current && <TalkTask r={rendRef.current} partner={task.partner} role={task.role} setting={task.setting} rounds={task.rounds} title={task.title} greet={task.greet} script={task.script} onDone={(perf) => endTask(perf)} />}
       {hang && !task && (
         <div className="absolute left-3 right-3 bottom-[5.4rem] z-20 card px-3 py-2 flex items-center gap-2 pointer-events-auto" style={{ background: '#1d3a2aee' }}><span className="flex-1 text-sm font-bold">🚶 With {hang.name} → {district.places.find((p) => p.id === hang.dest)?.name}</span><button className="chip" onClick={cancelHang}>✖ Cancel</button></div>
       )}

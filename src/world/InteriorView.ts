@@ -228,7 +228,13 @@ export class InteriorView {
   setMarker(hotspotId: string | null) { this.markTarget = hotspotId }
 
   /** Lay the player down in the bed (or stand up again). */
-  setSleeping(player: HumanParts, on: boolean) {
+  claimSeat(kind: Anchor['kind'], who: string): Anchor | null {
+    const a = (this.def.anchors ?? []).find((x) => x.kind === kind && !this.occupied.has(x.id))
+    if (!a) return null
+    this.occupied.set(a.id, who); return a
+  }
+  releaseSeat(who: string) { for (const [k, v] of [...this.occupied]) if (v === who) this.occupied.delete(k) }
+  setSleeping(player: HumanParts, on: boolean, zzzOn = true) {
     const bed = this.def.objs.find((o) => o.kind === 'bed')
     if (!bed) return
     const cx = (bed.rect.x0 + bed.rect.x1) / 2, cz = (bed.rect.z0 + bed.rect.z1) / 2
@@ -237,7 +243,7 @@ export class InteriorView {
       if (!this.bedGroup) { const g = new THREE.Group(); const blanket = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.25, 2.6), new THREE.MeshLambertMaterial({ color: 0x2b8a6a })); blanket.position.set(cx, 1.35, cz + 0.9); g.add(blanket); this.bedGroup = g; this.scene.add(g) }
       this.bedGroup.visible = true
       if (!this.zzz) { this.zzz = this.label('😴 Zzz…', 'rgba(255,255,255,0.9)'); this.scene.add(this.zzz) }
-      this.zzz.visible = true; this.zzz.position.set(cx, 3.2, cz)
+      this.zzz.visible = zzzOn; this.zzz.position.set(cx, 3.2, cz)
     } else {
       player.group.rotation.set(0, 0, 0)
       if (this.bedGroup) this.bedGroup.visible = false
