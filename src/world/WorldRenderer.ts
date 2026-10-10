@@ -99,6 +99,7 @@ export class WorldRenderer {
   private bubbles: { sprite: THREE.Sprite; id: string; t: number; scene: THREE.Scene }[] = []
   private ballMesh?: THREE.Mesh
   private stallGroup?: THREE.Group
+  private marks = new Map<string, THREE.Sprite>()
 
   constructor(private container: HTMLElement, private district: District, opts: { look: Appearance; age: number; uniform: boolean; month: number; hour: number; spawn: { x: number; z: number } }) {
     const dpr = window.devicePixelRatio || 1
@@ -330,6 +331,17 @@ export class WorldRenderer {
   hidePerson(id: string, hidden: boolean) { this.interior?.hidePerson(id, hidden) }
   setBoard(lines: string[] | null) { this.interior?.setBoard(lines) }
   npcPos(id: string): { x: number; z: number } | null { const o = this.npcs.get(id); if (o) return { x: o.npc.x, z: o.npc.z }; const p = this.interior?.personInfo(id); return p ? { x: p.x, z: p.z } : null }
+  addMark(id: string, x: number, z: number, emoji: string) {
+    this.removeMark(id)
+    const c = document.createElement('canvas'); c.width = c.height = 128
+    const g = c.getContext('2d')!; g.fillStyle = 'rgba(255,210,63,0.95)'; g.beginPath(); g.arc(64, 64, 58, 0, Math.PI * 2); g.fill(); g.strokeStyle = '#1c1b22'; g.lineWidth = 6; g.stroke()
+    g.font = '70px serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(emoji, 64, 70)
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthTest: false })); sp.renderOrder = 9
+    sp.scale.set(1.7, 1.7, 1); sp.position.set(x, 1.5, z); this.root().add(sp); this.marks.set(id, sp)
+  }
+  removeMark(id: string) { const s = this.marks.get(id); if (s) { s.parent?.remove(s); s.material.map?.dispose(); s.material.dispose(); this.marks.delete(id) } }
+  clearMarks() { for (const id of [...this.marks.keys()]) this.removeMark(id) }
   setStall(p: { x: number; z: number } | null) {
     if (this.stallGroup) { this.stallGroup.parent?.remove(this.stallGroup); this.stallGroup = undefined }
     if (!p) return
@@ -380,11 +392,12 @@ export class WorldRenderer {
     this.actors.clear()
     for (const b of this.bubbles) { b.scene.remove(b.sprite); b.sprite.material.map?.dispose(); b.sprite.material.dispose() }
     this.bubbles = []
-    this.setBall(null); this.setStall(null); this.camOverride = null; this.frozen = false; this.sitting = false
+    this.setBall(null); this.setStall(null); this.clearMarks(); this.camOverride = null; this.frozen = false; this.sitting = false
     for (const o of this.npcs.values()) { o.parts.group.visible = true; o.label.visible = true }
     this.player.group.position.y = 0; this.player.legL.rotation.x = this.player.legR.rotation.x = 0
   }
   private stepDirected(dt: number) {
+    for (const m of this.marks.values()) m.position.y = 1.6 + Math.sin(this.time * 4 + m.position.x) * 0.15
     const blockers = this.interior ? this.interior.blockers : this.district.blockers
     const bounds: Rect = this.interior ? this.interior.def.bounds : { x0: -WORLD.half, x1: WORLD.half, z0: -WORLD.half, z1: WORLD.half }
     for (const a of this.actors.values()) {

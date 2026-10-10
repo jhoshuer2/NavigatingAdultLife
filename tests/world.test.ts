@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { buildDistrict, DISTRICTS, SPAWN } from '../src/world/layout'
+import { HOME_CHORES } from '../src/world/interiors'
 import { buildNav, findPath, walkable, moveWithCollision } from '../src/world/nav'
 
 describe('district layout and navigation', () => {
@@ -72,4 +73,17 @@ describe('interiors', () => {
       expect(findPath(nav, { x: def.hotspots[0].x, z: def.hotspots[0].z }, def.door)).not.toBeNull()
     })
   }
+})
+
+describe('chores spots', () => {
+  it('every home chore spot is reachable', async () => {
+    const { INTERIORS, interiorBlockers } = await import('../src/world/interiors')
+    const { buildNavFor } = await import('../src/world/nav')
+    const def = INTERIORS.home!
+    const nav = buildNavFor(interiorBlockers(def), def.bounds, 0.5)
+    for (const c of HOME_CHORES) {
+      expect(walkable(nav, c.x, c.z), c.id).toBe(true)
+      expect(findPath(nav, def.spawn, { x: c.x, z: c.z }), `path ${c.id}`).not.toBeNull()
+    }
+  })
 })

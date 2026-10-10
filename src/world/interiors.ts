@@ -51,7 +51,7 @@ export const INTERIORS: Partial<Record<PlaceId, Interior>> = {
       { id: 'tv', name: 'TV and sofa', icon: '📺', x: 0.5, z: 1.5, r: 2.0, actions: [{ label: 'Turn the TV on/off', icon: '📺', cmd: 'toggle:tv' }, { label: 'Watch TV for a while', icon: '🍿', cmd: 'act:tv' }] },
       { id: 'fan', name: 'Standing fan', icon: '🌀', x: 2.1, z: 1.7, r: 1.8, actions: [{ label: 'Turn the fan on/off', icon: '🌀', cmd: 'toggle:fan' }] },
       { id: 'light', name: 'Light switch', icon: '💡', x: 2.4, z: 5.6, r: 1.6, actions: [{ label: 'Turn the lights on/off', icon: '💡', cmd: 'toggle:light' }] },
-      { id: 'kitchen', name: 'Kitchen', icon: '🍛', x: 7.0, z: -0.6, r: 2.3, actions: [{ label: 'Eat a meal', icon: '🍛', cmd: 'act:meal' }] },
+      { id: 'kitchen', name: 'Kitchen', icon: '🍛', x: 7.0, z: -0.6, r: 2.3, actions: [{ label: 'Eat a meal', icon: '🍛', cmd: 'act:meal' }, { label: 'Do the household chores', icon: '🧹', cmd: 'task:chores' }] },
       { id: 'bath', name: 'Bathroom', icon: '🪥', x: 7.0, z: 4.8, r: 2.2, actions: [{ label: 'Brush teeth and freshen up', icon: '🪥', cmd: 'act:groom' }, { label: 'Take a bath', icon: '🚿', cmd: 'act:groom' }] },
     ],
     people: [
@@ -122,7 +122,7 @@ export const INTERIORS: Partial<Record<PlaceId, Interior>> = {
       { kind: 'desk', rect: r(7.4, 9.4, 3.4, 4.4), h: 1.0, color: 0x7a6a58, id: 'hr' },
     ],
     hotspots: [
-      { id: 'mydesk', name: 'Your desk', icon: '💼', x: -3.6, z: -1.0, r: 2.4, actions: [{ label: 'Work harder (overtime)', icon: '⏰', cmd: 'act:overtime' }] },
+      { id: 'mydesk', name: 'Your desk', icon: '💼', x: -3.6, z: -1.0, r: 2.4, actions: [{ label: 'Work late: process the documents (overtime)', icon: '⏰', cmd: 'task:overtime' }] },
       { id: 'boss', name: 'Boss’s office', icon: '🧑‍💼', x: 7.7, z: -2.2, r: 2.3, actions: [{ label: 'Have a word with the boss', icon: '💬', cmd: 'chat:boss' }] },
       { id: 'hr', name: 'HR desk', icon: '📄', x: 6.1, z: 4.6, r: 2.3, actions: [{ label: 'Resign from your job', icon: '🚪', cmd: 'act:quitJob' }] },
     ],
@@ -143,6 +143,16 @@ export const INTERIORS: Partial<Record<PlaceId, Interior>> = {
     windowsAt: [{ x: 5, z: -6 }],
   },
 }
+
+/** Things to tidy during the chores task (home interior). */
+export const HOME_CHORES: { id: string; x: number; z: number; emoji: string; note: string }[] = [
+  { id: 'c1', x: 0.5, z: -3.3, emoji: '🧹', note: 'Sweep the sitting room' },
+  { id: 'c2', x: 6.5, z: 0.4, emoji: '🍽️', note: 'Wash the plates' },
+  { id: 'c3', x: -4.2, z: -3.0, emoji: '🧺', note: 'Fold the laundry' },
+  { id: 'c4', x: -6.0, z: 4.6, emoji: '🧹', note: 'Sweep the corridor' },
+  { id: 'c5', x: 7.0, z: 5.2, emoji: '🪣', note: 'Mop the bathroom' },
+  { id: 'c6', x: 1.8, z: 5.0, emoji: '🗑️', note: 'Take out the rubbish' },
+]
 
 export function interiorFor(id: PlaceId): Interior | undefined { return INTERIORS[id] }
 

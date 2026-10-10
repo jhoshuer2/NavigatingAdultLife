@@ -37,6 +37,8 @@ interface Store {
   startTalk: (kind: 'chat' | 'hang' | 'family', role: string) => void
   penaltyReq: { act: string; n: number } | null
   marketReq: { n: number } | null
+  startChoresReq: { n: number } | null
+  startChores: () => void
   startMarket: () => void
   startPenalty: (act: string) => void
   enterReq: { place: PlaceId; intent?: 'sleep'; n: number } | null
@@ -94,7 +96,8 @@ export const useGame = create<Store>((set, get) => {
   }
   const setMeta = (meta: MetaProfile) => { saveMeta(meta); set({ meta }); audio.configure(meta.settings) }
   return {
-    screen: 'title', life: null, meta: defaultMeta(), sheet: null, toasts: [], quizFeedback: null, dashMode: 'foot', lastDash: null, endingRecorded: false, placeId: null, npcId: null, walkReq: null, hour: 8, day: 0, enterReq: null, taskActive: false, talkReq: null, penaltyReq: null, marketReq: null,
+    screen: 'title', life: null, meta: defaultMeta(), sheet: null, toasts: [], quizFeedback: null, dashMode: 'foot', lastDash: null, endingRecorded: false, placeId: null, npcId: null, walkReq: null, hour: 8, day: 0, enterReq: null, taskActive: false, talkReq: null, penaltyReq: null, marketReq: null, startChoresReq: null,
+    startChores: () => set((st) => ({ startChoresReq: { n: (st.startChoresReq?.n ?? 0) + 1 }, sheet: null })),
     startMarket: () => set((st) => ({ marketReq: { n: (st.marketReq?.n ?? 0) + 1 }, sheet: null })),
     setTaskActive: (v) => set({ taskActive: v }),
     startTalk: (kind, role) => set((st) => ({ talkReq: { kind, role, n: (st.talkReq?.n ?? 0) + 1 }, sheet: null })),

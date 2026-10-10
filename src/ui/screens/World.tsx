@@ -11,6 +11,8 @@ import type { NpcRole } from '@engine/core/types'
 import { StudyTask, type StudyMode } from '../tasks/StudyTask'
 import { PenaltyTask } from '../tasks/PenaltyTask'
 import { MarketTask } from '../tasks/MarketTask'
+import { ChoresTask } from '../tasks/ChoresTask'
+import { OvertimeTask } from '../tasks/OvertimeTask'
 import { TalkTask, type Partner } from '../tasks/TalkTask'
 import type { Setting } from '@content/dialogue'
 import { npcSpot, placeActive, suggest } from '../../world/guide'
@@ -33,6 +35,8 @@ export default function World() {
     | { kind: 'study'; mode: StudyMode }
     | { kind: 'penalty'; act: string }
     | { kind: 'market' }
+    | { kind: 'chores' }
+    | { kind: 'overtime' }
     | { kind: 'talk'; partner: Partner; role: NpcRole; setting: Setting; rounds: number; title: string; actId: string; hidden?: string }
   const [task, setTask] = useState<Task | null>(null)
   const [hang, setHang] = useState<{ role: NpcRole; npcId: string; name: string; gender: 'male' | 'female'; dest: PlaceId } | null>(null)
@@ -54,7 +58,7 @@ export default function World() {
   const district = useMemo<District>(() => buildDistrict(districtId), [districtId])
   const age = life?.character.age ?? 6
   const ageBand = age < 12 ? 0 : age < 18 ? 1 : 2
-  const modalOpen = !!g.sheet || life?.phase !== 'action' || (!!life?.quiz && !task) || !!task || !!destPick || !!hotId || !!sleep || fade || mapOpen
+  const modalOpen = !!g.sheet || life?.phase !== 'action' || (!!life?.quiz && !task) || (!!task && task.kind !== 'chores') || !!destPick || !!hotId || !!sleep || fade || mapOpen
 
   const month = useMemo(() => {
     if (!life) return 0
@@ -221,6 +225,18 @@ export default function World() {
   }
   useEffect(() => { if (g.marketReq) startMarket() /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [g.marketReq])
 
+  const beginOvertime = () => {
+    const why = enabledAct('overtime'); if (why) { g.toast(why); return }
+    setTask({ kind: 'overtime' })
+  }
+  const beginChores = () => {
+    const r = rendRef.current; if (!r) return
+    const why = enabledAct('chores'); if (why) { g.toast(why); return }
+    if (r.inside === 'home') { setTask({ kind: 'chores' }); return }
+    enter('home', undefined, () => setTask({ kind: 'chores' }))
+  }
+  useEffect(() => { if (g.startChoresReq) beginChores() /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [g.startChoresReq])
+
   const settingHere = (): Setting => { const p = rendRef.current?.inside; return p === 'home' ? 'home' : p === 'mamaput' ? 'mamaput' : p === 'school' ? 'school' : p === 'office' ? 'office' : near.place === 'pitch' ? 'pitch' : 'street' }
   const beginTalk = (kind: 'chat' | 'hang' | 'family', role: NpcRole) => {
     const r = rendRef.current; if (!r || !life) return
@@ -285,6 +301,8 @@ export default function World() {
     setTask(null)
     if (!t) return
     if (t.kind === 'penalty') { if (perf !== undefined) g.act(t.act, { perf }) }
+    else if (t.kind === 'chores') { if (perf !== undefined) g.act('chores', { perf }) }
+    else if (t.kind === 'overtime') { if (perf !== undefined) g.act('overtime', { perf }) }
     else if (t.kind === 'market') { if (perf !== undefined) g.act('hustle', { perf }) }
     else if (t.kind === 'talk') {
       if (r) { r.removeActor('buddy'); if (t.hidden) r.hidePerson(t.hidden, false); if (hang) r.hideNpc(hang.npcId, false) }
@@ -299,6 +317,8 @@ export default function World() {
     const cmd = a.cmd
     if (cmd === 'sleep') { setHotId(null); startSleep() }
     else if (cmd.startsWith('toggle:')) toggle(cmd.slice(7) as 'light' | 'tv' | 'fan')
+    else if (cmd === 'task:chores') { setHotId(null); beginChores() }
+    else if (cmd === 'task:overtime') { setHotId(null); beginOvertime() }
     else if (cmd.startsWith('task:')) { setHotId(null); startStudy(cmd.slice(5) as StudyMode) }
     else if (cmd.startsWith('act:')) { setHotId(null); route(cmd.slice(4)) }
     else if (cmd.startsWith('chat:')) { setHotId(null); const role = cmd.slice(5); const n = Object.values(life!.npcs).find((x) => x.role === role && x.alive); if (n) g.openNpc(n.id) }
@@ -458,7 +478,7 @@ export default function World() {
           {nearPlace && !INTERIORS[nearPlace.id] && <button className="btn btn-green pointer-events-auto pop !text-lg" onClick={() => g.openPlace(near.place!)} aria-label="Interact">{nearPlace.icon} {nearPlace.name} <span className="text-xs opacity-70">(E)</span></button>}
         </div>
       )}
-      {!modalOpen && inside && (
+      {!modalOpen && inside && !task && (
         <div className="absolute right-3 bottom-[6.2rem] flex flex-col items-end gap-2 pointer-events-none">
           {nearIn.person && <button className="btn btn-primary pointer-events-auto pop" onClick={() => talkInside(nearIn.person!)} aria-label="Talk">💬 Talk to {rendRef.current?.personAt(nearIn.person)?.name}</button>}
           {nearIn.hotspot && (() => { const h = INTERIORS[inside]?.hotspots.find((x) => x.id === nearIn.hotspot); return h ? <button className="btn btn-green pointer-events-auto pop !text-lg" onClick={() => setHotId(h.id)} aria-label="Interact">{h.icon} {h.name} <span className="text-xs opacity-70">(E)</span></button> : null })()}
@@ -468,6 +488,8 @@ export default function World() {
 
       {task?.kind === 'study' && rendRef.current && <StudyTask r={rendRef.current} mode={task.mode} onDone={() => setTask(null)} />}
       {task?.kind === 'penalty' && rendRef.current && <PenaltyTask r={rendRef.current} pitch={district.places.find((p) => p.id === 'pitch')!.rect} onDone={(perf) => endTask(perf)} />}
+      {task?.kind === 'chores' && rendRef.current && <ChoresTask r={rendRef.current} motherId={INTERIORS.home?.people.find((p) => p.persistent === 'mother')?.id ?? null} onDone={(perf) => endTask(perf)} />}
+      {task?.kind === 'overtime' && rendRef.current && <OvertimeTask r={rendRef.current} onDone={(perf) => endTask(perf)} />}
       {task?.kind === 'market' && rendRef.current && <MarketTask r={rendRef.current} spot={{ x: district.places.find((p) => p.id === 'market')!.door.x, z: district.places.find((p) => p.id === 'market')!.door.z + 2.1 }} onDone={(perf) => endTask(perf)} />}
       {task?.kind === 'talk' && rendRef.current && <TalkTask r={rendRef.current} partner={task.partner} role={task.role} setting={task.setting} rounds={task.rounds} title={task.title} onDone={(perf) => endTask(perf)} />}
       {hang && !task && (
@@ -486,7 +508,7 @@ export default function World() {
       )}
 
       {/* joystick */}
-      {!task && <div className="absolute left-4 bottom-[5.2rem] w-28 h-28 rounded-full touch-none" style={{ background: '#ffffff22', border: '3px solid #ffffff55', touchAction: 'none' }}
+      {(!task || task.kind === 'chores') && <div className="absolute left-4 bottom-[5.2rem] w-28 h-28 rounded-full touch-none" style={{ background: '#ffffff22', border: '3px solid #ffffff55', touchAction: 'none' }}
         onPointerDown={onJoyDown} onPointerMove={onJoyMove} onPointerUp={onJoyUp} onPointerCancel={onJoyUp} aria-label="Movement joystick">
         <div className="absolute w-12 h-12 rounded-full" style={{ left: 'calc(50% - 24px)', top: 'calc(50% - 24px)', transform: `translate(${knob.x}px, ${knob.y}px)`, background: knob.on ? '#ffd23f' : '#ffffffaa', border: '3px solid #1c1b22' }} />
       </div>}
