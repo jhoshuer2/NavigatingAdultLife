@@ -155,8 +155,8 @@ export function finalizeYear(ctx: Ctx) {
   const lines: string[] = []
   const settle = settleMoney(ctx)
   lines.push(...settle.lines)
-  lines.push(...advanceEducation(ctx))
-  lines.push(...yearlyCareer(ctx))
+  const story = [...advanceEducation(ctx), ...yearlyCareer(ctx)]
+  lines.push(...story)
   applyPassiveItems(ctx)
   // drift & recovery
   addStat(ctx, 'stress', -5, 'Time')
@@ -178,7 +178,7 @@ export function finalizeYear(ctx: Ctx) {
   if (!cause && c.age >= MAX_AGE) cause = 'They lived a full and long life.'
   const sum: YearSummary = {
     age: c.age,
-    headline: headline(s, lines, settle.income, settle.expenses),
+    headline: headline(s, story, settle.income, settle.expenses),
     income: settle.income, expenses: settle.expenses, lines,
     deltas: collapseDeltas(s.yearDeltas), unlocked,
   }
