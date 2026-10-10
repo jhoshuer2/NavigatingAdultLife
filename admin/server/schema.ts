@@ -103,4 +103,21 @@ CREATE TABLE quality_days (day date NOT NULL, device_id uuid NOT NULL, device_ty
 CREATE TABLE error_days (day date NOT NULL, device_id uuid NOT NULL, message text NOT NULL, app_version text NOT NULL DEFAULT '', device_type text, n int NOT NULL DEFAULT 0, is_test boolean NOT NULL DEFAULT false, PRIMARY KEY (day, device_id, message, app_version));
 `,
   },
+  {
+    id: 3,
+    sql: `
+-- Multiplayer accounts (docs/PRD-multiplayer.md): anonymous accounts with an age band, guardian PIN and recovery code. No email or phone.
+CREATE TABLE accounts (
+  account_id uuid PRIMARY KEY, name text NOT NULL, tag int NOT NULL, friend_code text NOT NULL UNIQUE,
+  age_band text NOT NULL CHECK (age_band IN ('under13','13to17','18plus')),
+  mp_enabled boolean NOT NULL DEFAULT false, chat_level text NOT NULL DEFAULT 'none',
+  guardian_pin_hash text, recovery_hash text NOT NULL UNIQUE, token_ver int NOT NULL DEFAULT 1,
+  country text, created_at timestamptz NOT NULL DEFAULT now(), last_seen timestamptz NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX accounts_name_tag ON accounts (lower(name), tag);
+CREATE INDEX accounts_last_seen ON accounts (last_seen);
+CREATE TABLE account_attempts (key text NOT NULL, kind text NOT NULL, at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX account_attempts_key ON account_attempts (key, kind, at);
+`,
+  },
 ]

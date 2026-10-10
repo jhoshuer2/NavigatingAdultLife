@@ -5,8 +5,10 @@ import { createAdmin } from '../server/auth'
 import { memoryDb, setDb } from '../server/db'
 import { handleAdmin } from '../server/admin'
 import { handleCollect, handleForget } from '../server/collector'
+import { handleAccount } from '../server/account'
 import { seedPlayers } from '../server/seed'
 
+process.env.ACCOUNT_SECRET ??= 'dev-account-secret-change-me'
 process.env.GAME_ORIGINS ??= 'http://localhost:5173,http://localhost:4173'
 const db = await memoryDb('.pglite'); setDb(db)
 if (!(await db.query('SELECT 1 FROM admin_users LIMIT 1')).rows.length) {
@@ -19,6 +21,7 @@ const handler = async (req: Request): Promise<Response> => {
   const p = new URL(req.url).pathname
   if (p === '/api/collect') return handleCollect(req)
   if (p === '/api/forget') return handleForget(req)
+  if (p === '/api/account') return handleAccount(req, db)
   if (p.startsWith('/api/admin')) return handleAdmin(req, db)
   if (p === '/dev/code' && process.env.DEV_TOTP === '1') {
     const s = (await db.query<{ totp_secret: string }>("SELECT totp_secret FROM admin_users WHERE email='owner@example.com'")).rows[0]
