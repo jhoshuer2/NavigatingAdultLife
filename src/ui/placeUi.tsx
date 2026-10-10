@@ -17,7 +17,7 @@ const BENEFIT: Record<string, string> = {
 }
 
 export function PlaceModal() {
-  const { life, placeId, openSheet, endActions, enterPlace, hour, startPenalty, startMarket, startChores, startShop, startJog } = useGame()
+  const { life, placeId, openSheet, endActions, enterPlace, hour, startPenalty, startMarket, startChores, startShop, startJog, startMatch } = useGame()
   const route = useActivityRouter()
   const acts = useMemo(() => (life ? getActivities(life) : []), [life])
   if (!life || !placeId) return null
@@ -40,6 +40,9 @@ export function PlaceModal() {
         {INTERIORS[placeId] && (isOpen(placeId, hour)
           ? <button className="card-btn" style={{ borderColor: '#ffd23f' }} onClick={() => { audio.sfx('click'); enterPlace(placeId) }}><b>🚪 Go inside</b><div className="text-xs opacity-75">Open the door and walk in.</div></button>
           : <div className="card p-3 text-sm text-yellow-300">🔒 Closed. Opens at {fmtClock(opensAt(placeId))}.</div>)}
+        {placeId === 'pitch' && (
+          <button className="card-btn" style={{ borderColor: '#ffd23f' }} disabled={life.phase !== 'action' || closed} onClick={() => { audio.sfx('click'); startMatch() }}><div className="flex justify-between"><b>⚽ Find a team and play</b><span className="chip">⚡12</span></div><div className="text-xs opacity-75">Join a three-a-side street match with teammates and rivals.</div></button>
+        )}
         {rows.map(({ def, enabled, reason, remaining }) => (
           <button key={def.id} className="card-btn" disabled={!enabled || life.phase !== 'action' || closed} onClick={() => { audio.sfx('click'); if (def.id === 'rest' && placeId === 'home') { enterPlace('home', 'sleep'); return } if (def.id === 'study' && INTERIORS[placeId]) { enterPlace(placeId); return } if (def.id === 'chores' && placeId === 'home') { startChores(); return } if ((def.id === 'overtime' || def.id === 'community') && INTERIORS[placeId]) { enterPlace(placeId); return } if (placeId === 'market' && def.id === 'shop') { startShop(); return } if (placeId === 'market' && def.id === 'hustle') { startMarket(); return } if (placeId === 'pitch' && def.id === 'exercise') { startJog(); return } if (placeId === 'pitch' && def.id === 'play') { startPenalty(def.id); return } if (def.id !== 'applyJob' && def.id !== 'socialise' && def.id !== 'familyTime' && def.id !== 'shop') openSheet(null); route(def.id) }}>
             <div className="flex items-center justify-between gap-2"><b>{def.icon} {def.label}</b><span className="chip">{def.cost.energy ? `⚡${def.cost.energy}` : 'free'}{def.cost.cash ? ` · ${nairaShort(def.cost.cash)}` : ''}</span></div>

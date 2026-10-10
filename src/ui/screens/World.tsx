@@ -16,6 +16,7 @@ import { OvertimeTask } from '../tasks/OvertimeTask'
 import { WorshipTask } from '../tasks/WorshipTask'
 import { ShopTask } from '../tasks/ShopTask'
 import { JogTask } from '../tasks/JogTask'
+import { MatchTask } from '../tasks/MatchTask'
 import { PoseTask } from '../tasks/PoseTask'
 import { CookTask } from '../tasks/CookTask'
 import { DineTask } from '../tasks/DineTask'
@@ -51,6 +52,7 @@ export default function World() {
     | { kind: 'service' }
     | { kind: 'shop' }
     | { kind: 'jog' }
+    | { kind: 'match'; actAs: string }
     | { kind: 'pose'; mode: 'sofa' | 'bed' }
     | { kind: 'cook' }
     | { kind: 'dine' }
@@ -85,7 +87,7 @@ export default function World() {
   const district = useMemo<District>(() => buildDistrict(districtId), [districtId])
   const age = life?.character.age ?? 6
   const ageBand = age < 12 ? 0 : age < 18 ? 1 : 2
-  const modalOpen = !!g.sheet || life?.phase !== 'action' || (!!life?.quiz && !task) || (!!task && task.kind !== 'chores' && task.kind !== 'shop' && task.kind !== 'jog') || !!destPick || !!hotId || !!sleep || fade || mapOpen
+  const modalOpen = !!g.sheet || life?.phase !== 'action' || (!!life?.quiz && !task) || (!!task && task.kind !== 'chores' && task.kind !== 'shop' && task.kind !== 'jog' && task.kind !== 'match') || !!destPick || !!hotId || !!sleep || fade || mapOpen
 
   const month = useMemo(() => {
     if (!life) return 0
@@ -294,6 +296,15 @@ export default function World() {
   }
   useEffect(() => { if (g.penaltyReq) startPenalty(g.penaltyReq.act) /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [g.penaltyReq])
 
+  const startMatch = () => {
+    const r = rendRef.current; if (!r || fade) return
+    const actAs = !enabledAct('play') ? 'play' : !enabledAct('exercise') ? 'exercise' : ''
+    if (!actAs) { g.toast(enabledAct('exercise') ?? 'Too tired for a match.'); return }
+    setFade(true)
+    setTimeout(() => { if (r.inside) { r.exitInterior(); setInside(null); setHotId(null) } const pl = district.places.find((p) => p.id === 'pitch')!; r.placePlayer((pl.rect.x0 + pl.rect.x1) / 2 - 1.2, (pl.rect.z0 + pl.rect.z1) / 2, Math.PI / 2); setTask({ kind: 'match', actAs }); setFade(false) }, 280)
+  }
+  useEffect(() => { if (g.matchReq) startMatch() /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [g.matchReq])
+
   const startJog = () => {
     const r = rendRef.current; if (!r || fade) return
     const why = enabledAct('exercise'); if (why) { g.toast(why); return }
@@ -400,6 +411,7 @@ export default function World() {
     if (t.kind === 'penalty') { if (perf !== undefined) g.act(t.act, { perf }) }
     else if (t.kind === 'chores') { if (perf !== undefined) g.act('chores', { perf }) }
     else if (t.kind === 'cook' || t.kind === 'dine') { if (perf !== undefined) g.act('meal', { perf, spend: spendAmt }) }
+    else if (t.kind === 'match') { if (perf !== undefined && perf >= 0) g.act(t.actAs, { perf }) }
     else if (t.kind === 'jog') { if (perf !== undefined) g.act('exercise', { perf }) }
     else if (t.kind === 'service') { if (perf !== undefined) g.act('community', { perf, donation }) }
     else if (t.kind === 'overtime') { if (perf !== undefined) g.act('overtime', { perf }) }
@@ -597,6 +609,7 @@ export default function World() {
       {task?.kind === 'pose' && rendRef.current && <PoseTask r={rendRef.current} mode={task.mode} tvOn={appl.tv} onToggleTv={() => toggle('tv')} onWatch={() => { const why = enabledAct('tv'); if (why) g.toast(why); else g.act('tv') }} onSleep={() => startSleep()} onDone={() => setTask(null)} />}
       {task?.kind === 'cook' && rendRef.current && <CookTask r={rendRef.current} free={life.character.housing.type === 'family'} onDone={(perf, sp) => endTask(perf, 0, sp)} />}
       {task?.kind === 'dine' && rendRef.current && <DineTask r={rendRef.current} cash={life.character.stats.cash} onDone={(perf, sp) => endTask(sp ? perf : undefined, 0, sp)} />}
+      {task?.kind === 'match' && rendRef.current && <MatchTask r={rendRef.current} pitch={district.places.find((p) => p.id === 'pitch')!.rect} actAs={task.actAs} onDone={(perf) => endTask(perf)} />}
       {task?.kind === 'jog' && rendRef.current && <JogTask r={rendRef.current} pitch={district.places.find((p) => p.id === 'pitch')!.rect} onDone={(perf) => endTask(perf)} />}
       {task?.kind === 'shop' && rendRef.current && <ShopTask r={rendRef.current} items={getShopItems(life)} cash={life.character.stats.cash} energy={life.character.stats.energy} onBuy={(itemId, pricePct) => g.act('shop', { itemId, pricePct })} onDeliver={(id, mode) => g.orderDelivery(id, mode === 'loader' ? 2 : 0, mode === 'loader' ? 3000 : 0)} onDone={() => endTask()} />}
       {task?.kind === 'service' && rendRef.current && <WorshipTask r={rendRef.current} cash={life.character.stats.cash} onDone={(perf, don) => endTask(perf, don)} />}
@@ -619,7 +632,7 @@ export default function World() {
       )}
 
       {/* joystick */}
-      {(!task || task.kind === 'chores' || task.kind === 'shop' || task.kind === 'jog') && <div className="absolute left-4 bottom-[5.2rem] w-28 h-28 rounded-full touch-none" style={{ background: '#ffffff22', border: '3px solid #ffffff55', touchAction: 'none' }}
+      {(!task || task.kind === 'chores' || task.kind === 'shop' || task.kind === 'jog' || task.kind === 'match') && <div className="absolute left-4 bottom-[5.2rem] w-28 h-28 rounded-full touch-none" style={{ background: '#ffffff22', border: '3px solid #ffffff55', touchAction: 'none' }}
         onPointerDown={onJoyDown} onPointerMove={onJoyMove} onPointerUp={onJoyUp} onPointerCancel={onJoyUp} aria-label="Movement joystick">
         <div className="absolute w-12 h-12 rounded-full" style={{ left: 'calc(50% - 24px)', top: 'calc(50% - 24px)', transform: `translate(${knob.x}px, ${knob.y}px)`, background: knob.on ? '#ffd23f' : '#ffffffaa', border: '3px solid #1c1b22' }} />
       </div>}

@@ -318,14 +318,17 @@ export class WorldRenderer {
   setFrozen(v: boolean) { this.frozen = v; if (v) { this.input = { x: 0, z: 0 }; this.path = null } }
   setSitting(v: boolean) { this.sitting = v }
   setCameraOverride(o: { pos: [number, number, number]; look: [number, number, number]; shift?: number } | null) { this.camOverride = o; this.interior?.showIcons(!o); for (const l of this.labelSprites.values()) l.visible = !o; for (const n of this.npcs.values()) n.label.visible = !o; if (o) { this.camLook.set(this.px, 1, this.pz) } }
-  placePlayer(x: number, z: number, heading = 0) {
-    this.px = this.followX = x; this.pz = this.followZ = z; this.heading = heading
-    this.player.group.position.set(x, 0, z); this.player.group.rotation.set(0, heading, 0); this.path = null
+  placePlayer(x: number, z: number, heading?: number) {
+    const h = heading ?? this.heading
+    this.px = this.followX = x; this.pz = this.followZ = z; this.heading = h
+    this.player.group.position.set(x, this.player.group.position.y, z); this.player.group.rotation.set(0, h, 0); this.path = null
   }
+  get facing() { return this.heading }
   facePlayer(x: number, z: number) { this.heading = Math.atan2(x - this.px, z - this.pz); this.player.group.rotation.y = this.heading }
-  addActor(id: string, spec: { name: string; gender: Gender; age?: number; x: number; z: number; heading?: number; label?: boolean }) {
+  addActor(id: string, spec: { name: string; gender: Gender; age?: number; x: number; z: number; heading?: number; label?: boolean; top?: string }) {
     this.removeActor(id)
-    const parts = buildHuman({ look: hashLook(spec.name, spec.gender), age: spec.age ?? 22, scale: 1.12 })
+    const look = hashLook(spec.name, spec.gender)
+    const parts = buildHuman({ look: spec.top ? { ...look, topColor: spec.top } : look, age: spec.age ?? 22, scale: 1.12 })
     parts.group.position.set(spec.x, 0, spec.z); parts.group.rotation.y = spec.heading ?? 0
     const sc = this.root(); sc.add(parts.group)
     this.actors.set(id, { parts, x: spec.x, z: spec.z, tx: spec.x, tz: spec.z, follow: false, moving: false, locked: false, scene: sc })
