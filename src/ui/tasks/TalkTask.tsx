@@ -10,7 +10,7 @@ const TONE: Record<Tone, string> = { warm: '💚 Warm', funny: '😂 Funny', meh
 
 export interface Partner { id: string; name: string }
 
-export function TalkTask({ r, partner, role, setting, rounds, title, onDone }: { r: WorldRenderer; partner: Partner; role: string; setting: Setting; rounds: number; title: string; onDone: (perf: number) => void }) {
+export function TalkTask({ r, partner, role, setting, rounds, title, greet, onDone }: { r: WorldRenderer; partner: Partner; role: string; setting: Setting; rounds: number; title: string; greet?: string; onDone: (perf: number) => void }) {
   const convo = useMemo<Exchange[]>(() => buildConversation(role, setting, rounds), [role, setting, rounds])
   const [i, setI] = useState(0)
   const [phase, setPhase] = useState<'greet' | 'ask' | 'wait' | 'end'>('greet')
@@ -33,7 +33,7 @@ export function TalkTask({ r, partner, role, setting, rounds, title, onDone }: {
 
   // both of you speak first: a greeting each way, then the conversation starts
   useEffect(() => {
-    const hi = GREET[g] ?? 'Hello!'
+    const hi = greet ?? GREET[g] ?? 'Hello!'
     r.say('player', `Hi ${partner.name}!`, 2.6)
     const a = setTimeout(() => { if (alive.current) r.say(partner.id, hi, 2.6) }, 1500)
     const b = setTimeout(() => { if (alive.current) setPhase('ask') }, 3300)

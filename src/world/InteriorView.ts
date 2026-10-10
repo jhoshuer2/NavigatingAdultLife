@@ -42,7 +42,7 @@ export class InteriorView {
   private windowMat = new THREE.MeshBasicMaterial({ color: 0x9ed3ff })
   private fanBlades?: THREE.Object3D
   private fanOn = false
-  private people = new Map<string, { parts: HumanParts; sprite: THREE.Sprite; id: string; name: string; line: string; x: number; z: number; persistent?: string }>()
+  private people = new Map<string, { parts: HumanParts; sprite: THREE.Sprite; id: string; name: string; line: string; role: string; x: number; z: number; persistent?: string }>()
   private marker: THREE.Mesh
   private arrow: THREE.Mesh
   private markTarget: string | null = null
@@ -201,7 +201,7 @@ export class InteriorView {
       parts.group.position.set(p.x, 0, p.z); parts.group.rotation.y = Math.PI
       this.scene.add(parts.group)
       const sprite = this.label(name); sprite.position.set(p.x, 3.5, p.z); this.scene.add(sprite)
-      this.people.set(p.id, { parts, sprite, id: p.id, name, line: p.line, x: p.x, z: p.z, persistent: persistent?.id })
+      this.people.set(p.id, { parts, sprite, id: p.id, name, line: p.line, role: p.role, x: p.x, z: p.z, persistent: persistent?.id })
     }
   }
   setBoard(lines: string[] | null) {
@@ -217,7 +217,7 @@ export class InteriorView {
   }
   showIcons(v: boolean) { for (const s of this.icons) s.visible = v; for (const p of this.people.values()) p.sprite.visible = v && p.parts.group.visible }
   hidePerson(id: string, hidden: boolean) { const p = this.people.get(id); if (p) { p.parts.group.visible = !hidden; p.sprite.visible = !hidden } }
-  personInfo(id: string) { const p = this.people.get(id); return p ? { id: p.id, name: p.name, line: p.line, persistent: p.persistent, x: p.x, z: p.z } : null }
+  personInfo(id: string) { const p = this.people.get(id); return p ? { id: p.id, name: p.name, line: p.line, role: p.role, persistent: p.persistent, x: p.x, z: p.z } : null }
   allPeople() { return [...this.people.values()].map((p) => ({ id: p.id, x: p.x, z: p.z })) }
 
   setMarker(hotspotId: string | null) { this.markTarget = hotspotId }

@@ -97,7 +97,7 @@ export class WorldRenderer {
   private camOverride: { pos: [number, number, number]; look: [number, number, number]; shift?: number } | null = null
   private viewShift = 0
   private actors = new Map<string, { parts: HumanParts; x: number; z: number; tx: number; tz: number; follow: boolean; moving: boolean; locked: boolean; scene: THREE.Scene }>()
-  private bubbles: { sprite: THREE.Sprite; id: string; t: number; scene: THREE.Scene }[] = []
+  private bubbles: { sprite: THREE.Sprite; id: string; t: number; scene: THREE.Scene; text: string; tail: number }[] = []
   private ballMesh?: THREE.Mesh
   private stallGroup?: THREE.Group
   private marks = new Map<string, THREE.Sprite>()
@@ -361,7 +361,7 @@ export class WorldRenderer {
     if (!this.ballMesh) { this.ballMesh = new THREE.Mesh(new THREE.SphereGeometry(0.32, 12, 10), new THREE.MeshLambertMaterial({ color: 0xffffff })); this.root().add(this.ballMesh) }
     this.ballMesh.position.set(p.x, p.y + 0.32, p.z)
   }
-  private bubbleSprite(text: string): THREE.Sprite {
+  private bubbleTexture(text: string, tail: number): THREE.CanvasTexture {
     const c = document.createElement('canvas'); c.width = 512; c.height = 256
     const g = c.getContext('2d')!
     g.font = '800 38px system-ui, "Nunito", sans-serif'
@@ -371,19 +371,23 @@ export class WorldRenderer {
     const L = lines.slice(0, 4), lh = 46, h = L.length * lh + 36, y0 = 230 - h
     g.fillStyle = 'rgba(255,255,255,0.97)'; g.strokeStyle = '#1c1b22'; g.lineWidth = 6
     ;(g as CanvasRenderingContext2D & { roundRect: (...a: number[]) => void }).roundRect(14, y0, 484, h, 28); g.fill(); g.stroke()
-    g.beginPath(); g.moveTo(236, y0 + h - 2); g.lineTo(256, y0 + h + 22); g.lineTo(276, y0 + h - 2); g.closePath(); g.fillStyle = 'rgba(255,255,255,0.97)'; g.fill()
+    const tx = 14 + 484 * tail
+    g.beginPath(); g.moveTo(tx - 20, y0 + h - 2); g.lineTo(tx, y0 + h + 22); g.lineTo(tx + 20, y0 + h - 2); g.closePath(); g.fillStyle = 'rgba(255,255,255,0.97)'; g.fill()
     g.fillStyle = '#1c1b22'; g.textAlign = 'center'; g.textBaseline = 'middle'
     L.forEach((l, i) => g.fillText(l, 256, y0 + 18 + lh / 2 + i * lh, 450))
     const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace
-    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthWrite: false, depthTest: false })); sp.renderOrder = 10
-    sp.center.set(0.5, 0.03); sp.scale.set(5, 2.5, 1); return sp
+    return t
+  }
+  private bubbleSprite(text: string, tail = 0.5): THREE.Sprite {
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.bubbleTexture(text, tail), transparent: true, depthWrite: false, depthTest: false })); sp.renderOrder = 10
+    sp.center.set(tail, 0.03); sp.scale.set(4.4, 2.2, 1); return sp
   }
   /** Show a speech bubble over the player, an actor, an NPC or an interior person. */
   say(id: string, text: string, ttl = 3.2) {
     for (const b of this.bubbles.filter((x) => x.id === id)) { b.scene.remove(b.sprite); b.sprite.material.map?.dispose(); b.sprite.material.dispose() }
     this.bubbles = this.bubbles.filter((x) => x.id !== id)
     const sc = this.root(); const sp = this.bubbleSprite(text); sc.add(sp)
-    this.bubbles.push({ sprite: sp, id, t: ttl, scene: sc })
+    this.bubbles.push({ sprite: sp, id, t: ttl, scene: sc, text, tail: 0.5 })
   }
   private whereIs(id: string): { x: number; z: number } | null {
     if (id === 'player') return { x: this.px, z: this.pz }
@@ -419,7 +423,33 @@ export class WorldRenderer {
     for (const b of [...this.bubbles]) {
       b.t -= dt
       const w = this.whereIs(b.id)
-      if (w) { b.sprite.position.set(w.x, 3.1, w.z + 0.1); const f = Math.max(0.35, Math.min(1.1, this.camera.position.distanceTo(b.sprite.position) / 22)); b.sprite.scale.set(5 * f, 2.5 * f, 1) }
+      if (w) {
+        // each bubble sits right above its speaker, with its tail on the head. When two people talk the bubbles
+        // extend away from each other (left speaker's to the left, right speaker's to the right) so they never overlap.
+        const pos = new THREE.Vector3(w.x, 3.1, w.z + 0.1)
+        const d = this.camera.position.distanceTo(pos)
+        const f = Math.max(0.35, Math.min(1.0, d / 24))
+        const two = this.bubbles.length > 1
+        let tail = 0.5
+        if (two) {
+          const me = pos.clone().project(this.camera).x
+          const other = this.bubbles.find((o) => o !== b)!; const ow = this.whereIs(other.id)
+          const ox = ow ? new THREE.Vector3(ow.x, 3.1, ow.z + 0.1).project(this.camera).x : me + 1
+          tail = me <= ox ? 0.8 : 0.2
+        }
+        if (Math.abs(tail - b.tail) > 0.01) { b.tail = tail; b.sprite.material.map?.dispose(); b.sprite.material.map = this.bubbleTexture(b.text, tail); b.sprite.material.needsUpdate = true }
+        b.sprite.center.set(tail, 0.03)
+        const sw = 4.4 * f
+        b.sprite.scale.set(sw, 2.2 * f, 1)
+        b.sprite.position.copy(pos)
+        // keep the bubble on screen: shift sideways along the camera's right axis if it would be clipped
+        const ndc = pos.clone().project(this.camera).x
+        const half = sw / (2 * d * Math.tan((this.camera.fov * Math.PI) / 360) * this.camera.aspect)
+        const left = ndc - tail * 2 * half, right = ndc + (1 - tail) * 2 * half
+        let shiftN = 0
+        if (left < -0.96) shiftN = -0.96 - left; else if (right > 0.96) shiftN = 0.96 - right
+        if (shiftN) { const r = new THREE.Vector3(1, 0, 0).applyQuaternion(this.camera.quaternion); const k = (shiftN * d * Math.tan((this.camera.fov * Math.PI) / 360) * this.camera.aspect); b.sprite.position.addScaledVector(r, k) }
+      }
       if (b.t <= 0) { b.scene.remove(b.sprite); b.sprite.material.map?.dispose(); b.sprite.material.dispose(); this.bubbles = this.bubbles.filter((x) => x !== b) }
     }
   }

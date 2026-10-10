@@ -44,7 +44,7 @@ export default function World() {
     | { kind: 'service' }
     | { kind: 'shop' }
     | { kind: 'jog' }
-    | { kind: 'talk'; partner: Partner; role: NpcRole; setting: Setting; rounds: number; title: string; actId: string; hidden?: string }
+    | { kind: 'talk'; partner: Partner; role: NpcRole; setting: Setting; rounds: number; title: string; actId: string; hidden?: string; greet?: string }
   const [task, setTask] = useState<Task | null>(null)
   const [hang, setHang] = useState<{ role: NpcRole; npcId: string; name: string; gender: 'male' | 'female'; dest: PlaceId } | null>(null)
   const [destPick, setDestPick] = useState<{ role: NpcRole; npcId: string } | null>(null)
@@ -203,7 +203,11 @@ export default function World() {
     const info = rendRef.current?.personAt(pid); if (!info) return
     const npc = info.persistent ? Object.values(life!.npcs).find((n) => n.role === info.persistent && n.alive) : null
     if (npc) g.openNpc(npc.id)
-    else g.toast(`${info.name}: “${info.line}”`)
+    else {
+      // a bystander (teacher, classmate, cook...): a short real conversation in speech bubbles, no stats at stake
+      const warm = ['teacher', 'elder', 'cook'].includes(info.role)
+      setTask({ kind: 'talk', partner: { id: pid, name: info.name }, role: (warm ? 'mother' : 'friend') as NpcRole, setting: settingHere(), rounds: 1, title: `Talking with ${info.name}`, actId: '', greet: info.line })
+    }
   }
   const interact = useCallback(() => {
     if (rendRef.current?.inside) {
@@ -346,7 +350,7 @@ export default function World() {
     else if (t.kind === 'talk') {
       if (r) { r.removeActor('buddy'); if (t.hidden) r.hidePerson(t.hidden, false); if (hang) r.hideNpc(hang.npcId, false) }
       setHang(null)
-      if (perf !== undefined) g.act(t.actId, { target: t.role, perf })
+      if (perf !== undefined && t.actId) g.act(t.actId, { target: t.role, perf })
     }
     r?.clearDirected()
   }
@@ -535,7 +539,7 @@ export default function World() {
       {task?.kind === 'service' && rendRef.current && <WorshipTask r={rendRef.current} cash={life.character.stats.cash} onDone={(perf, don) => endTask(perf, don)} />}
       {task?.kind === 'overtime' && rendRef.current && <OvertimeTask r={rendRef.current} onDone={(perf) => endTask(perf)} />}
       {task?.kind === 'market' && rendRef.current && <MarketTask r={rendRef.current} spot={{ x: district.places.find((p) => p.id === 'market')!.door.x, z: district.places.find((p) => p.id === 'market')!.door.z + 2.1 }} onDone={(perf) => endTask(perf)} />}
-      {task?.kind === 'talk' && rendRef.current && <TalkTask r={rendRef.current} partner={task.partner} role={task.role} setting={task.setting} rounds={task.rounds} title={task.title} onDone={(perf) => endTask(perf)} />}
+      {task?.kind === 'talk' && rendRef.current && <TalkTask r={rendRef.current} partner={task.partner} role={task.role} setting={task.setting} rounds={task.rounds} title={task.title} greet={task.greet} onDone={(perf) => endTask(perf)} />}
       {hang && !task && (
         <div className="absolute left-3 right-3 bottom-[5.4rem] z-20 card px-3 py-2 flex items-center gap-2 pointer-events-auto" style={{ background: '#1d3a2aee' }}><span className="flex-1 text-sm font-bold">🚶 With {hang.name} → {district.places.find((p) => p.id === hang.dest)?.name}</span><button className="chip" onClick={cancelHang}>✖ Cancel</button></div>
       )}
