@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useGame } from '../../store'
-import { DeltaChips, Modal, StatBar, naira, nairaShort } from '../components'
+import { Btn, DeltaChips, Mentor, Modal, RoundBtn, StatBadge, naira, nairaShort } from '../components'
+import { Icon, type IconName } from '../icons'
+import { Avatar } from '../Avatar'
 import { getActivities, getShopItems } from '@engine/api'
 import { useActivityRouter } from '../useActivities'
 import { buildDistrict, DISTRICTS, SPAWN, WORLD, type District, type PlaceId } from '../../world/layout'
@@ -68,7 +70,6 @@ export default function World() {
   const [near, setNear] = useState<Near>({ place: null, npc: null })
   const [fail, setFail] = useState(false)
   const [pos, setPos] = useState({ x: SPAWN.x, z: SPAWN.z, h: 0 })
-  const [showHud, setShowHud] = useState(false)
   const [slow, setSlow] = useState(false)
   const [mapOpen, setMapOpen] = useState(false)
   // telemetry only (no gameplay effect): where the player is and which task they run
@@ -506,10 +507,8 @@ export default function World() {
 
   if (!life) return null
   const c = life.character
-  const reserved = Number(life.flags.__reserved ?? 0)
   const nearPlace = near.place ? district.places.find((p) => p.id === near.place) : null
   const nearNpc = near.npc ? life.npcs[near.npc] : null
-  const delta = (k: string) => life.yearDeltas.filter((d) => d.stat === k).reduce((a, d) => a + d.delta, 0)
   void meta
 
   if (fail) return <div className="p-6 text-center"><p className="mb-3 opacity-80">Your device could not start the 3D world. Switching to menu mode.</p><button className="btn btn-primary" onClick={() => g.updateSettings({ lite: true })}>Use menu mode</button></div>
@@ -518,94 +517,91 @@ export default function World() {
     <div className="absolute inset-0 overflow-hidden" style={{ background: '#9ed3ff' }}>
       <div ref={host} className="absolute inset-0" onPointerDown={onCanvasDown} onPointerUp={onCanvasUp} />
 
-      {/* top HUD */}
-      <div className={`absolute top-2 left-2 right-2 pointer-events-none ${task ? 'hidden' : ''}`}>
-        <div className="flex items-start gap-2">
-          <button className="card px-3 py-1.5 pointer-events-auto text-left flex-1 min-w-0" style={{ background: '#1e1a30ee' }} onClick={() => setShowHud((v) => !v)} aria-label="Toggle stats">
-            <div className="flex items-baseline justify-between gap-2">
-              <span className="font-display text-xl text-danfo truncate">{c.nickname || c.name}, {c.age}</span>
-              <span className="font-display text-2xl text-green-300 tabular-nums" aria-label={`Cash ${naira(c.stats.cash)}`}>{nairaShort(c.stats.cash)}</span>
-            </div>
-            <div className="flex gap-2 items-center mt-1">
-              <div className="flex-1"><StatBar stat="energy" value={c.stats.energy} max={Math.max(c.stats.maxEnergy, 1)} delta={0} /></div>
-              {!showHud && <span className="text-[11px] font-bold opacity-80">😊{c.stats.happiness} 📚{c.stats.knowledge} ⭐{c.stats.reputation}</span>}
-            </div>
-            {showHud && (
-              <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 mt-1.5">
-                <StatBar stat="happiness" value={c.stats.happiness} delta={delta('happiness')} />
-                <StatBar stat="knowledge" value={c.stats.knowledge} delta={delta('knowledge')} />
-                <StatBar stat="reputation" value={c.stats.reputation} delta={delta('reputation')} />
-                <StatBar stat="health" value={c.stats.health} delta={delta('health')} />
-                <StatBar stat="stress" value={c.stats.stress} delta={delta('stress')} />
-                <div className="text-[11px] opacity-70 self-end">{reserved > 0 ? `${c.edu.level !== 'none' ? 'School' : 'Work'} uses ⚡${reserved}` : ''}</div>
-              </div>
-            )}
+      {/* top HUD: who you are, what you have, what is going on */}
+      <div className={`absolute top-0 inset-x-0 pointer-events-none ${task ? 'hidden' : ''}`} style={{ paddingTop: 'calc(.5rem + var(--safe-t))' }}>
+        <div className="flex items-start gap-2 px-2">
+          <button className="hud-glass pointer-events-auto flex items-center gap-2.5 rounded-[22px] pl-1.5 pr-3 py-1.5 text-left flex-1 min-w-0" onClick={() => { audio.sfx('click'); g.openSheet('profile') }} aria-label={`${c.nickname || c.name}, age ${c.age}. Open profile`}>
+            <span className="relative shrink-0 rounded-full overflow-hidden" style={{ width: 52, height: 52, background: 'radial-gradient(circle at 35% 25%, #ffe27a, #ff7a4d)', boxShadow: '0 0 0 2px #1a0f55, 0 0 0 4px var(--gold)' }}>
+              <span className="block" style={{ marginTop: 1, marginLeft: -2 }}><Avatar look={c.appearance} gender={c.gender} age={c.age} uniform={c.edu.level !== 'none' && c.age < 18} size={56} /></span>
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="flex items-center justify-between gap-2">
+                <span className="font-display text-[17px] uppercase truncate leading-none">{c.nickname || c.name}<span className="opacity-60 text-[13px]"> · {c.age}</span></span>
+                <span className="flex items-center gap-1 shrink-0" aria-label={`Cash ${naira(c.stats.cash)}`}><Icon name="coin" size={19} /><span className="num text-[18px]" style={{ color: '#ffe27a' }}>{nairaShort(c.stats.cash)}</span></span>
+              </span>
+              <span className="flex items-center gap-1.5 mt-1.5" aria-label={`Energy ${c.stats.energy}`}>
+                <Icon name="bolt" size={17} />
+                <span className="bar flex-1 !h-[11px]"><i style={{ width: `${Math.max(0, Math.min(100, (c.stats.energy / Math.max(c.stats.maxEnergy, 1)) * 100))}%`, background: c.stats.energy / Math.max(c.stats.maxEnergy, 1) < 0.25 ? 'linear-gradient(180deg,#ff8a8d,#ff5a5f)' : 'linear-gradient(180deg,#fff08a,#ffc72c)' }} /></span>
+                <span className="num text-[13px] w-6 text-right">{c.stats.energy}</span>
+              </span>
+            </span>
           </button>
-          {!inside && <Minimap district={district} x={pos.x} z={pos.z} h={pos.h} onOpen={() => { track('map_opened'); setMapOpen(true) }} />}
+          {!inside
+            ? <Minimap district={district} x={pos.x} z={pos.z} h={pos.h} onOpen={() => { track('map_opened'); setMapOpen(true) }} />
+            : <div className="hud-glass pointer-events-none rounded-2xl px-3 py-2 flex items-center gap-1.5 max-w-[40%]"><Icon name="door" size={18} /><span className="font-display text-[14px] uppercase leading-tight truncate">{INTERIORS[inside]?.name}</span></div>}
         </div>
-        <div className="flex gap-2 mt-1.5 items-center">
-          <span className="chip pointer-events-auto" style={{ background: '#1e1a30ee' }} aria-label="Date and time">📅 {MONTHS[month]} · {isNight(sleep ? sleep.from + sleep.elapsed : hour) ? '🌙' : '☀️'} {fmtClock(sleep ? (sleep.from + sleep.elapsed) % 24 : hour)}</span>
-          {!sleep && <button className="chip pointer-events-auto" style={{ background: '#1e1a30ee' }} onClick={() => { track('wait_used'); g.advance(2); g.toast('⏳ Two hours pass.') }} aria-label="Wait two hours">⏳ Wait</button>}
-          <button className="chip pointer-events-auto ml-auto" style={{ background: '#1e1a30ee' }} onClick={() => setMenuOpen((v) => !v)} aria-label="More">☰</button>
+        <div className="flex items-center gap-2 px-2 mt-2">
+          <button className="hud-glass pointer-events-auto flex items-center gap-2.5 rounded-full px-2.5 py-1" onClick={() => g.openSheet('profile')} aria-label="Stats">
+            <StatBadge stat="happiness" value={c.stats.happiness} size="sm" />
+            <StatBadge stat="knowledge" value={c.stats.knowledge} size="sm" />
+            <StatBadge stat="reputation" value={c.stats.reputation} size="sm" />
+            {c.stats.health < 50 && <StatBadge stat="health" value={c.stats.health} size="sm" />}
+            {c.stats.stress > 60 && <StatBadge stat="stress" value={c.stats.stress} size="sm" />}
+          </button>
+          <span className="ml-auto flex items-center gap-2">
+            <span className="hud-glass pointer-events-auto flex items-center gap-1.5 rounded-full px-2.5 py-1.5" aria-label="Date and time"><Icon name={isNight(sleep ? sleep.from + sleep.elapsed : hour) ? 'moon' : 'sun'} size={17} /><span className="num text-[13px] whitespace-nowrap">{MONTHS[month]} · {fmtClock(sleep ? (sleep.from + sleep.elapsed) % 24 : hour)}</span></span>
+            {!sleep && <RoundBtn icon="hourglass" label="Wait two hours" size={36} onClick={() => { track('wait_used'); g.advance(2); g.toast('Two hours pass') }} />}
+          </span>
         </div>
         {menuOpen && (
-          <div className="card mt-1.5 p-2 grid gap-1.5 pointer-events-auto w-56 ml-auto" style={{ background: '#1e1a30f5' }}>
-            <button className="chip justify-start" onClick={() => { setMenuOpen(false); setCoach(0); setReplay(true) }}>❓ How to play</button>
-            <button className="chip justify-start" onClick={() => { setMenuOpen(false); g.openSheet('paywall') }}>⏱ Playtime</button>
-            <button className="chip justify-start" onClick={() => { setMenuOpen(false); g.go('settings') }}>⚙️ Settings</button>
-            <button className="chip justify-start" onClick={() => g.updateSettings({ lite: true })}>📋 Menu mode</button>
+          <div className="hud-glass mt-2 mr-2 ml-auto p-2 grid gap-1 pointer-events-auto w-56 rounded-2xl pop">
+            {([['info', 'How to play', () => { setMenuOpen(false); setCoach(0); setReplay(true) }], ['clock', 'Play time', () => { setMenuOpen(false); g.openSheet('paywall') }], ['gear', 'Settings', () => { setMenuOpen(false); g.go('settings') }], ['scroll', 'Menu mode', () => g.updateSettings({ lite: true })]] as [IconName, string, () => void][]).map(([ic, label, fn]) => (
+              <button key={label} className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-left font-extrabold active:bg-white/10" onClick={fn}><Icon name={ic} size={20} />{label}</button>
+            ))}
           </div>
         )}
-        {slow && <div className="card mt-1.5 px-3 py-2 text-sm flex items-center gap-2 pointer-events-auto" style={{ background: '#5a3d00ee' }}><span className="flex-1">🐢 Running slowly?</span><button className="btn btn-primary !min-h-8 !px-3 !py-1 text-sm" onClick={() => g.updateSettings({ lite: true })}>Menu mode</button></div>}
-        {coachOn && !modalOpen ? (
-          <div className="card mt-1.5 px-3 py-2.5 pointer-events-auto pop" style={{ background: '#2a2200f5', borderColor: '#ffd23f' }}>
-            <div className="text-[11px] font-black opacity-70 mb-0.5">HOW TO PLAY · {coach + 1}/3</div>
-            <div className="text-sm font-bold leading-snug">
-              {coach === 0 && '👋 Welcome! Drag the joystick (bottom-left) to walk. You can also tap the ground, or use W A S D.'}
-              {coach === 1 && `🎯 Walk to the glowing yellow ring${sug ? ` at ${district.places.find((p) => p.id === sug.place)?.name ?? 'the place'}` : ''}, then tap the green Enter button.`}
-              {coach === 2 && '⚡ Every action costs Energy. When you have done enough, go 🏠 Home and tap End the year. Tap the little map any time to see everywhere.'}
-            </div>
-            <div className="flex gap-2 mt-2">
-              <button className="btn btn-primary !min-h-8 !px-3 !py-1 text-sm" onClick={() => { if (coach < 2) setCoach(coach + 1); else { setReplay(false); g.finishTutorial() } }}>{coach < 2 ? 'Next' : 'Got it!'}</button>
-              {coach < 2 && <button className="chip" onClick={() => { setReplay(false); g.finishTutorial() }}>Skip</button>}
-            </div>
-          </div>
-        ) : sug && !modalOpen && !inside && (
-          <button className="card mt-1.5 px-3 py-1.5 flex items-center gap-2 text-left pointer-events-auto w-full" style={{ background: '#241f38f2' }} onClick={() => g.goToPlace(sug.place)}>
-            <span className="text-xl">{sug.icon}</span>
-            <span className="flex-1 text-[13px] font-bold leading-snug">{sug.text}</span>
-            <span className="btn btn-primary !min-h-8 !px-3 !py-0.5 text-sm">Go</span>
+        {slow && <div className="hud-glass mt-2 mx-2 px-3 py-2 rounded-2xl text-sm flex items-center gap-2 pointer-events-auto"><span className="flex-1">Running slowly?</span><Btn size="sm" onClick={() => g.updateSettings({ lite: true })}>Menu mode</Btn></div>}
+        {sug && !coachOn && !modalOpen && !inside && (
+          <button className="pointer-events-auto mt-2 mx-2 flex items-center gap-2 rounded-full pl-1.5 pr-2 py-1 hud-glass active:scale-[.98] transition-transform" onClick={() => { audio.sfx('click'); g.goToPlace(sug.place) }} aria-label={`Next: ${sug.text}`}>
+            <span className="grid place-items-center w-8 h-8 rounded-full text-[18px]" style={{ background: 'linear-gradient(180deg,#ffe27a,#f59e0b)' }}>{sug.icon}</span>
+            <span className="font-display text-[15px] uppercase tracking-wide pr-1">{sug.text}</span>
+            <span className="grid place-items-center w-7 h-7 rounded-full glow-pulse" style={{ background: 'var(--green)' }}><Icon name="chevron" size={16} color="#052e16" /></span>
           </button>
         )}
         {flash && life.lastAction && !modalOpen && !coachOn && (
-          <div className="card mt-1.5 px-3 py-2 text-sm font-bold pop max-w-[80%] pointer-events-none" key={flash} style={{ background: '#1e1a30ee' }}>
-            {life.lastAction.text}<DeltaChips deltas={life.lastAction.deltas} limit={4} />
-          </div>
+          <div className="mx-2 mt-2 flex justify-center" key={flash} aria-label={life.lastAction.text}><DeltaChips deltas={life.lastAction.deltas} limit={5} /></div>
         )}
       </div>
 
+      {coachOn && !modalOpen && (
+        <div className="absolute inset-x-3 bottom-[8.4rem] z-20 pointer-events-auto">
+          <Mentor mood={coach === 2 ? 'wow' : 'hype'} nextLabel={coach < 2 ? 'Next' : 'Got it!'} onNext={() => { if (coach < 2) setCoach(coach + 1); else { setReplay(false); g.finishTutorial() } }}>
+            {coach === 0 && 'Drag the stick to walk. Tap the ground works too!'}
+            {coach === 1 && `Walk to the glowing ring${sug ? ` at the ${district.places.find((p) => p.id === sug.place)?.name ?? 'place'}` : ''}, then tap the green button.`}
+            {coach === 2 && 'Actions cost energy. Done for the year? Go home and end it.'}
+          </Mentor>
+          {coach < 2 && <button className="block mx-auto mt-1 text-[12px] font-extrabold uppercase tracking-wider opacity-70" onClick={() => { setReplay(false); g.finishTutorial() }}>Skip</button>}
+        </div>
+      )}
+
       {mapOpen && <MapModal district={district} x={pos.x} z={pos.z} h={pos.h} hour={hour} life={life} sugPlace={sug?.place ?? null} onClose={() => setMapOpen(false)} onGo={(id) => { track('map_travel', { place: id }); setMapOpen(false); g.goToPlace(id) }} />}
 
-      {/* proximity prompts */}
+      {/* proximity prompts: one big round action button, like a controller prompt */}
       {!modalOpen && !inside && !task && (nearNpc || nearPlace) && (
-        <div className="absolute right-3 bottom-[6.2rem] flex flex-col items-end gap-2 pointer-events-none">
-          {nearNpc && <button className="btn btn-primary pointer-events-auto pop" onClick={() => g.openNpc(near.npc!)} aria-label="Talk">💬 Talk to {nearNpc.name}</button>}
-          {nearPlace && INTERIORS[nearPlace.id] && (
-            <div className="flex flex-col items-end gap-1.5 pointer-events-auto pop">
-              <button className="chip" style={{ background: '#1e1a30ee' }} onClick={() => g.openPlace(near.place!)} aria-label="Place options">⋯ Options</button>
-              {isOpen(nearPlace.id, hour)
-                ? <button className="btn btn-green !text-lg" onClick={() => enter(nearPlace.id)} aria-label="Interact">🚪 Enter {nearPlace.name} <span className="text-xs opacity-70">(E)</span></button>
-                : <button className="btn !text-base" style={{ background: '#4a4a55' }} onClick={() => enter(nearPlace.id)} aria-label="Interact">🔒 Closed until {fmtClock(opensAt(nearPlace.id))}</button>}
-            </div>
-          )}
-          {nearPlace && !INTERIORS[nearPlace.id] && <button className="btn btn-green pointer-events-auto pop !text-lg" onClick={() => g.openPlace(near.place!)} aria-label="Interact">{nearPlace.icon} {nearPlace.name} <span className="text-xs opacity-70">(E)</span></button>}
+        <div className="absolute right-3 bottom-[7rem] flex items-end gap-3 pointer-events-none">
+          {nearPlace && INTERIORS[nearPlace.id] && <Prompt small icon="menu" label="Options" tone="ghost" onClick={() => g.openPlace(near.place!)} />}
+          {nearNpc && <Prompt small icon="chat" label={nearNpc.name} tone="gold" onClick={() => g.openNpc(near.npc!)} />}
+          {nearPlace && INTERIORS[nearPlace.id] && (isOpen(nearPlace.id, hour)
+            ? <Prompt icon="door" label={`Enter ${nearPlace.name}`} tone="green" hint="E" onClick={() => enter(nearPlace.id)} />
+            : <Prompt icon="lock" label={`Opens ${fmtClock(opensAt(nearPlace.id))}`} tone="ghost" onClick={() => enter(nearPlace.id)} />)}
+          {nearPlace && !INTERIORS[nearPlace.id] && <Prompt emoji={nearPlace.icon} label={nearPlace.name} tone="green" hint="E" onClick={() => g.openPlace(near.place!)} />}
         </div>
       )}
       {!modalOpen && inside && !task && (
-        <div className="absolute right-3 bottom-[6.2rem] flex flex-col items-end gap-2 pointer-events-none">
-          {nearIn.person && <button className="btn btn-primary pointer-events-auto pop" onClick={() => talkInside(nearIn.person!)} aria-label="Talk">💬 Talk to {rendRef.current?.personAt(nearIn.person)?.name}</button>}
-          {nearIn.hotspot && (() => { const h = INTERIORS[inside]?.hotspots.find((x) => x.id === nearIn.hotspot); return h ? <button className="btn btn-green pointer-events-auto pop !text-lg" onClick={() => setHotId(h.id)} aria-label="Interact">{h.icon} {h.name} <span className="text-xs opacity-70">(E)</span></button> : null })()}
-          {nearIn.exit && <button className="btn pointer-events-auto pop" onClick={leave} aria-label="Go outside">🚪 Go outside</button>}
+        <div className="absolute right-3 bottom-[7rem] flex items-end gap-3 pointer-events-none">
+          {nearIn.exit && <Prompt small icon="door" label="Go outside" tone="ghost" onClick={leave} />}
+          {nearIn.person && <Prompt small icon="chat" label={rendRef.current?.personAt(nearIn.person)?.name ?? 'Talk'} tone="gold" onClick={() => talkInside(nearIn.person!)} />}
+          {nearIn.hotspot && (() => { const h = INTERIORS[inside]?.hotspots.find((x) => x.id === nearIn.hotspot); return h ? <Prompt emoji={h.icon} label={h.name} tone="green" hint="E" onClick={() => setHotId(h.id)} /> : null })()}
         </div>
       )}
 
@@ -648,11 +644,13 @@ export default function World() {
       )}
 
       {/* joystick */}
-      {(!task || task.kind === 'chores' || task.kind === 'shop' || task.kind === 'jog' || task.kind === 'match') && <div className="absolute left-4 bottom-[5.2rem] w-28 h-28 rounded-full touch-none" style={{ background: '#ffffff22', border: '3px solid #ffffff55', touchAction: 'none' }}
-        onPointerDown={onJoyDown} onPointerMove={onJoyMove} onPointerUp={onJoyUp} onPointerCancel={onJoyUp} aria-label="Movement joystick">
-        <div className="absolute w-12 h-12 rounded-full" style={{ left: 'calc(50% - 24px)', top: 'calc(50% - 24px)', transform: `translate(${knob.x}px, ${knob.y}px)`, background: knob.on ? '#ffd23f' : '#ffffffaa', border: '3px solid #1c1b22' }} />
-      </div>}
-
+      {(!task || task.kind === 'chores' || task.kind === 'shop' || task.kind === 'jog' || task.kind === 'match') && (
+        <div className="joy absolute left-4 bottom-[7rem] w-[116px] h-[116px] rounded-full touch-none" style={{ touchAction: 'none' }}
+          onPointerDown={onJoyDown} onPointerMove={onJoyMove} onPointerUp={onJoyUp} onPointerCancel={onJoyUp} aria-label="Movement joystick">
+          {[0, 90, 180, 270].map((r) => <span key={r} className="absolute left-1/2 top-1/2 opacity-45" style={{ transform: `translate(-50%,-50%) rotate(${r}deg) translateY(-44px)` }}><Icon name="up" size={11} color="#fff" /></span>)}
+          <div className="joy-knob absolute w-[50px] h-[50px] rounded-full" style={{ left: 'calc(50% - 25px)', top: 'calc(50% - 25px)', transform: `translate(${knob.x}px, ${knob.y}px) scale(${knob.on ? 1.08 : 1})`, transition: knob.on ? 'none' : 'transform .18s var(--ease)' }} />
+        </div>
+      )}
 
       {hotId && inside && (() => {
         const h = INTERIORS[inside]?.hotspots.find((x) => x.id === hotId); if (!h) return null
@@ -692,13 +690,43 @@ export default function World() {
 
       <div className="absolute inset-0 pointer-events-none z-40 transition-opacity duration-300" style={{ background: '#0b0a14', opacity: fade ? 1 : 0 }} />
 
-      {/* bottom bar */}
-      {!task && <div className="absolute bottom-0 left-0 right-0 px-3 pt-2 pb-3 safe-pad flex gap-2" style={{ background: '#14121f', borderTop: '1px solid #ffffff14' }}>
-        <button className="chip flex-1 justify-center !py-2.5 !text-sm" onClick={() => g.openSheet('places')}>📍 Places</button>
-        <button className="chip flex-1 justify-center !py-2.5 !text-sm" onClick={() => g.openSheet('quests')}>📋 Quests</button>
-        <button className="chip flex-1 justify-center !py-2.5 !text-sm" onClick={() => g.openSheet('profile')}>👤 Profile</button>
-        <button className="chip flex-1 justify-center !py-2.5 !text-sm" style={{ background: '#1d5a3a' }} onClick={() => { audio.sfx('good'); if (inside) leave(); else g.goToPlace('home') }}>{inside ? '🚪 Outside' : '🏠 Home'}</button>
-      </div>}
+      {/* dock */}
+      {!task && (
+        <nav className="absolute bottom-0 inset-x-0 z-10 px-3 pt-8 safe-pad dock-fade pointer-events-none" aria-label="Main">
+          <div className="hud-glass pointer-events-auto mx-auto max-w-sm flex items-end justify-between rounded-[28px] px-2 pt-1.5 pb-1.5">
+            <DockBtn icon="pin" label="Places" onClick={() => g.openSheet('places')} />
+            <DockBtn icon="scroll" label="Quests" onClick={() => g.openSheet('quests')} />
+            <button className="relative -mt-7 flex flex-col items-center gap-0.5" onClick={() => { audio.sfx('good'); if (inside) leave(); else g.goToPlace('home') }} aria-label={inside ? 'Go outside' : 'Go home'}>
+              <span className={`btn btn-gold btn-round !w-[66px] !h-[66px] ${sug?.place === 'home' && !inside ? 'glow-pulse' : ''}`}><Icon name={inside ? 'door' : 'home'} size={32} color="#7a4700" /></span>
+              <span className="text-[10px] font-extrabold uppercase tracking-wider">{inside ? 'Outside' : 'Home'}</span>
+            </button>
+            <DockBtn icon="user" label="Profile" onClick={() => g.openSheet('profile')} />
+            <DockBtn icon="menu" label="More" onClick={() => setMenuOpen((v) => !v)} />
+          </div>
+        </nav>
+      )}
+    </div>
+  )
+}
+
+function DockBtn({ icon, label, onClick }: { icon: IconName; label: string; onClick: () => void }) {
+  return (
+    <button className="flex flex-col items-center gap-0.5 w-[58px] py-1 active:scale-95 transition-transform" onClick={() => { audio.sfx('click'); onClick() }} aria-label={label}>
+      <Icon name={icon} size={28} /><span className="text-[10px] font-extrabold uppercase tracking-wider opacity-85">{label}</span>
+    </button>
+  )
+}
+
+/** A controller-style action prompt: round button, name chip above, key hint on desktop. */
+function Prompt({ icon, emoji, label, tone, hint, small, onClick }: { icon?: IconName; emoji?: string; label: string; tone: 'green' | 'gold' | 'ghost'; hint?: string; small?: boolean; onClick: () => void }) {
+  const d = small ? 54 : 80
+  return (
+    <div className="flex flex-col items-center gap-1.5 pointer-events-auto pop max-w-[132px]">
+      <span className="chip !text-[11px] !py-0.5 text-center leading-tight" style={{ background: 'rgba(10,7,34,.78)', backdropFilter: 'blur(4px)' }}>{label}</span>
+      <button className={`btn btn-${tone} btn-round ${small ? '' : 'glow-pulse'}`} style={{ width: d, height: d, minHeight: d }} onClick={() => { audio.sfx('click'); onClick() }} aria-label={label}>
+        {emoji ? <span style={{ fontSize: d * 0.5, lineHeight: 1 }}>{emoji}</span> : <Icon name={icon!} size={d * 0.48} color={tone === 'gold' ? '#7a4700' : '#fff'} />}
+        {hint && <kbd className="kbd-hint absolute -bottom-1 -right-1 place-items-center w-5 h-5 rounded-md text-[11px] font-black" style={{ background: '#fff', color: '#1a0f55' }}>{hint}</kbd>}
+      </button>
     </div>
   )
 }

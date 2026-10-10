@@ -9,18 +9,18 @@ export function suggest(life: GameState): Suggestion | null {
   const c = life.character
   const used = (id: string) => Number(life.activityCounts[id] ?? 0)
   const inSchool = c.edu.level !== 'none'
-  if (c.stats.energy < 12) return { place: 'home', icon: '🌙', text: "You are worn out. Head home and sleep to end the year." }
-  if (c.stats.health < 40) return { place: 'home', icon: '❤️', text: 'You are not feeling well. Rest at home.' }
-  if (c.stats.happiness < 35) return { place: 'mamaput', icon: '🍲', text: 'Your mood is low. Hang with a friend at the buka.' }
-  if (c.stats.stress > 70) return { place: 'pitch', icon: '⚽', text: 'Stress is high. Burn it off at the pitch.' }
-  if (inSchool && used('study') < 2) return { place: 'school', icon: '📚', text: 'Study at school: pop quizzes grow your Knowledge.' }
-  if (!c.job && !inSchool && c.age >= 18 && c.age < 62) return { place: 'jobcentre', icon: '📝', text: 'You need work. Visit the Job Centre.' }
-  if (c.job && used('overtime') < 1 && c.age < 60) return { place: 'office', icon: '⏰', text: 'Impress the boss: work harder at your workplace.' }
-  if (c.age >= 14 && used('hustle') < 1 && c.stats.energy >= 22) return { place: 'market', icon: '🛍️', text: 'Make a little money: do a side hustle at the market.' }
-  if (c.age < 14 && used('play') < 1) return { place: 'pitch', icon: '⚽', text: 'Go and play outside!' }
-  if (used('socialise') < 1 && c.stats.energy >= 15) return { place: 'mamaput', icon: '🧑‍🤝‍🧑', text: 'Catch up with a friend at the buka.' }
-  if (used('familyTime') < 1) return { place: 'home', icon: '👪', text: 'Spend time with your family at home.' }
-  return { place: 'home', icon: '🌙', text: 'You have done enough. Sleep at home to end the year.' }
+  if (c.stats.energy < 12) return { place: 'home', icon: '🌙', text: 'Sleep at home' }
+  if (c.stats.health < 40) return { place: 'home', icon: '❤️', text: 'Rest at home' }
+  if (c.stats.happiness < 35) return { place: 'mamaput', icon: '🍲', text: 'Cheer up at the buka' }
+  if (c.stats.stress > 70) return { place: 'pitch', icon: '⚽', text: 'Burn stress at the pitch' }
+  if (inSchool && used('study') < 2) return { place: 'school', icon: '📚', text: 'Study at school' }
+  if (!c.job && !inSchool && c.age >= 18 && c.age < 62) return { place: 'jobcentre', icon: '📝', text: 'Find a job' }
+  if (c.job && used('overtime') < 1 && c.age < 60) return { place: 'office', icon: '⏰', text: 'Impress the boss' }
+  if (c.age >= 14 && used('hustle') < 1 && c.stats.energy >= 22) return { place: 'market', icon: '🛍️', text: 'Hustle at the market' }
+  if (c.age < 14 && used('play') < 1) return { place: 'pitch', icon: '⚽', text: 'Play outside' }
+  if (used('socialise') < 1 && c.stats.energy >= 15) return { place: 'mamaput', icon: '🧑‍🤝‍🧑', text: 'Catch up with a friend' }
+  if (used('familyTime') < 1) return { place: 'home', icon: '👪', text: 'Family time at home' }
+  return { place: 'home', icon: '🌙', text: 'Sleep to end the year' }
 }
 
 export function placeActive(life: GameState, id: PlaceId): boolean {
