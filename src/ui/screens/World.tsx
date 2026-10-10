@@ -3,7 +3,7 @@ import { useGame } from '../../store'
 import { DeltaChips, Modal, StatBar, naira, nairaShort } from '../components'
 import { getActivities } from '@engine/api'
 import { useActivityRouter } from '../useActivities'
-import { buildDistrict, SPAWN, WORLD, type District, type PlaceId } from '../../world/layout'
+import { buildDistrict, DISTRICTS, SPAWN, WORLD, type District, type PlaceId } from '../../world/layout'
 import { WorldRenderer, type Near, type NearInside, type WorldNpc } from '../../world/WorldRenderer'
 import { INTERIORS, type HotAction } from '../../world/interiors'
 import { fmtClock, isNight, isOpen, opensAt } from '../../world/time'
@@ -31,11 +31,16 @@ export default function World() {
   const [pos, setPos] = useState({ x: SPAWN.x, z: SPAWN.z, h: 0 })
   const [showHud, setShowHud] = useState(false)
   const [slow, setSlow] = useState(false)
+  const [mapOpen, setMapOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [coach, setCoach] = useState(0)
+  const [replay, setReplay] = useState(false)
+  const [flash, setFlash] = useState<string | null>(null)
   const districtId = life?.character.housing.districtId ?? 'surulere'
   const district = useMemo<District>(() => buildDistrict(districtId), [districtId])
   const age = life?.character.age ?? 6
   const ageBand = age < 12 ? 0 : age < 18 ? 1 : 2
-  const modalOpen = !!g.sheet || life?.phase !== 'action' || !!life?.quiz || !!hotId || !!sleep || fade
+  const modalOpen = !!g.sheet || life?.phase !== 'action' || !!life?.quiz || !!hotId || !!sleep || fade || mapOpen
 
   const month = useMemo(() => {
     if (!life) return 0
@@ -86,6 +91,15 @@ export default function World() {
   }, [life, district, month, ageBand, hour])
 
   useEffect(() => { if (!sleep) rendRef.current?.setHour(hour) }, [hour, sleep, district, ageBand])
+
+  const coachOn = (!meta.seenTutorial || replay) && life?.phase === 'action'
+  useEffect(() => {
+    if (!coachOn) return
+    if (coach === 0 && Math.hypot(pos.x - SPAWN.x, pos.z - SPAWN.z) > 4) setCoach(1)
+    if (coach === 1 && (inside || g.sheet === 'place')) setCoach(2)
+  }, [coachOn, coach, pos, inside, g.sheet])
+  const lastText = life?.lastAction?.text
+  useEffect(() => { if (!lastText) return; setFlash(lastText); const t = setTimeout(() => setFlash(null), 3800); return () => clearTimeout(t) }, [lastText])
 
   const sug = useMemo(() => (life ? suggest(life) : null), [life])
   useEffect(() => { rendRef.current?.setHighlight(sug?.place ?? null) }, [sug])
@@ -270,30 +284,50 @@ export default function World() {
               </div>
             )}
           </button>
-          {!inside && <Minimap district={district} x={pos.x} z={pos.z} h={pos.h} onTap={(id) => g.goToPlace(id)} />}
+          {!inside && <Minimap district={district} x={pos.x} z={pos.z} h={pos.h} onOpen={() => setMapOpen(true)} />}
         </div>
-        <div className="flex gap-2 mt-1.5">
-          <span className="chip pointer-events-auto" style={{ background: '#1e1a30ee' }}>📅 {MONTHS[month]} {life.year}</span>
-          <span className="chip pointer-events-auto" style={{ background: '#1e1a30ee' }} aria-label="Time of day">{isNight(sleep ? sleep.from + sleep.elapsed : hour) ? '🌙' : '☀️'} {fmtClock(sleep ? (sleep.from + sleep.elapsed) % 24 : hour)}</span>
-          {!sleep && <button className="chip pointer-events-auto" style={{ background: '#1e1a30ee' }} onClick={() => { g.advance(2); g.toast('⏳ Two hours pass.') }} aria-label="Wait two hours">⏳</button>}
-          <button className="chip pointer-events-auto" style={{ background: '#1e1a30ee' }} onClick={() => g.openSheet('paywall')}>⏱</button>
-          <button className="chip pointer-events-auto" style={{ background: '#1e1a30ee' }} onClick={() => g.go('settings')}>⚙️</button>
-          <button className="chip pointer-events-auto" style={{ background: '#1e1a30ee' }} onClick={() => g.updateSettings({ lite: true })}>📋 Menu mode</button>
+        <div className="flex gap-2 mt-1.5 items-center">
+          <span className="chip pointer-events-auto" style={{ background: '#1e1a30ee' }} aria-label="Date and time">📅 {MONTHS[month]} · {isNight(sleep ? sleep.from + sleep.elapsed : hour) ? '🌙' : '☀️'} {fmtClock(sleep ? (sleep.from + sleep.elapsed) % 24 : hour)}</span>
+          {!sleep && <button className="chip pointer-events-auto" style={{ background: '#1e1a30ee' }} onClick={() => { g.advance(2); g.toast('⏳ Two hours pass.') }} aria-label="Wait two hours">⏳ Wait</button>}
+          <button className="chip pointer-events-auto ml-auto" style={{ background: '#1e1a30ee' }} onClick={() => setMenuOpen((v) => !v)} aria-label="More">☰</button>
         </div>
-        {slow && <div className="card mt-1.5 px-3 py-2 text-sm flex items-center gap-2 pointer-events-auto" style={{ background: '#5a3d00ee' }}><span className="flex-1">🐢 Running slowly on this phone?</span><button className="btn btn-primary !min-h-8 !px-3 !py-1 text-sm" onClick={() => g.updateSettings({ lite: true })}>Use menu mode</button></div>}
-        {sug && !modalOpen && !inside && (
-          <button className="card mt-1.5 px-3 py-2 flex items-center gap-3 text-left pointer-events-auto w-full" style={{ background: '#241f38f2' }} onClick={() => g.goToPlace(sug.place)}>
-            <span className="text-2xl">{sug.icon}</span>
-            <span className="flex-1 text-sm font-bold leading-snug">{sug.text}</span>
-            <span className="btn btn-primary !min-h-9 !px-3 !py-1 text-sm">Go</span>
+        {menuOpen && (
+          <div className="card mt-1.5 p-2 grid gap-1.5 pointer-events-auto w-56 ml-auto" style={{ background: '#1e1a30f5' }}>
+            <button className="chip justify-start" onClick={() => { setMenuOpen(false); setCoach(0); setReplay(true) }}>❓ How to play</button>
+            <button className="chip justify-start" onClick={() => { setMenuOpen(false); g.openSheet('paywall') }}>⏱ Playtime</button>
+            <button className="chip justify-start" onClick={() => { setMenuOpen(false); g.go('settings') }}>⚙️ Settings</button>
+            <button className="chip justify-start" onClick={() => g.updateSettings({ lite: true })}>📋 Menu mode</button>
+          </div>
+        )}
+        {slow && <div className="card mt-1.5 px-3 py-2 text-sm flex items-center gap-2 pointer-events-auto" style={{ background: '#5a3d00ee' }}><span className="flex-1">🐢 Running slowly?</span><button className="btn btn-primary !min-h-8 !px-3 !py-1 text-sm" onClick={() => g.updateSettings({ lite: true })}>Menu mode</button></div>}
+        {coachOn && !modalOpen ? (
+          <div className="card mt-1.5 px-3 py-2.5 pointer-events-auto pop" style={{ background: '#2a2200f5', borderColor: '#ffd23f' }}>
+            <div className="text-[11px] font-black opacity-70 mb-0.5">HOW TO PLAY · {coach + 1}/3</div>
+            <div className="text-sm font-bold leading-snug">
+              {coach === 0 && '👋 Welcome! Drag the joystick (bottom-left) to walk. You can also tap the ground, or use W A S D.'}
+              {coach === 1 && `🎯 Walk to the glowing yellow ring${sug ? ` at ${district.places.find((p) => p.id === sug.place)?.name ?? 'the place'}` : ''}, then tap the green Enter button.`}
+              {coach === 2 && '⚡ Every action costs Energy. When you have done enough, go 🏠 Home and tap End the year. Tap the little map any time to see everywhere.'}
+            </div>
+            <div className="flex gap-2 mt-2">
+              <button className="btn btn-primary !min-h-8 !px-3 !py-1 text-sm" onClick={() => { if (coach < 2) setCoach(coach + 1); else { setReplay(false); g.finishTutorial() } }}>{coach < 2 ? 'Next' : 'Got it!'}</button>
+              {coach < 2 && <button className="chip" onClick={() => { setReplay(false); g.finishTutorial() }}>Skip</button>}
+            </div>
+          </div>
+        ) : sug && !modalOpen && !inside && (
+          <button className="card mt-1.5 px-3 py-1.5 flex items-center gap-2 text-left pointer-events-auto w-full" style={{ background: '#241f38f2' }} onClick={() => g.goToPlace(sug.place)}>
+            <span className="text-xl">{sug.icon}</span>
+            <span className="flex-1 text-[13px] font-bold leading-snug">{sug.text}</span>
+            <span className="btn btn-primary !min-h-8 !px-3 !py-0.5 text-sm">Go</span>
           </button>
         )}
-        {life.lastAction && (
-          <div className="card mt-1.5 px-3 py-2 text-sm font-bold pop max-w-[80%] pointer-events-none" key={life.lastAction.text} style={{ background: '#1e1a30ee' }}>
+        {flash && life.lastAction && !modalOpen && !coachOn && (
+          <div className="card mt-1.5 px-3 py-2 text-sm font-bold pop max-w-[80%] pointer-events-none" key={flash} style={{ background: '#1e1a30ee' }}>
             {life.lastAction.text}<DeltaChips deltas={life.lastAction.deltas} limit={4} />
           </div>
         )}
       </div>
+
+      {mapOpen && <MapModal district={district} x={pos.x} z={pos.z} h={pos.h} hour={hour} life={life} sugPlace={sug?.place ?? null} onClose={() => setMapOpen(false)} onGo={(id) => { setMapOpen(false); g.goToPlace(id) }} />}
 
       {/* proximity prompts */}
       {!modalOpen && !inside && (nearNpc || nearPlace) && (
@@ -374,35 +408,87 @@ export default function World() {
   )
 }
 
-function Minimap({ district, x, z, h, onTap }: { district: District; x: number; z: number; h: number; onTap: (id: PlaceId) => void }) {
+function drawBase(district: District, S: number) {
+  const c = document.createElement('canvas'); c.width = c.height = S
+  const g = c.getContext('2d')!
+  const k = S / (WORLD.half * 2)
+  const X = (v: number) => (v + WORLD.half) * k
+  g.fillStyle = '#' + district.theme.ground.toString(16).padStart(6, '0'); g.fillRect(0, 0, S, S)
+  g.fillStyle = '#4b4b55'; for (const r of district.roads) g.fillRect(X(r.x0), X(r.z0), (r.x1 - r.x0) * k, (r.z1 - r.z0) * k)
+  g.fillStyle = '#d9c9a8'; for (const b of district.buildings) g.fillRect(X(b.rect.x0), X(b.rect.z0), (b.rect.x1 - b.rect.x0) * k, (b.rect.z1 - b.rect.z0) * k)
+  return c
+}
+function drawPlayer(g: CanvasRenderingContext2D, S: number, x: number, z: number, h: number, size: number) {
+  const k = S / (WORLD.half * 2)
+  g.save(); g.translate((x + WORLD.half) * k, (z + WORLD.half) * k); g.rotate(-h + Math.PI)
+  g.fillStyle = '#ffd23f'; g.strokeStyle = '#1c1b22'; g.lineWidth = Math.max(2, size / 3); g.beginPath(); g.moveTo(0, -size); g.lineTo(size * 0.78, size * 0.9); g.lineTo(-size * 0.78, size * 0.9); g.closePath(); g.fill(); g.stroke(); g.restore()
+}
+
+function Minimap({ district, x, z, h, onOpen }: { district: District; x: number; z: number; h: number; onOpen: () => void }) {
   const ref = useRef<HTMLCanvasElement>(null)
-  const S = 92
+  const S = 92, R = S * 2
   const base = useMemo(() => {
-    const c = document.createElement('canvas'); c.width = c.height = S * 2
-    const g = c.getContext('2d')!
-    const k = (S * 2) / (WORLD.half * 2)
-    const X = (v: number) => (v + WORLD.half) * k
-    g.fillStyle = '#' + district.theme.ground.toString(16).padStart(6, '0'); g.fillRect(0, 0, S * 2, S * 2)
-    g.fillStyle = '#4b4b55'; for (const r of district.roads) g.fillRect(X(r.x0), X(r.z0), (r.x1 - r.x0) * k, (r.z1 - r.z0) * k)
-    g.fillStyle = '#d9c9a8'; for (const b of district.buildings) g.fillRect(X(b.rect.x0), X(b.rect.z0), (b.rect.x1 - b.rect.x0) * k, (b.rect.z1 - b.rect.z0) * k)
+    const c = drawBase(district, R); const g = c.getContext('2d')!; const k = R / (WORLD.half * 2)
     g.font = `${S * 0.24}px system-ui`; g.textAlign = 'center'; g.textBaseline = 'middle'
-    for (const p of district.places) { g.fillStyle = '#1c1b22cc'; g.beginPath(); g.arc(X(p.door.x), X(p.door.z), S * 0.12, 0, Math.PI * 2); g.fill(); g.fillText(p.icon, X(p.door.x), X(p.door.z) + 1) }
+    for (const p of district.places) { const X = (p.door.x + WORLD.half) * k, Y = (p.door.z + WORLD.half) * k; g.fillStyle = '#1c1b22cc'; g.beginPath(); g.arc(X, Y, S * 0.12, 0, Math.PI * 2); g.fill(); g.fillText(p.icon, X, Y + 1) }
     return c
   }, [district])
   useEffect(() => {
     const cv = ref.current; if (!cv) return
     const g = cv.getContext('2d')!
-    g.clearRect(0, 0, S * 2, S * 2); g.drawImage(base, 0, 0)
-    const k = (S * 2) / (WORLD.half * 2)
-    g.save(); g.translate((x + WORLD.half) * k, (z + WORLD.half) * k); g.rotate(-h + Math.PI)
-    g.fillStyle = '#ffd23f'; g.strokeStyle = '#1c1b22'; g.lineWidth = 3; g.beginPath(); g.moveTo(0, -9); g.lineTo(7, 8); g.lineTo(-7, 8); g.closePath(); g.fill(); g.stroke(); g.restore()
+    g.clearRect(0, 0, R, R); g.drawImage(base, 0, 0); drawPlayer(g, R, x, z, h, 9)
   }, [base, x, z, h])
+  return (
+    <button className="relative rounded-full pointer-events-auto shrink-0 p-0" style={{ width: S, height: S }} onClick={onOpen} aria-label="Open the full map">
+      <canvas ref={ref} width={R} height={R} className="rounded-full" style={{ width: S, height: S, border: '3px solid #1c1b22', boxShadow: '0 0 0 2px #fff8ea66' }} />
+      <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[10px] font-black px-1.5 rounded-full" style={{ background: '#ffd23f', color: '#1c1b22' }}>🗺️ MAP</span>
+    </button>
+  )
+}
+
+function MapModal({ district, x, z, h, hour, life, sugPlace, onClose, onGo }: { district: District; x: number; z: number; h: number; hour: number; life: NonNullable<ReturnType<typeof useGame.getState>['life']>; sugPlace: PlaceId | null; onClose: () => void; onGo: (id: PlaceId) => void }) {
+  const ref = useRef<HTMLCanvasElement>(null)
+  const [sel, setSel] = useState<PlaceId | null>(sugPlace)
+  const S = 640
+  const base = useMemo(() => drawBase(district, S), [district])
+  const stateOf = (id: PlaceId) => (!isOpen(id, hour) ? 'closed' : placeActive(life, id) ? 'open' : 'inactive')
+  useEffect(() => {
+    const cv = ref.current; if (!cv) return
+    const g = cv.getContext('2d')!; const k = S / (WORLD.half * 2)
+    g.clearRect(0, 0, S, S); g.drawImage(base, 0, 0)
+    g.font = '28px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'
+    for (const p of district.places) {
+      const X = (p.door.x + WORLD.half) * k, Y = (p.door.z + WORLD.half) * k, st = stateOf(p.id)
+      g.beginPath(); g.arc(X, Y, 24, 0, Math.PI * 2); g.fillStyle = st === 'open' ? '#1c1b22' : '#55555f'; g.fill()
+      g.lineWidth = p.id === sel ? 6 : p.id === sugPlace ? 5 : 2; g.strokeStyle = p.id === sel ? '#2fd27b' : p.id === sugPlace ? '#ffd23f' : '#fff8ea88'; g.stroke()
+      g.fillText(st === 'closed' ? '🔒' : p.icon, X, Y + 2)
+    }
+    drawPlayer(g, S, x, z, h, 16)
+  }, [base, x, z, h, sel, sugPlace, hour])
   const tap = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const r = e.currentTarget.getBoundingClientRect()
     const wx = ((e.clientX - r.left) / r.width) * WORLD.half * 2 - WORLD.half, wz = ((e.clientY - r.top) / r.height) * WORLD.half * 2 - WORLD.half
-    let best: PlaceId | null = null, bd = 9
+    let best: PlaceId | null = null, bd = 12
     for (const p of district.places) { const d = Math.hypot(p.door.x - wx, p.door.z - wz); if (d < bd) { bd = d; best = p.id } }
-    if (best) onTap(best)
+    if (best) setSel(best)
   }
-  return <canvas ref={ref} width={S * 2} height={S * 2} className="rounded-full pointer-events-auto shrink-0" style={{ width: S, height: S, border: '3px solid #1c1b22', boxShadow: '0 0 0 2px #fff8ea66' }} onPointerUp={tap} aria-label="Minimap. Tap a place to walk there." />
+  const place = district.places.find((p) => p.id === sel)
+  const st = sel ? stateOf(sel) : null
+  return (
+    <Modal title={`🗺️ ${DISTRICTS[life.character.housing.districtId]?.name ?? 'Your area'}`} onClose={onClose}>
+      <canvas ref={ref} width={S} height={S} className="w-full rounded-2xl touch-none" style={{ border: '3px solid #1c1b22', aspectRatio: '1 / 1' }} onPointerUp={tap} aria-label="Map. Tap a place to select it." />
+      <div className="text-[11px] opacity-70 mt-1">▲ You · yellow ring = suggested next stop · 🔒 closed right now</div>
+      {place ? (
+        <div className="card p-3 mt-2 flex items-center gap-3">
+          <div className="text-3xl">{place.icon}</div>
+          <div className="flex-1 min-w-0"><div className="font-black leading-tight">{place.name}</div><div className="text-xs opacity-75">{st === 'closed' ? `Closed. Opens ${fmtClock(opensAt(place.id))}` : st === 'inactive' ? 'Nothing for you here right now' : place.blurb}</div></div>
+          <button className="btn btn-green !min-h-10 !px-4" onClick={() => onGo(place.id)}>🚶 Go</button>
+        </div>
+      ) : <div className="text-sm opacity-75 mt-2">Tap a place on the map to see it and walk there.</div>}
+      <div className="grid grid-cols-2 gap-1.5 mt-2">
+        {district.places.map((p) => <button key={p.id} className="chip justify-start" style={{ opacity: stateOf(p.id) === 'open' ? 1 : 0.55, outline: p.id === sel ? '2px solid #2fd27b' : 'none' }} onClick={() => setSel(p.id)}>{p.icon} {p.name}</button>)}
+      </div>
+      <button className="btn w-full mt-3" onClick={onClose}>Close map</button>
+    </Modal>
+  )
 }

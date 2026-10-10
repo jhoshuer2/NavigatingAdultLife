@@ -1,0 +1,17 @@
+import { chromium } from 'playwright-core'
+const OUT = '/tmp/claude-0/-home-user-NavigatingAdultLife/f97bb3da-afd4-5501-b372-1bb1d534ad7b/scratchpad/shots'
+const browser = await chromium.launch({ executablePath: process.env.CHROME, args: ['--no-sandbox', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--use-gl=angle'] })
+const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
+const errors = []; page.on('pageerror', (e) => errors.push(String(e)))
+await page.goto('http://localhost:4173/?unlimited=1&debug=1')
+await page.waitForFunction(() => window.__nal)
+await page.evaluate(() => window.__nal.jump(13, 'scholar', 3))
+await page.waitForTimeout(1500)
+await page.screenshot({ path: `${OUT}/90-first.png` })
+await page.evaluate(() => window.__world.walkTo(-18, -2)); await page.waitForTimeout(3500)
+console.log('coach step 2 visible', await page.getByText('Walk to the glowing').count())
+await page.getByRole('button', { name: 'Open the full map' }).click(); await page.waitForTimeout(600)
+await page.screenshot({ path: `${OUT}/91-map.png` })
+await page.getByRole('button', { name: /Go/ }).first().click(); await page.waitForTimeout(800)
+console.log('map closed', await page.getByText('Close map').count() === 0, 'errors', errors)
+await browser.close()

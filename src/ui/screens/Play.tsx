@@ -120,7 +120,7 @@ function PlayMenu({ onWorld }: { onWorld?: () => void }) {
   )
 }
 
-function Modals() {
+function Modals({ lite }: { lite: boolean }) {
   const g = useGame()
   const { life, meta, sheet } = g
   if (!life) return null
@@ -140,7 +140,7 @@ function Modals() {
       {sheet === 'place' && <PlaceModal />}
       {sheet === 'npc' && <NpcModal />}
       {sheet === 'places' && <PlacesModal />}
-      {!meta.seenTutorial && phase !== 'ended' && <TutorialModal />}
+      {lite && !meta.seenTutorial && phase !== 'ended' && <TutorialModal />}
     </>
   )
 }
@@ -156,7 +156,7 @@ export function Play() {
       {lite ? <PlayMenu onWorld={ok ? () => updateSettings({ lite: false }) : undefined} /> : (
         <div className="fixed inset-0 mx-auto max-w-[480px] overflow-hidden"><Suspense fallback={<div className="p-8 text-center font-display text-3xl text-danfo">Loading your neighbourhood…</div>}><World /></Suspense></div>
       )}
-      <Modals />
+      <Modals lite={lite} />
     </>
   )
 }
