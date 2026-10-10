@@ -199,7 +199,7 @@ Each trait has one clear upside and one downside, both expressed as data modifie
 - Gender affects *cultural expectation events* (e.g., pressure to marry, career bias events) with humour and agency — **never** locks careers, stats, or achievements.
 
 ### 4.3 Avatar technical approach
-- **Layered 2D sprites** composited in a single `<Avatar>` component (SVG/PNG layers: body, head, hair-back, face, hair-front, outfit, accessory). Tinting via CSS/Canvas for skin tone. Same config drives the Three.js low-poly character in the runner/world; the 2D layer set drives the mini-game sprite via pre-rendered spritesheet (generated at runtime from the avatar config on a hidden canvas, or a simplified silhouette-with-colours in M1).
+- **Layered 2D sprites** composited in a single `<Avatar>` component (SVG/PNG layers: body, head, hair-back, face, hair-front, outfit, accessory). Tinting via CSS/Canvas for skin tone. The same `AvatarConfig` drives a simple procedural low-poly 3D character (skin tint, hair mesh, outfit colours) in the runner and, from M2, the world.
 - Aging: 5 life-stage variants of body/face proportion (child, teen, adult, mid-age, elder) with grey-hair overlay and wrinkle layer. (M1 MAY ship with 3 stages.)
 
 ---
