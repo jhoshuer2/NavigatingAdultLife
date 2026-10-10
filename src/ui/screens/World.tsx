@@ -18,7 +18,8 @@ import { ShopTask } from '../tasks/ShopTask'
 import { JogTask } from '../tasks/JogTask'
 import { TalkTask, type Partner } from '../tasks/TalkTask'
 import type { Setting } from '@content/dialogue'
-import { npcSpot, placeActive, suggest } from '../../world/guide'
+import { placeActive, suggest } from '../../world/guide'
+import { outdoorAnchor, presenceAt, type Activity } from '../../world/residents'
 import { audio } from '@platform/audio'
 import { track, setAnalyticsContext } from '@platform/analytics'
 
@@ -116,11 +117,13 @@ export default function World() {
     const list: WorldNpc[] = []
     for (const n of Object.values(life.npcs)) {
       if (!n.alive) continue
-      const spot = npcSpot(n.role)
-      if (!spot) continue
       if (n.role === 'boss' && !life.character.job) continue
       if (n.role === 'child' && n.id !== life.character.childrenIds[0]) continue
-      list.push({ id: n.id, name: n.name, gender: n.gender, x: spot.x, z: spot.z, role: n.role })
+      const pr = presenceAt(n.role, hour, n.id)
+      if (pr.where !== 'out') continue // at home, at work, at school, in a shop or asleep: not on the street
+      const near = district.places.find((p) => p.id === (pr.near ?? 'home')) ?? district.places[0]
+      const a = outdoorAnchor(near.id, near.door)
+      list.push({ id: n.id, name: n.name, gender: n.gender, x: a.x + (Math.random() - 0.5) * a.r, z: a.z + (Math.random() - 0.5) * a.r, role: n.role, wander: a })
     }
     r.setNpcs(list)
   }, [life, district, month, ageBand, hour])
@@ -135,6 +138,21 @@ export default function World() {
   }, [coachOn, coach, pos, inside, g.sheet])
   const lastText = life?.lastAction?.text
   useEffect(() => { if (!lastText) return; setFlash(lastText); const t = setTimeout(() => setFlash(null), 3800); return () => clearTimeout(t) }, [lastText])
+
+  // people inside a building follow their own routines (and arrive or leave as the clock moves)
+  const residentMap = (place: PlaceId): Record<string, Activity | null> => {
+    const m: Record<string, Activity | null> = {}
+    if (!life) return m
+    for (const n of Object.values(life.npcs)) {
+      if (!n.alive) continue
+      if (n.role === 'boss' && !life.character.job) { m[n.role] = null; continue }
+      if (n.role === 'child' && n.id !== life.character.childrenIds[0]) { m[n.role] = null; continue }
+      const pr = presenceAt(n.role, hour, n.id)
+      m[n.role] = (place === 'home' ? pr.where === 'home' : pr.where === `place:${place}`) ? pr.activity : null
+    }
+    return m
+  }
+  useEffect(() => { const r = rendRef.current; if (r?.inside) r.setResidents(residentMap(r.inside), false) /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [hour, inside, life?.npcs])
 
   const sug = useMemo(() => (life ? suggest(life) : null), [life])
   useEffect(() => { rendRef.current?.setHighlight(sug?.place ?? null) }, [sug])
@@ -185,6 +203,7 @@ export default function World() {
       const st = { light: dark, tv: place === 'home' && hour >= 17.5 && hour < 23, fan: place === 'home' && hour >= 11 && hour < 23, hour }
       setAppl({ light: st.light, tv: st.tv, fan: st.fan })
       if (r.enterInterior(place, people, st, { x: p.door.x, z: p.door.z })) {
+        r.setResidents(residentMap(place), true)
         setInside(place); setNearIn({ hotspot: null, person: null, exit: false }); setNear({ place: null, npc: null })
         if (then) setTimeout(then, 60)
         if (want === 'sleep') { intent.current = 'sleep'; const b = r.hotspotPos('bed'); if (b) { r.setInteriorMarker('bed'); r.walkTo(b.x, b.z) } }
@@ -201,7 +220,7 @@ export default function World() {
 
   const talkInside = (pid: string) => {
     const info = rendRef.current?.personAt(pid); if (!info) return
-    const npc = info.persistent ? Object.values(life!.npcs).find((n) => n.role === info.persistent && n.alive) : null
+    const npc = info.npcId ? life!.npcs[info.npcId] : null
     if (npc) g.openNpc(npc.id)
     else {
       // a bystander (teacher, classmate, cook...): a short real conversation in speech bubbles, no stats at stake

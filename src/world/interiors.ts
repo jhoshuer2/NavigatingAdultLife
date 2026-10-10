@@ -8,7 +8,9 @@ export interface IObj { kind: ObjKind; rect: Rect; h: number; color: number; blo
 export interface HotAction { label: string; icon: string; cmd: string; note?: string }
 export interface Hotspot { id: string; name: string; icon: string; x: number; z: number; r: number; actions: HotAction[] }
 export interface IPerson { id: string; name: string; role: string; x: number; z: number; line: string; persistent?: string }
+export interface Anchor { id: string; kind: 'sofa' | 'table' | 'cook' | 'rug' | 'stand'; x: number; z: number; ax: number; az: number; pose: 'sit' | 'stand'; face: number; floor?: boolean }
 export interface Interior {
+  anchors?: Anchor[]
   id: PlaceId
   name: string
   bounds: Rect
@@ -41,7 +43,7 @@ export const INTERIORS: Partial<Record<PlaceId, Interior>> = {
       { kind: 'fan', rect: r(3.2, 3.7, 2.2, 2.8), h: 1.6, color: 0x4a6a8a, id: 'fan' },
       { kind: 'cooker', rect: r(4.6, 6.4, -6.9, -5.9), h: 1.0, color: 0x888888 }, { kind: 'counter', rect: r(6.4, 8.6, -6.9, -5.9), h: 1.0, color: 0x9a7a5a },
       { kind: 'fridge', rect: r(8.8, 9.9, -6.0, -4.9), h: 2.3, color: 0xe8e8ee },
-      { kind: 'table', rect: r(5.5, 8, -3.4, -1.8), h: 0.9, color: 0x9a6a3a }, { kind: 'stool', rect: r(5.0, 5.5, -2.9, -2.4), h: 0.5, color: 0xc4562a }, { kind: 'stool', rect: r(8.0, 8.5, -2.9, -2.4), h: 0.5, color: 0xc4562a },
+      { kind: 'table', rect: r(6.2, 8.4, -3.4, -1.8), h: 0.9, color: 0x9a6a3a },
       { kind: 'shower', rect: r(5, 6.4, 1.8, 3.2), h: 0.2, color: 0x7ab3d4, blocks: false }, { kind: 'toilet', rect: r(7.6, 8.4, 2.0, 2.9), h: 0.9, color: 0xffffff }, { kind: 'sink', rect: r(9.1, 9.9, 2.0, 3.2), h: 1.0, color: 0xf2f2f2 },
       { kind: 'plant', rect: r(-2.4, -1.8, 5.6, 6.2), h: 1.4, color: 0x2f7a3a },
     ],
@@ -61,6 +63,19 @@ export const INTERIORS: Partial<Record<PlaceId, Interior>> = {
       { id: 'child', name: 'Little one', role: 'child', x: 2.6, z: 4.6, line: 'Play with me!', persistent: 'child' },
     ],
     windowsAt: [{ x: -6.5, z: -7 }, { x: 1, z: -7 }, { x: 7, z: -7 }],
+    anchors: [
+      { id: 'sofa1', kind: 'sofa', x: -0.7, z: -0.4, ax: -0.7, az: 1.3, pose: 'sit', face: Math.PI },
+      { id: 'sofa2', kind: 'sofa', x: 0.7, z: -0.4, ax: 0.7, az: 1.3, pose: 'sit', face: Math.PI },
+      { id: 'table1', kind: 'table', x: 6.8, z: -1.3, ax: 6.8, az: -0.6, pose: 'sit', face: Math.PI },
+      { id: 'table2', kind: 'table', x: 7.8, z: -1.3, ax: 7.8, az: -0.6, pose: 'sit', face: Math.PI },
+      { id: 'cook1', kind: 'cook', x: 5.5, z: -5.0, ax: 5.5, az: -5.0, pose: 'stand', face: Math.PI },
+      { id: 'rug1', kind: 'rug', x: 0.4, z: -3.4, ax: 0.4, az: -3.4, pose: 'sit', face: 0, floor: true },
+      { id: 'rug2', kind: 'rug', x: -0.9, z: -2.7, ax: -0.9, az: -2.7, pose: 'sit', face: 0.8, floor: true },
+      { id: 'st1', kind: 'stand', x: -4.2, z: 2.4, ax: -4.2, az: 2.4, pose: 'stand', face: 0.5 },
+      { id: 'st2', kind: 'stand', x: 2.4, z: 3.6, ax: 2.4, az: 3.6, pose: 'stand', face: -0.6 },
+      { id: 'st3', kind: 'stand', x: 6.6, z: 0.3, ax: 6.6, az: 0.3, pose: 'stand', face: 0 },
+      { id: 'st4', kind: 'stand', x: -6.0, z: 4.4, ax: -6.0, az: 4.4, pose: 'stand', face: 2.4 },
+    ],
   },
   school: {
     id: 'school', name: 'Classroom', bounds: r(-9, 9, -6, 6), wallColor: 0xf7efe0, door: { x: 0, z: 5.2 }, spawn: { x: 0, z: 4.2 },

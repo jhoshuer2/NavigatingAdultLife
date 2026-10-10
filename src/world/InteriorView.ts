@@ -2,9 +2,10 @@
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import type { Gender } from '@engine/core/types'
-import { INTERIORS, interiorBlockers, type IObj, type Interior } from './interiors'
+import { INTERIORS, interiorBlockers, type Anchor, type IObj, type Interior } from './interiors'
+import type { Activity } from './residents'
 import type { PlaceId, Rect } from './layout'
-import { buildNavFor, type Nav } from './nav'
+import { buildNavFor, findPath, type Nav } from './nav'
 import { animateHuman, buildHuman, hashLook, type HumanParts } from './characters'
 import { lightingAt } from './time'
 
@@ -42,7 +43,9 @@ export class InteriorView {
   private windowMat = new THREE.MeshBasicMaterial({ color: 0x9ed3ff })
   private fanBlades?: THREE.Object3D
   private fanOn = false
-  private people = new Map<string, { parts: HumanParts; sprite: THREE.Sprite; id: string; name: string; line: string; role: string; x: number; z: number; persistent?: string }>()
+  private people = new Map<string, { parts: HumanParts; sprite: THREE.Sprite; id: string; name: string; line: string; role: string; x: number; z: number; persistent?: string; prole?: string; act?: Activity | null; route: { x: number; z: number }[]; anchor?: Anchor; seat?: Anchor; leaving?: boolean; nextT: number; moving: boolean }>()
+  private occupied = new Map<string, string>() // anchor id -> person id
+  private clock = 0
   private marker: THREE.Mesh
   private arrow: THREE.Mesh
   private markTarget: string | null = null
@@ -192,6 +195,7 @@ export class InteriorView {
     const wanted = new Map<string, { id: string; name: string; gender: Gender; role: string }>()
     for (const p of list) wanted.set(p.role, p)
     for (const [k, o] of this.people) { this.scene.remove(o.parts.group, o.sprite); this.people.delete(k) }
+    this.occupied.clear()
     for (const p of this.def.people) {
       const persistent = p.persistent ? wanted.get(p.persistent) : undefined
       if (p.persistent && !persistent) continue
@@ -201,7 +205,7 @@ export class InteriorView {
       parts.group.position.set(p.x, 0, p.z); parts.group.rotation.y = Math.PI
       this.scene.add(parts.group)
       const sprite = this.label(name); sprite.position.set(p.x, 3.5, p.z); this.scene.add(sprite)
-      this.people.set(p.id, { parts, sprite, id: p.id, name, line: p.line, role: p.role, x: p.x, z: p.z, persistent: persistent?.id })
+      this.people.set(p.id, { parts, sprite, id: p.id, name, line: p.line, role: p.role, x: p.x, z: p.z, persistent: persistent?.id, prole: p.persistent, act: undefined, route: [], nextT: 0, moving: false })
     }
   }
   setBoard(lines: string[] | null) {
@@ -217,8 +221,9 @@ export class InteriorView {
   }
   showIcons(v: boolean) { for (const s of this.icons) s.visible = v; for (const p of this.people.values()) p.sprite.visible = v && p.parts.group.visible }
   hidePerson(id: string, hidden: boolean) { const p = this.people.get(id); if (p) { p.parts.group.visible = !hidden; p.sprite.visible = !hidden } }
-  personInfo(id: string) { const p = this.people.get(id); return p ? { id: p.id, name: p.name, line: p.line, role: p.role, persistent: p.persistent, x: p.x, z: p.z } : null }
-  allPeople() { return [...this.people.values()].map((p) => ({ id: p.id, x: p.x, z: p.z })) }
+  personInfo(id: string) { const p = this.people.get(id); return p ? { id: p.id, name: p.name, line: p.line, role: p.role, persistent: p.persistent, npcId: p.persistent, prole: p.prole, x: p.x, z: p.z } : null }
+  debugPeople() { return [...this.people.values()].map((p) => ({ id: p.id, act: p.act, vis: p.parts.group.visible, x: +p.x.toFixed(1), z: +p.z.toFixed(1), seat: p.seat?.id ?? null, moving: p.moving })) }
+  allPeople() { return [...this.people.values()].filter((p) => p.parts.group.visible).map((p) => ({ id: p.id, x: p.x, z: p.z })) }
 
   setMarker(hotspotId: string | null) { this.markTarget = hotspotId }
 
@@ -241,6 +246,76 @@ export class InteriorView {
   }
   bedStand(): { x: number; z: number } { const h = this.def.hotspots.find((x) => x.id === 'bed'); return h ? { x: h.x, z: h.z } : this.def.spawn }
 
+
+  // ---------- residents with their own routines ----------
+  private anchorFor(p: { id: string }, act: Activity, avoid?: string): Anchor | undefined {
+    const all = this.def.anchors; if (!all) return undefined
+    const want: Anchor['kind'][] = act === 'cook' ? ['cook'] : act === 'eat' ? ['table'] : act === 'tv' ? ['sofa'] : act === 'play' ? ['rug', 'stand'] : ['stand']
+    const free = all.filter((a) => want.includes(a.kind) && a.id !== avoid && (!this.occupied.has(a.id) || this.occupied.get(a.id) === p.id))
+    if (!free.length) { const st = all.filter((a) => a.kind === 'stand' && a.id !== avoid); return st[Math.floor(Math.random() * st.length)] }
+    return free[Math.floor(Math.random() * free.length)]
+  }
+  private release(p: { id: string; seat?: Anchor }) { if (p.seat) { this.occupied.delete(p.seat.id); p.seat = undefined } }
+  private stand(p: { parts: HumanParts }) { p.parts.group.position.y = 0; p.parts.legL.rotation.x = p.parts.legR.rotation.x = 0 }
+  private goTo(p: NonNullable<ReturnType<InteriorView['people']['get']>>, a: Anchor, instant: boolean) {
+    this.release(p); this.occupied.set(a.id, p.id); p.anchor = a; p.nextT = this.clock + 14 + Math.random() * 22
+    if (instant) { this.sitOrStand(p, a); return }
+    this.stand(p)
+    const path = findPath(this.nav, { x: p.x, z: p.z }, { x: a.ax, z: a.az })
+    p.route = path ?? []
+    if (!path) this.sitOrStand(p, a)
+  }
+  private sitOrStand(p: NonNullable<ReturnType<InteriorView['people']['get']>>, a: Anchor) {
+    p.x = a.x; p.z = a.z; p.route = []; p.seat = a
+    p.parts.group.position.set(a.x, 0, a.z); p.parts.group.rotation.y = a.face; p.sprite.position.set(a.x, 3.5, a.z)
+    if (a.pose === 'sit') { p.parts.legL.rotation.x = p.parts.legR.rotation.x = -1.45; p.parts.group.position.y = a.floor ? -0.9 : -0.45 }
+    else this.stand(p)
+  }
+  /** Tell each resident what they are doing now (null = not at home). New arrivals walk in through the door. */
+  setActivities(map: Record<string, Activity | null>, instant = false) {
+    if (!this.def.anchors) { for (const p of this.people.values()) if (p.prole && p.prole in map) { const on = map[p.prole] != null; p.parts.group.visible = on; p.sprite.visible = on } return }
+    for (const p of this.people.values()) {
+      if (!p.prole || !(p.prole in map)) continue
+      const act = map[p.prole]
+      if (act === p.act) continue
+      p.act = act
+      if (act == null) {
+        if (!p.parts.group.visible) continue
+        if (instant) { this.release(p); p.parts.group.visible = false; p.sprite.visible = false; continue }
+        this.stand(p); this.release(p); p.leaving = true
+        p.route = findPath(this.nav, { x: p.x, z: p.z }, this.def.door) ?? []
+        if (!p.route.length) { p.parts.group.visible = false; p.sprite.visible = false }
+        continue
+      }
+      const a = this.anchorFor(p, act); if (!a) continue
+      p.leaving = false
+      if (!p.parts.group.visible) {
+        p.parts.group.visible = true; p.sprite.visible = true
+        const from = instant ? { x: a.x, z: a.z } : this.def.door
+        p.x = from.x; p.z = from.z; p.parts.group.position.set(from.x, 0, from.z)
+      }
+      this.goTo(p, a, instant)
+    }
+  }
+  private stepResidents(dt: number) {
+    this.clock += dt
+    for (const p of this.people.values()) {
+      if (!p.prole || !p.parts.group.visible) continue
+      // wander a little within the same activity so people keep moving about
+      if (p.act && !p.leaving && !p.route.length && this.clock > p.nextT && (p.act === 'idle' || p.act === 'play' || p.act === 'chat')) {
+        const a = this.anchorFor(p, p.act, p.anchor?.id); if (a && Math.random() < 0.6) this.goTo(p, a, false); else p.nextT = this.clock + 10 + Math.random() * 15
+      }
+      if (p.route.length) {
+        const t = p.route[0]; const vx = t.x - p.x, vz = t.z - p.z, d = Math.hypot(vx, vz)
+        if (d < 0.25) { p.route.shift(); if (!p.route.length) { if (p.leaving) { p.parts.group.visible = false; p.sprite.visible = false } else if (p.anchor) this.sitOrStand(p, p.anchor) } }
+        else { const sp = 2.3 * dt; p.x += (vx / d) * sp; p.z += (vz / d) * sp; p.parts.group.position.set(p.x, 0, p.z); p.parts.group.rotation.y = Math.atan2(vx, vz); p.sprite.position.set(p.x, 3.5, p.z) }
+        p.moving = true
+      } else p.moving = false
+      animateHuman(p.parts, this.time + p.x, p.moving, 0.7)
+      if (p.seat?.pose === 'sit' && !p.moving) { p.parts.legL.rotation.x = p.parts.legR.rotation.x = -1.45 }
+    }
+  }
+
   update(dt: number) {
     this.time += dt
     if (this.fanOn && this.fanBlades) this.fanBlades.rotation.y += dt * 14
@@ -248,7 +323,8 @@ export class InteriorView {
     const h = this.markTarget ? this.def.hotspots.find((x) => x.id === this.markTarget) : null
     this.marker.visible = this.arrow.visible = !!h
     if (h) { this.marker.position.set(h.x, 0.1, h.z); this.marker.scale.setScalar(1 + Math.sin(this.time * 4) * 0.1); this.arrow.position.set(h.x, 3.5 + Math.abs(Math.sin(this.time * 3)) * 0.5, h.z) }
-    for (const p of this.people.values()) animateHuman(p.parts, this.time, false)
+    this.stepResidents(dt)
+    for (const p of this.people.values()) if (!p.prole) animateHuman(p.parts, this.time, false)
   }
 
   dispose() {

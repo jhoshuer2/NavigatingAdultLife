@@ -37,7 +37,7 @@ const BUBBLES = [
   'Omo, this sun!', 'Sapa is real.', 'Na so e be.', 'Fuel don cost again!', 'Wahala for who no get generator.', 'Boss, na ₦200 only!', 'Small chops dey?', 'I dey come.',
 ]
 
-export interface WorldNpc { id: string; name: string; gender: Gender; x: number; z: number; role: string }
+export interface WorldNpc { id: string; name: string; gender: Gender; x: number; z: number; role: string; wander?: { x: number; z: number; r: number } }
 export interface Near { place: PlaceId | null; npc: string | null }
 export interface NearInside { hotspot: string | null; person: string | null; exit: boolean }
 
@@ -62,7 +62,7 @@ export class WorldRenderer {
   private time = 0
   private raycaster = new THREE.Raycaster()
   private ground: THREE.Mesh
-  private npcs = new Map<string, { parts: HumanParts; npc: WorldNpc; label: THREE.Sprite }>()
+  private npcs = new Map<string, { parts: HumanParts; npc: WorldNpc; label: THREE.Sprite; tx: number; tz: number; wt: number; moving: boolean }>()
   private ambient: { parts: HumanParts; x: number; z: number; heading: number; timer: number; speed: number; bubble?: THREE.Sprite; bubbleT: number; sayT: number }[] = []
   private labelSprites = new Map<PlaceId, THREE.Sprite>()
   private textCache = new Map<string, THREE.SpriteMaterial>()
@@ -260,11 +260,11 @@ export class WorldRenderer {
     for (const [id, o] of this.npcs) if (!keep.has(id)) { this.scene.remove(o.parts.group); this.scene.remove(o.label); this.npcs.delete(id) }
     for (const n of list) {
       const ex = this.npcs.get(n.id)
-      if (ex) { ex.npc = n; ex.parts.group.position.set(n.x, 0, n.z); ex.label.position.set(n.x, 3.7, n.z); continue }
+      if (ex) { const keep = n.wander && ex.npc.wander; ex.npc = { ...n, x: keep ? ex.npc.x : n.x, z: keep ? ex.npc.z : n.z }; if (!keep) { ex.parts.group.position.set(n.x, 0, n.z); ex.label.position.set(n.x, 3.7, n.z); ex.tx = n.x; ex.tz = n.z } continue }
       const parts = buildHuman({ look: hashLook(n.name, n.gender), age: n.role === 'child' ? 6 : 22, scale: 1.15 })
       parts.group.position.set(n.x, 0, n.z); this.scene.add(parts.group)
       const label = this.textSprite(n.name, { bg: 'rgba(255,210,63,0.92)', fg: '#1c1b22', size: 3.4 }); label.position.set(n.x, 3.7, n.z); this.scene.add(label)
-      this.npcs.set(n.id, { parts, npc: n, label })
+      this.npcs.set(n.id, { parts, npc: n, label, tx: n.x, tz: n.z, wt: 1 + Math.random() * 3, moving: false })
     }
   }
 
@@ -301,6 +301,8 @@ export class WorldRenderer {
     this.interior.setSleeping(this.player, on)
     if (!on) { const st = this.interior.bedStand(); this.px = st.x; this.pz = st.z; this.player.group.position.set(this.px, 0, this.pz) }
   }
+  setResidents(map: Record<string, import('./residents').Activity | null>, instant = false) { this.interior?.setActivities(map, instant) }
+  debugPeople() { return this.interior?.debugPeople() ?? [] }
   onNearInside(cb: (n: NearInside) => void) { this.nearInCb = cb }
   personAt(id: string) { return this.interior?.personInfo(id) ?? null }
   hotspotPos(id: string) { const h = this.interior?.def.hotspots.find((x) => x.id === id); return h ? { x: h.x, z: h.z } : null }
@@ -528,6 +530,25 @@ export class WorldRenderer {
       }
       return
     }
+    // people with their own lives wander about near where they hang out
+    for (const o of this.npcs.values()) {
+      const w = o.npc.wander
+      if (w) {
+        o.wt -= dt
+        if (o.wt <= 0) {
+          o.wt = 3 + Math.random() * 7
+          if (Math.random() < 0.65) { const a = Math.random() * Math.PI * 2, d = Math.random() * w.r; o.tx = w.x + Math.cos(a) * d; o.tz = w.z + Math.sin(a) * d } else { o.tx = o.npc.x; o.tz = o.npc.z }
+        }
+        const vx = o.tx - o.npc.x, vz = o.tz - o.npc.z, d = Math.hypot(vx, vz)
+        o.moving = d > 0.4
+        if (o.moving) {
+          const sp = 1.7 * dt; const p = moveWithCollision(this.district.blockers, o.npc.x, o.npc.z, (vx / d) * sp, (vz / d) * sp)
+          if (Math.abs(p.x - o.npc.x) < 1e-5 && Math.abs(p.z - o.npc.z) < 1e-5) { o.tx = o.npc.x; o.tz = o.npc.z } else { o.npc.x = p.x; o.npc.z = p.z }
+          o.parts.group.position.set(o.npc.x, 0, o.npc.z); o.label.position.set(o.npc.x, 3.7, o.npc.z)
+          o.parts.group.rotation.y += this.angleDiff(Math.atan2(vx, vz), o.parts.group.rotation.y) * Math.min(1, dt * 6)
+        }
+      }
+    }
     // ambient wanderers (outdoors only)
     for (const a of this.ambient) {
       a.timer -= dt
@@ -586,7 +607,7 @@ export class WorldRenderer {
         h.ring.visible = h.arrow.visible = !!pl
         if (pl) { h.ring.position.set(pl.door.x, 0.12, pl.door.z); h.ring.scale.setScalar(1 + Math.sin(this.time * 4) * 0.12); h.arrow.position.set(pl.door.x, 3.2 + Math.abs(Math.sin(this.time * 3)) * 0.7, pl.door.z) }
       }
-      for (const o of this.npcs.values()) { o.parts.group.rotation.y += this.angleDiff(Math.atan2(this.px - o.npc.x, this.pz - o.npc.z), o.parts.group.rotation.y) * Math.min(1, dt * 3); animateHuman(o.parts, this.time, false) }
+      for (const o of this.npcs.values()) { if (!o.moving) o.parts.group.rotation.y += this.angleDiff(Math.atan2(this.px - o.npc.x, this.pz - o.npc.z), o.parts.group.rotation.y) * Math.min(1, dt * 3); animateHuman(o.parts, this.time + o.npc.x, o.moving, 0.6) }
     }
     const shift = this.camOverride?.shift ?? 0
     if (shift !== this.viewShift) {

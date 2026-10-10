@@ -1,5 +1,5 @@
 // "What should I do next?" suggestions and place/NPC rules for the world view. Pure helpers over GameState.
-import type { GameState, NpcRole } from '@engine/core/types'
+import type { GameState } from '@engine/core/types'
 import type { PlaceId } from './layout'
 
 export interface Suggestion { place: PlaceId; text: string; icon: string }
@@ -21,21 +21,6 @@ export function suggest(life: GameState): Suggestion | null {
   if (used('socialise') < 1 && c.stats.energy >= 15) return { place: 'mamaput', icon: '🧑‍🤝‍🧑', text: 'Catch up with a friend at the buka.' }
   if (used('familyTime') < 1) return { place: 'home', icon: '👪', text: 'Spend time with your family at home.' }
   return { place: 'home', icon: '🌙', text: 'You have done enough. Sleep at home to end the year.' }
-}
-
-/** Where each persistent NPC stands in the district. */
-export function npcSpot(role: NpcRole): { x: number; z: number } | null {
-  switch (role) {
-    case 'mother': return { x: -22.5, z: -6.4 }
-    case 'father': return { x: -14.5, z: -6.6 }
-    case 'sibling': return { x: -18.5, z: -4.6 }
-    case 'child': return { x: -23, z: -4.2 }
-    case 'friend': return { x: 36.2, z: 7.4 }
-    case 'friend2': return { x: -35.5, z: -25.5 }
-    case 'partner': return { x: 23.5, z: 7.4 }
-    case 'boss': return { x: -16.8, z: 9.2 }
-    default: return null
-  }
 }
 
 export function placeActive(life: GameState, id: PlaceId): boolean {
