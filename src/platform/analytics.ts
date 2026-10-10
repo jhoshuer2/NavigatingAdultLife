@@ -84,13 +84,13 @@ export function createClient(d: Deps) {
     get queueLength() { return queue.length },
     setConsent(granted: boolean) {
       if (granted === consent) return
-      if (!granted) { consent = false; queue = []; store.del(QUEUE_KEY); sessionId = ''; return }
-      consent = true
+      if (!granted) { consent = false; queue = []; lifeId = null; store.del(QUEUE_KEY); store.del(LIFE_KEY); store.del(DEVICE_KEY); deviceId = ''; sessionId = ''; return }
+      consent = true; if (lifeId) store.set(LIFE_KEY, lifeId)
       try { const q = JSON.parse(store.get(QUEUE_KEY) ?? '[]') as QueuedEvent[]; if (Array.isArray(q)) queue = q } catch { queue = [] }
       emit('consent_changed', { granted: true })
     },
-    setLife(id: string | null) { lifeId = id; if (id) store.set(LIFE_KEY, id); else store.del(LIFE_KEY) },
-    restoreLife() { lifeId = store.get(LIFE_KEY) },
+    setLife(id: string | null) { lifeId = id; if (consent) { if (id) store.set(LIFE_KEY, id); else store.del(LIFE_KEY) } },
+    restoreLife() { if (consent) lifeId = store.get(LIFE_KEY) ?? lifeId },
     setContext(c: Partial<Ctx>) { ctx = { ...ctx, ...c } },
     input() { lastInput = d.now() },
     setVisible(v: boolean) { visible = v },

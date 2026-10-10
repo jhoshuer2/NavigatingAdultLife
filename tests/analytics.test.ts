@@ -22,7 +22,7 @@ function harness(over: Partial<Deps> = {}) {
 
 describe('telemetry SDK', () => {
   it('does nothing without consent (no queue, storage or network)', async () => {
-    const h = harness()
+    const h = harness(); h.c.setLife('00000000-0000-4000-8000-0000000000aa')
     h.c.emit('title_viewed'); h.c.tick(); h.c.leaving(); await h.c.flush()
     expect(h.c.queueLength).toBe(0); expect(h.calls.length).toBe(0); expect(h.beacons.length).toBe(0); expect(h.mem.size).toBe(0)
   })
@@ -38,6 +38,7 @@ describe('telemetry SDK', () => {
   it('withdrawing consent clears the queue and stops all requests', async () => {
     const h = harness(); h.c.setConsent(true); h.c.emit('title_viewed'); h.c.setConsent(false)
     await h.c.flush(); h.c.leaving(); h.c.emit('map_opened')
+    expect([...h.mem.keys()]).toEqual([])
     expect(h.calls.length).toBe(0); expect(h.beacons.length).toBe(0); expect(h.c.queueLength).toBe(0)
   })
   it('keeps events on server errors and retries with backoff, without duplicating ids', async () => {

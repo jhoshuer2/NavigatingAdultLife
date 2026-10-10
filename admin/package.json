@@ -11,7 +11,8 @@
     "test": "vitest run",
     "migrate": "tsx scripts/migrate.ts",
     "create-user": "tsx scripts/create-user.ts",
-    "seed": "tsx scripts/seed.ts"
+    "seed": "tsx scripts/seed.ts",
+    "bench": "tsx scripts/bench.ts"
   },
   "dependencies": {
     "@electric-sql/pglite": "0.2.12",

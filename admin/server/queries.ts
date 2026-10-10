@@ -133,28 +133,32 @@ export async function playersForExport(db: Db, f: PlayerQuery) {
 // ---------- geography ----------
 export async function geography(db: Db, f: Filters) {
   const q = dd(f)
-  const byCountry = (await db.query<any>(`
+  const ngq = dd({ ...f, country: 'NG' })
+  const byCountryP = (db.query<any>(`
     SELECT coalesce(dd.country,'??') AS country, count(DISTINCT dd.device_id) FILTER (WHERE dd.active_seconds >= ${ACTIVE_MIN_SECONDS})::int AS players,
            coalesce(sum(dd.sessions),0)::int AS sessions, coalesce(sum(dd.active_seconds),0)::int AS active_seconds,
            count(DISTINCT dd.device_id) FILTER (WHERE dd.is_new)::int AS new_players
-    FROM device_days dd WHERE ${q.where} GROUP BY 1 ORDER BY players DESC, sessions DESC`, q.p)).rows
-  const retention = async (extraWhere: string, days: number) => {
-    const rq = dd({ ...f, cohort: 'new', to: addDays(f.to, -days) > f.from ? addDays(f.to, -days) : f.from })
-    return (await db.query<any>(`SELECT coalesce(dd.country,'??') AS country, ${extraWhere} AS key, count(*)::int AS cohort,
-      count(*) FILTER (WHERE EXISTS (SELECT 1 FROM device_days x WHERE x.device_id = dd.device_id AND x.day = dd.day + ${days} AND x.active_seconds >= ${ACTIVE_MIN_SECONDS}))::int AS back
-      FROM device_days dd WHERE ${rq.where} GROUP BY 1, 2`, rq.p)).rows
-  }
-  const [d1, d7] = [await retention("''", 1), await retention("''", 7)]
-  const rate = (rows: any[], c: string) => { const r = rows.find((x: any) => x.country === c); return r && r.cohort >= 1 ? Math.round((r.back / r.cohort) * 100) : null }
-  const countries = byCountry.map((r: any) => ({ ...r, avg_playtime_per_player: r.players ? Math.round(r.active_seconds / r.players) : 0, d1: rate(d1, r.country), d7: rate(d7, r.country) }))
-  const ngq = dd({ ...f, country: 'NG' })
-  const states = (await db.query<any>(`
+    FROM device_days dd WHERE ${q.where} GROUP BY 1 ORDER BY players DESC, sessions DESC`, q.p))
+  // D1 / D7: share of devices first seen in the range (and old enough to be measured) that were active exactly n days later
+  const rq = dd({ ...f, cohort: 'new' }); const toIdx = rq.p.length + 1
+  const retP = (db.query<any>(`
+    SELECT coalesce(dd.country,'??') AS country,
+      count(*) FILTER (WHERE dd.day + 1 <= $${toIdx}::date)::int AS e1, count(x1.device_id) FILTER (WHERE x1.active_seconds >= ${ACTIVE_MIN_SECONDS})::int AS b1,
+      count(*) FILTER (WHERE dd.day + 7 <= $${toIdx}::date)::int AS e7, count(x7.device_id) FILTER (WHERE x7.active_seconds >= ${ACTIVE_MIN_SECONDS})::int AS b7
+    FROM device_days dd
+    LEFT JOIN device_days x1 ON x1.device_id = dd.device_id AND x1.day = dd.day + 1
+    LEFT JOIN device_days x7 ON x7.device_id = dd.device_id AND x7.day = dd.day + 7
+    WHERE ${rq.where} GROUP BY 1`, [...rq.p, f.to]))
+  const statesP = (db.query<any>(`
     SELECT coalesce(dd.region,'unknown') AS code, count(DISTINCT dd.device_id) FILTER (WHERE dd.active_seconds >= ${ACTIVE_MIN_SECONDS})::int AS players,
            coalesce(sum(dd.sessions),0)::int AS sessions, coalesce(sum(dd.active_seconds),0)::int AS active_seconds
-    FROM device_days dd WHERE ${ngq.where} GROUP BY 1 ORDER BY players DESC`, ngq.p)).rows
-  const cities = (await db.query<any>(`
+    FROM device_days dd WHERE ${ngq.where} GROUP BY 1 ORDER BY players DESC`, ngq.p))
+  const citiesP = (db.query<any>(`
     SELECT coalesce(dd.city,'unknown') AS city, coalesce(dd.region,'') AS region, count(DISTINCT dd.device_id) FILTER (WHERE dd.active_seconds >= ${ACTIVE_MIN_SECONDS})::int AS players
-    FROM device_days dd WHERE ${ngq.where} GROUP BY 1, 2 ORDER BY players DESC LIMIT 25`, ngq.p)).rows
+    FROM device_days dd WHERE ${ngq.where} GROUP BY 1, 2 ORDER BY players DESC LIMIT 25`, ngq.p))
+  const [byCountry, ret, states, cities] = (await Promise.all([byCountryP, retP, statesP, citiesP])).map((r) => r.rows) as any[][]
+  const rate = (c: string, e: 'e1' | 'e7', b: 'b1' | 'b7') => { const r = ret.find((x: any) => x.country === c); return r && r[e] > 0 ? Math.round((r[b] / r[e]) * 100) : null }
+  const countries = byCountry.map((r: any) => ({ ...r, avg_playtime_per_player: r.players ? Math.round(r.active_seconds / r.players) : 0, d1: rate(r.country, 'e1', 'b1'), d7: rate(r.country, 'e7', 'b7') }))
   return {
     countries,
     states: states.map((s: any) => ({ ...s, name: NG_STATES[s.code] ?? s.code, avg_playtime_per_player: s.players ? Math.round(s.active_seconds / s.players) : 0 })),
@@ -168,11 +172,14 @@ export async function engagement(db: Db, f: Filters) {
   const q = dd(f)
   const bucketsS = [[0, 60, 'under 1 min'], [60, 300, '1–5 min'], [300, 600, '5–10 min'], [600, 1200, '10–20 min'], [1200, 2400, '20–40 min'], [2400, 3600, '40–60 min'], [3600, 1e9, '1 hour +']] as const
   const sp = [f.from, f.to]
-  const sessRows = (await db.query<any>('SELECT s.active_seconds FROM sessions s WHERE NOT s.is_test AND s.active_seconds > 0 AND s.started_at >= $1::date AND s.started_at < $2::date + 1', sp)).rows
-  const sessionHist = bucketsS.map(([lo, hi, label]) => ({ label, count: sessRows.filter((r: any) => r.active_seconds >= lo && r.active_seconds < hi).length }))
+  const hist = async (sql: string, params: unknown[], bounds: readonly (readonly [number, number, string])[]) => {
+    const cases = bounds.map(([lo, hi], i) => `count(*) FILTER (WHERE v >= ${lo} AND v < ${hi})::int AS b${i}`).join(', ')
+    const r = (await db.query<any>(`SELECT ${cases} FROM (${sql}) t`, params)).rows[0]
+    return bounds.map(([, , label], i) => ({ label, count: n(r[`b${i}`]) }))
+  }
+  const sessionHist = await hist('SELECT s.active_seconds AS v FROM sessions s WHERE NOT s.is_test AND s.active_seconds > 0 AND s.started_at >= $1::date AND s.started_at < $2::date + 1', sp, bucketsS)
   const bucketsD = [[0, 300, 'under 5 min'], [300, 900, '5–15 min'], [900, 1800, '15–30 min'], [1800, 3600, '30–60 min'], [3600, 7200, '1–2 h'], [7200, 1e9, '2 h +']] as const
-  const dayRows = (await db.query<any>(`SELECT dd.active_seconds FROM device_days dd WHERE ${q.where} AND dd.active_seconds >= ${ACTIVE_MIN_SECONDS}`, q.p)).rows
-  const dailyHist = bucketsD.map(([lo, hi, label]) => ({ label, count: dayRows.filter((r: any) => r.active_seconds >= lo && r.active_seconds < hi).length }))
+  const dailyHist = await hist(`SELECT dd.active_seconds AS v FROM device_days dd WHERE ${q.where} AND dd.active_seconds >= ${ACTIVE_MIN_SECONDS}`, q.p, bucketsD)
   const heat = (await db.query<any>('SELECT dow, hour, sum(seconds)::int AS seconds FROM activity_heat WHERE day >= $1::date AND day <= $2::date GROUP BY 1, 2', sp)).rows
   const split = (await db.query<any>('SELECT bucket, sum(seconds)::int AS seconds FROM playtime_split WHERE day >= $1::date AND day <= $2::date GROUP BY 1', sp)).rows
   const dauSeries = (await db.query<any>(`SELECT dd.day, count(*) FILTER (WHERE dd.active_seconds >= ${ACTIVE_MIN_SECONDS})::int c FROM device_days dd WHERE ${q.where} GROUP BY 1`, q.p)).rows
