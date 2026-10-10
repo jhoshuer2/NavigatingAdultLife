@@ -253,7 +253,7 @@ export class DashRenderer {
     // camera
     this.shake = Math.max(0, this.shake - dt * 2)
     const sx = (Math.random() - 0.5) * this.shake, sy = (Math.random() - 0.5) * this.shake
-    const camBack = this.mode === 'danfo' ? 9.2 : 8.4, camUp = this.mode === 'danfo' ? 4.8 : 4.2
+    const camBack = this.mode === 'danfo' ? 12.5 : 8.4, camUp = this.mode === 'danfo' ? 6.4 : 4.2
     this.camera.position.set(st.x * LANE_W * 0.45 + sx, camUp + st.y * 0.3 + sy, camBack)
     this.camera.lookAt(st.x * LANE_W * 0.25, 1.1, -11)
     this.camera.fov = 60 + Math.min(10, (st.speed - 13) * 0.6) + (st.powers.suya > 0 ? 6 : 0); this.camera.updateProjectionMatrix()

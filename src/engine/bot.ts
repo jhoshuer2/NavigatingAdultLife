@@ -5,7 +5,6 @@ import { createNewLife, getActivities, doActivity, finishActions, chooseOption, 
 import { TRAITS } from '@content/traits'
 import { DREAMS } from '@content/dreams'
 import { ARCHETYPES, HOMES, tierRank } from '@content/archetypes'
-import { QUIZ_BANK } from '@content/quiz'
 import { NAME_POOLS } from '@content/names'
 
 export type BotKind = 'random' | 'scholar' | 'money'
@@ -59,7 +58,7 @@ export function playLife(seed: number, kind: BotKind, config?: NewLifeConfig, ma
       } else if (state.phase === 'action') {
         if (state.quiz) {
           const q = state.quiz.questions[state.quiz.index]
-          const known = QUIZ_BANK.find((x) => x.id === q.id) ?? q
+          const known = q
           const ok = kind === 'scholar' ? 0.85 : kind === 'money' ? 0.5 : 0.4
           state = submitQuizAnswer(state, rng.chance(ok) ? known.answer : rng.int(0, known.options.length - 1)).state
           continue

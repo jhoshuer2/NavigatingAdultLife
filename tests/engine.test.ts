@@ -159,3 +159,17 @@ describe('no soft locks', () => {
     for (const e of EVENTS) expect(e.choices.some((c) => !c.requires), e.id).toBe(true)
   })
 })
+
+import { pickQuestions, QUIZ_BANK } from '../src/content/quiz'
+describe('quiz', () => {
+  it('has a healthy bank and shuffles answer positions', () => {
+    expect(QUIZ_BANK.length).toBeGreaterThanOrEqual(80)
+    const rng = makeRng(5)
+    const positions = new Set<number>()
+    for (let i = 0; i < 60; i++) for (const q of pickQuestions(rng, 16, 3, new Set())) { expect(q.options[q.answer]).toBeTruthy(); positions.add(q.answer) }
+    expect(positions.size).toBeGreaterThanOrEqual(3)
+  })
+  it('every question has a valid answer index and 4 distinct options', () => {
+    for (const q of QUIZ_BANK) { expect(q.answer).toBeGreaterThanOrEqual(0); expect(q.answer).toBeLessThan(q.options.length); expect(new Set(q.options).size).toBe(q.options.length) }
+  })
+})
