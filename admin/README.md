@@ -9,7 +9,10 @@ game (src/platform/analytics.ts) --batch--> POST /api/collect  --> Postgres --> 
 
 ## Run it locally (no accounts, no services)
 
+The admin app imports the shared event schema from `../shared`, which needs the repo's top-level packages too, so install both:
+
 ```bash
+npm install            # in the repo's top folder
 cd admin && npm install
 DEV_TOTP=1 npm run dev        # API on :8787, in-process Postgres kept in .pglite, 60 demo players, demo owner
 npm run dev:ui                # console on http://localhost:5173 (proxies /api to :8787)
@@ -29,7 +32,7 @@ Tests: `npm test` (collector, auth, roles, dashboards run on in-process Postgres
    - **Transaction pooler** (port 6543) for `DATABASE_URL` on Vercel.
    - Supabase's certificate is signed by its own CA. Download it from Project Settings > Database > SSL configuration and put the file's contents in `DATABASE_SSL_CA` (preferred), or set `DATABASE_SSL=no-verify` to get going (encrypted but not verified).
    - Run `DATABASE_URL='<session pooler string>' DATABASE_SSL_CA="$(cat prod-ca-2021.crt)" npm run migrate`. Any Postgres host (Neon, etc.) works the same way; only the connection string differs.
-2. **Vercel project #2**: root directory `admin`, framework Vite. "Include source files outside of the Root Directory" must be on (it imports `../shared`).
+2. **Vercel project #2**: root directory `admin`, framework Vite (its `vercel.json` installs the top-level packages as well). "Include source files outside of the Root Directory" must be on (it imports `../shared`).
 3. **Environment variables** (admin project):
    | Name | Purpose |
    |---|---|

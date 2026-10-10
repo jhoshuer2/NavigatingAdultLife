@@ -18,5 +18,6 @@
       "path": "/api/cron",
       "schedule": "17 3 * * *"
     }
-  ]
+  ],
+  "installCommand": "npm install && npm install --prefix .."
 }

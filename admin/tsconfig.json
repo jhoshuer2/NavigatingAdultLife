@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "ES2022", "lib": ["ES2022", "DOM", "DOM.Iterable"], "module": "ESNext", "moduleResolution": "bundler",
     "jsx": "react-jsx", "strict": true, "noUnusedLocals": true, "noUnusedParameters": true, "skipLibCheck": true,
-    "resolveJsonModule": true, "isolatedModules": true, "types": ["node", "vite/client"], "allowImportingTsExtensions": false
+    "resolveJsonModule": true, "isolatedModules": true, "types": ["node", "vite/client"], "baseUrl": ".", "paths": { "zod": ["./node_modules/zod"] }, "allowImportingTsExtensions": false
   },
   "include": ["api", "server", "src", "scripts", "tests", "../shared"]
 }
