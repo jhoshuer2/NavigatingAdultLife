@@ -14,7 +14,7 @@ export function Btn({ variant = 'primary', size, shine, className = '', onClick,
 export function RoundBtn({ icon, label, onClick, size = 44, tone = 'ghost' }: { icon: IconName; label: string; onClick?: () => void; size?: number; tone?: 'ghost' | 'gold' | 'green' }) {
   const bg = tone === 'gold' ? 'linear-gradient(180deg,#ffe27a,#f59e0b)' : tone === 'green' ? 'linear-gradient(180deg,#55f09b,#12a152)' : 'linear-gradient(180deg, rgba(130,100,255,.5), rgba(60,40,170,.7))'
   return (
-    <button aria-label={label} onClick={() => { audio.sfx('click'); onClick?.() }} className="grid place-items-center rounded-full active:translate-y-0.5 transition-transform pointer-events-auto"
+    <button aria-label={label} onClick={() => { audio.sfx(icon === 'close' || icon === 'back' ? 'close' : 'click'); onClick?.() }} className="grid place-items-center rounded-full active:translate-y-0.5 transition-transform pointer-events-auto"
       style={{ width: size, height: size, background: bg, boxShadow: 'inset 0 2px 0 rgba(255,255,255,.4), 0 3px 0 rgba(0,0,0,.45), 0 8px 14px rgba(0,0,0,.35)', border: '1px solid rgba(255,255,255,.18)' }}>
       <Icon name={icon} size={Math.round(size * 0.5)} color={icon === 'dice' ? '#fff' : tone === 'gold' ? '#3b2300' : '#fff'} />
     </button>
@@ -25,6 +25,7 @@ export function Ribbon({ children, className = '' }: { children: ReactNode; clas
 
 /** A bottom sheet (phone) / centred card (desktop): grabber, ribbon title, round close button, glass body. */
 export function Modal({ children, onClose, title, wide, hero }: { children: ReactNode; onClose?: () => void; title?: string; wide?: boolean; hero?: ReactNode }) {
+  useEffect(() => { audio.sfx('open') }, [])
   useEffect(() => {
     if (!onClose) return
     const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -110,6 +111,7 @@ export function CountUp({ to, ms = 900, format = (n: number) => String(Math.roun
 /** A burst of paper confetti for big moments (achievements, a good ending). */
 export function Confetti({ n = 36 }: { n?: number }) {
   const bits = useRef(Array.from({ length: n }, (_, i) => ({ l: Math.random() * 100, d: Math.random() * 0.8, t: 1.6 + Math.random() * 1.6, c: ['#ffc72c', '#ff3d8b', '#35e0f0', '#2bd978', '#8f6bff'][i % 5], w: 6 + Math.random() * 6 }))).current
+  useEffect(() => { audio.sfx('reward') }, [])
   return (
     <div className="pointer-events-none fixed inset-0 z-[70] overflow-hidden" aria-hidden="true">
       {bits.map((b, i) => <i key={i} style={{ position: 'absolute', top: 0, left: `${b.l}%`, width: b.w, height: b.w * 1.6, background: b.c, borderRadius: 2, animation: `confetti ${b.t}s ${b.d}s ease-in both` }} />)}
@@ -137,6 +139,8 @@ export function DeltaChips({ deltas, limit = 8 }: { deltas: StatDelta[]; limit?:
 }
 
 export function Toasts({ items }: { items: { id: number; text: string; kind: 'ach' | 'info' }[] }) {
+  const last = items[items.length - 1]
+  useEffect(() => { if (last) audio.sfx(last.kind === 'ach' ? 'reward' : 'pop') }, [last?.id]) // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div className="fixed top-3 left-0 right-0 z-[60] flex flex-col items-center gap-2 pointer-events-none px-3" style={{ paddingTop: 'var(--safe-t)' }} aria-live="polite">
       {items.map((t) => {
@@ -192,7 +196,7 @@ export function Mentor({ children, mood = 'hype', onNext, nextLabel = 'Next', cl
 /** Big tappable tile: icon on top, short label, optional chip row. */
 export function Tile({ icon, emoji, label, sub, on, disabled, locked, onClick, children, className = '' }: { icon?: IconName; emoji?: string; label: string; sub?: string; on?: boolean; disabled?: boolean; locked?: boolean; onClick?: () => void; children?: ReactNode; className?: string }) {
   return (
-    <button className={`tile ${on ? 'is-on' : ''} ${className}`} disabled={disabled} onClick={() => { audio.sfx('click'); onClick?.() }} aria-pressed={on}>
+    <button className={`tile ${on ? 'is-on' : ''} ${className}`} disabled={disabled} onClick={() => { audio.sfx('tap'); onClick?.() }} aria-pressed={on}>
       {locked ? <Icon name="lock" size={26} /> : icon ? <Icon name={icon} size={30} /> : <span className="text-[30px] leading-none">{emoji}</span>}
       <span className="font-display text-[15px] leading-tight text-center uppercase tracking-wide">{label}</span>
       {sub && <span className="text-[11px] font-bold opacity-75 leading-tight text-center">{sub}</span>}

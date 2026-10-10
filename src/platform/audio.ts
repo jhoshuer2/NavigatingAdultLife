@@ -2,6 +2,7 @@
 import { ASSET_MANIFEST } from '../assets/manifest'
 
 type Track = 'menu' | 'play' | 'dash'
+export type SfxName = 'click' | 'coin' | 'hit' | 'good' | 'bad' | 'power' | 'jump' | 'horn' | 'level' | 'tap' | 'open' | 'close' | 'toggle' | 'pop' | 'reward' | 'prompt'
 interface Cfg { sound: boolean; music: boolean; volume: number }
 
 const PENT = [0, 3, 5, 7, 10] // minor pentatonic
@@ -18,6 +19,7 @@ class AudioEngine {
   private nextTime = 0
   private cfg: Cfg = { sound: true, music: true, volume: 0.6 }
   private fileAudio?: HTMLAudioElement
+  private lastSfx: Partial<Record<SfxName, number>> = {}
 
   configure(c: Cfg) {
     this.cfg = c
@@ -101,8 +103,11 @@ class AudioEngine {
     }
   }
 
-  sfx(name: 'click' | 'coin' | 'hit' | 'good' | 'bad' | 'power' | 'jump' | 'horn' | 'level') {
+  sfx(name: SfxName) {
     if (!this.cfg.sound) return
+    const now = performance.now()
+    if (now - (this.lastSfx[name] ?? 0) < 45) return // never stack the same sound (e.g. two handlers on one tap)
+    this.lastSfx[name] = now
     const file = ASSET_MANIFEST.sfx[name]
     if (file) { const a = new Audio(file); a.volume = this.cfg.volume; void a.play().catch(() => undefined); return }
     const c = this.ctx; if (!c) return
@@ -116,6 +121,13 @@ class AudioEngine {
       case 'power': [440, 660, 880, 1320].forEach((f, i) => this.tone(f, t + i * 0.05, 0.12, 'square', 0.15)); break
       case 'jump': this.tone(300, t, 0.14, 'sine', 0.3, undefined, 700); break
       case 'horn': this.tone(330, t, 0.35, 'sawtooth', 0.22); this.tone(415, t, 0.35, 'sawtooth', 0.18); break
+      case 'tap': this.tone(660, t, 0.05, 'sine', 0.22, undefined, 880); break
+      case 'open': this.hit(t, 0.16, 0.12, 1800); this.tone(300, t, 0.16, 'sine', 0.14, undefined, 620); break
+      case 'close': this.tone(520, t, 0.12, 'sine', 0.14, undefined, 260); break
+      case 'toggle': this.tone(700, t, 0.04, 'square', 0.1); this.tone(1000, t + 0.04, 0.05, 'square', 0.08); break
+      case 'pop': this.tone(500, t, 0.09, 'sine', 0.2, undefined, 900); break
+      case 'reward': [784, 988, 1175, 1568].forEach((f, i) => this.tone(f, t + i * 0.06, 0.18, 'triangle', 0.18)); this.hit(t, 0.3, 0.05, 6000); break
+      case 'prompt': this.tone(880, t, 0.07, 'sine', 0.12); this.tone(1175, t + 0.06, 0.09, 'sine', 0.1); break
       case 'level': [392, 523, 659, 784, 1046].forEach((f, i) => this.tone(f, t + i * 0.09, 0.22, 'triangle', 0.25)); break
     }
   }

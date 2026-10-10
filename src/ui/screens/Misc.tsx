@@ -117,7 +117,7 @@ export function Settings() {
   const [showPrivacy, setShowPrivacy] = useState(false)
   const s = meta.settings
   const Toggle = ({ label, on, onChange }: { label: string; on: boolean; onChange: (v: boolean) => void }) => (
-    <button className="card-btn flex items-center justify-between w-full" onClick={() => onChange(!on)} role="switch" aria-checked={on}><span className="font-bold text-sm">{label}</span><span className="relative w-12 h-7 rounded-full shrink-0 transition-colors" style={{ background: on ? 'var(--green)' : 'rgba(255,255,255,.18)', boxShadow: 'inset 0 2px 4px rgba(0,0,0,.4)' }}><span className="absolute top-0.5 w-6 h-6 rounded-full bg-white transition-all" style={{ left: on ? 22 : 2, boxShadow: '0 2px 4px rgba(0,0,0,.4)' }} /></span></button>
+    <button className="card-btn flex items-center justify-between w-full" onClick={() => { audio.sfx('toggle'); onChange(!on) }} role="switch" aria-checked={on}><span className="font-bold text-sm">{label}</span><span className="relative w-12 h-7 rounded-full shrink-0 transition-colors" style={{ background: on ? 'var(--green)' : 'rgba(255,255,255,.18)', boxShadow: 'inset 0 2px 4px rgba(0,0,0,.4)' }}><span className="absolute top-0.5 w-6 h-6 rounded-full bg-white transition-all" style={{ left: on ? 22 : 2, boxShadow: '0 2px 4px rgba(0,0,0,.4)' }} /></span></button>
   )
   const download = () => {
     const blob = new Blob([exportJson()], { type: 'application/json' })

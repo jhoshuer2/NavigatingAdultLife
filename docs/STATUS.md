@@ -99,7 +99,7 @@ Every screen was redesigned to be visual first: custom icon set, glass panels, c
 - Place, person, hotspot and picker sheets as icon tile grids (cost and reward as symbols, locked tiles show the reason in one phrase)
 - Events, quiz, year summary, quests, profile, trophy shelf, unlocks shop, past lives, settings (switches), ending ("Final whistle"), paywall, tutorial
 - Brand rule: titles are white, gold is for rewards, green is the single main action
-- Still to polish: a sound pass for the new interactions, and a real-phone check
+- Sounds: tile tap, sheet open, close, toggle, toast pop, reward chime (confetti and trophies), prompt blip. Still to polish: a real-phone check
 
 ## Online profile (client)
 Settings > Online profile (shown only when the account API is configured) creates an anonymous profile, shows the recovery code once, restores with a code, sets or checks the guardian PIN, toggles "play with others" (no multiplayer yet), rotates the code, signs out and deletes. Code: `src/platform/account.ts`, `src/ui/screens/OnlineProfile.tsx`. Verified against the local admin API with `tests/e2e/profile.mjs`.

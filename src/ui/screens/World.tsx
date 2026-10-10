@@ -707,7 +707,7 @@ export default function World() {
 
 function DockBtn({ icon, label, onClick }: { icon: IconName; label: string; onClick: () => void }) {
   return (
-    <button className="flex flex-col items-center gap-0.5 w-[58px] py-1 active:scale-95 transition-transform" onClick={() => { audio.sfx('click'); onClick() }} aria-label={label}>
+    <button className="flex flex-col items-center gap-0.5 w-[58px] py-1 active:scale-95 transition-transform" onClick={() => { audio.sfx('tap'); onClick() }} aria-label={label}>
       <Icon name={icon} size={28} /><span className="text-[10px] font-extrabold uppercase tracking-wider opacity-85">{label}</span>
     </button>
   )
@@ -716,6 +716,7 @@ function DockBtn({ icon, label, onClick }: { icon: IconName; label: string; onCl
 /** A controller-style action prompt: round button, name chip above, key hint on desktop. */
 function Prompt({ icon, emoji, label, tone, hint, small, onClick }: { icon?: IconName; emoji?: string; label: string; tone: 'green' | 'gold' | 'ghost'; hint?: string; small?: boolean; onClick: () => void }) {
   const d = small ? 54 : 80
+  useEffect(() => { if (!small) audio.sfx('prompt') }, [label, small])
   return (
     <div className="flex flex-col items-center gap-1.5 pointer-events-auto pop max-w-[132px]">
       <span className="chip !text-[11px] !py-0.5 text-center leading-tight" style={{ background: 'rgba(10,7,34,.78)', backdropFilter: 'blur(4px)' }}>{label}</span>

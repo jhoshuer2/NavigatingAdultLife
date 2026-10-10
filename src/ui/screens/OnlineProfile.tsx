@@ -3,6 +3,7 @@ import type { AccountPublic } from '@shared/account'
 import { Btn, Tile } from '../components'
 import { Icon } from '../icons'
 import { useGame } from '../../store'
+import { audio } from '@platform/audio'
 import { ACCOUNT_ERRORS, createAccount, deleteAccount, recoverAccount, rotateRecovery, savedAccount, setGuardianPin, signOutEverywhere, signOutHere, updateAccount } from '@platform/account'
 
 const BANDS: { id: AccountPublic['age_band']; label: string; sub: string; emoji: string }[] = [
@@ -73,7 +74,7 @@ export function OnlineProfile() {
         <button className="chip" onClick={() => copy(acc.friend_code)} aria-label="Copy friend code"><Icon name="share" size={13} /></button>
       </div>
       {recoveryCard}
-      <button className="card-btn flex items-center justify-between w-full mt-3" role="switch" aria-checked={acc.mp_enabled} disabled={busy} onClick={() => run(() => updateAccount({ mp_enabled: !acc.mp_enabled, ...(pin ? { pin } : {}) }))}>
+      <button className="card-btn flex items-center justify-between w-full mt-3" role="switch" aria-checked={acc.mp_enabled} disabled={busy} onClick={() => { audio.sfx('toggle'); return run(() => updateAccount({ mp_enabled: !acc.mp_enabled, ...(pin ? { pin } : {}) })) }}>
         <span className="font-bold text-sm">Play with other people (coming soon)</span>
         <span className="relative w-12 h-7 rounded-full shrink-0" style={{ background: acc.mp_enabled ? 'var(--green)' : 'rgba(255,255,255,.18)' }}><span className="absolute top-0.5 w-6 h-6 rounded-full bg-white transition-all" style={{ left: acc.mp_enabled ? 22 : 2 }} /></span>
       </button>
