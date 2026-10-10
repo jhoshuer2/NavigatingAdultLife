@@ -29,7 +29,6 @@ function csv(rows: Record<string, unknown>[], cols: string[]): string {
 }
 
 export async function handleAdmin(req: Request, dbArg?: Db, now = new Date()): Promise<Response> {
-  const db = dbArg ?? (await getDb())
   const url = new URL(req.url)
   const route = (url.searchParams.get('route') ?? url.pathname.replace(/^\/api\/admin\/?/, '')).replace(/^\/+|\/+$/g, '')
   const parts = route.split('/')
@@ -38,6 +37,7 @@ export async function handleAdmin(req: Request, dbArg?: Db, now = new Date()): P
   if (method !== 'GET' && req.headers.get('x-nal-admin') !== '1') return json({ error: 'missing header' }, 403) // CSRF guard on top of SameSite=Strict
 
   try {
+    const db = dbArg ?? (await getDb())
     if (route === 'login' && method === 'POST') {
       const b = (await req.json().catch(() => ({}))) as { email?: string; password?: string; code?: string }
       const r = await login(db, String(b.email ?? ''), String(b.password ?? ''), String(b.code ?? ''), now)
