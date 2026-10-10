@@ -12,6 +12,8 @@ import { nairaShort } from '../components'
 import { clearFlags, exportFlags, loadFlags } from '@platform/feedback'
 import { analyticsAvailable, forgetMe, shortDeviceCode } from '@platform/analytics'
 import { PrivacyDetails } from './Consent'
+import { OnlineProfile } from './OnlineProfile'
+import { accountAvailable } from '@platform/account'
 
 function Page({ title, children, back = 'title' }: { title: string; children: React.ReactNode; back?: 'title' | 'play' }) {
   const go = useGame((s) => s.go)
@@ -136,6 +138,7 @@ export function Settings() {
         {showPrivacy && <div className="card p-3"><PrivacyDetails />{analyticsAvailable() && <div className="text-xs mt-2 opacity-70">Your device code: <b>{shortDeviceCode()}</b></div>}</div>}
         {analyticsAvailable() && <Btn variant="danger" onClick={async () => { if (!confirm('Delete the play statistics stored about this device?')) return; const ok = await forgetMe(); toast(ok ? 'Your statistics were deleted' : 'Could not reach the server. Try again later.') }}>🗑 Delete my statistics</Btn>}
       </div>
+      {accountAvailable() && <><h2 className="font-display text-xl text-white/90 uppercase tracking-wide mt-6 mb-1">Online profile</h2><OnlineProfile /></>}
       <h2 className="font-display text-xl text-white/90 uppercase tracking-wide mt-6 mb-1">Play time</h2>
       <div className="card p-3 mt-1 text-sm">Time left: <b>{fmtTime(remainingSec(meta))}</b>. Free time refills daily (up to 2 hours banked).
         <div className="mt-2"><Toggle label="Unlimited time (playtest mode)" on={meta.tokens.unlimited} onChange={setUnlimited} /></div></div>

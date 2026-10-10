@@ -91,3 +91,15 @@ First tuning pass, based on simulation and unit tests rather than player data (p
 - Rented and owned homes start bare; buy a TV, fridge, fan or air conditioner at the market, hire a loader, and watch the delivery arrive at home.
 - Football: find a team (three squads) and play a three-a-side match with AI teammates, rivals and goalkeepers.
 - Co-op: chores can be done together with a family member who is home. Real multiplayer is planned in `docs/PRD-multiplayer.md` (needs accounts and a realtime server).
+
+## Design overhaul ("Danfo Nights", docs/DESIGN-AUDIT.md)
+Every screen was redesigned to be visual first: custom icon set, glass panels, chunky buttons, banner ribbons, stat badges, tile pickers, the Oga Conductor mentor, count-ups, confetti and staggered motion (Reduced Motion respected).
+- Title, character creation (live avatar, icon tabs, swatches, lottery reveal), first-run mentor
+- World HUD (avatar ring, cash, energy, stat badges, objective banner), round action prompts, joystick, icon dock with a raised Home button
+- Place, person, hotspot and picker sheets as icon tile grids (cost and reward as symbols, locked tiles show the reason in one phrase)
+- Events, quiz, year summary, quests, profile, trophy shelf, unlocks shop, past lives, settings (switches), ending ("Final whistle"), paywall, tutorial
+- Brand rule: titles are white, gold is for rewards, green is the single main action
+- Still to polish: minimap and full-map styling, task panels keep some older card buttons, a sound pass for the new interactions
+
+## Online profile (client)
+Settings > Online profile (shown only when the account API is configured) creates an anonymous profile, shows the recovery code once, restores with a code, sets or checks the guardian PIN, toggles "play with others" (no multiplayer yet), rotates the code, signs out and deletes. Code: `src/platform/account.ts`, `src/ui/screens/OnlineProfile.tsx`. Verified against the local admin API with `tests/e2e/profile.mjs`.
