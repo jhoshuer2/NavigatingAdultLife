@@ -24,12 +24,17 @@ Tests: `npm test` (collector, auth, roles, dashboards run on in-process Postgres
 
 ## Deploy (needs accounts, so do this when you are ready)
 
-1. **Database**: any Postgres (Neon or Supabase free tiers work). Choose the nearest region and get legal advice on cross-border transfer. Run `DATABASE_URL=... npm run migrate`.
+1. **Database (Supabase)**: supabase.com > New project (free plan). Pick the closest region (check the list for Cape Town; otherwise Frankfurt or London), set a database password and keep it safe. Then **Connect** > **Connection string**:
+   - **Session pooler** (port 5432) for `npm run migrate` and `npm run create-user` from your computer (works over IPv4; the direct connection is IPv6-only on the free plan).
+   - **Transaction pooler** (port 6543) for `DATABASE_URL` on Vercel.
+   - Supabase's certificate is signed by its own CA. Download it from Project Settings > Database > SSL configuration and put the file's contents in `DATABASE_SSL_CA` (preferred), or set `DATABASE_SSL=no-verify` to get going (encrypted but not verified).
+   - Run `DATABASE_URL='<session pooler string>' DATABASE_SSL_CA="$(cat prod-ca-2021.crt)" npm run migrate`. Any Postgres host (Neon, etc.) works the same way; only the connection string differs.
 2. **Vercel project #2**: root directory `admin`, framework Vite. "Include source files outside of the Root Directory" must be on (it imports `../shared`).
 3. **Environment variables** (admin project):
    | Name | Purpose |
    |---|---|
-   | `DATABASE_URL` | Postgres connection string |
+   | `DATABASE_URL` | Postgres connection string (Supabase: transaction pooler) |
+   | `DATABASE_SSL_CA` | Database certificate authority text (or `DATABASE_SSL=no-verify`) |
    | `GAME_ORIGINS` | Comma-separated game origins allowed to call the collector, e.g. `https://adultlife.example` |
    | `ID_HASH_SECRET` | Random string; keys the hashed player IDs analysts see |
    | `IP_SALT` | Random string; salts the hashed admin IP in the audit log |

@@ -17,7 +17,12 @@ export async function getDb(): Promise<Db> {
   const url = process.env.DATABASE_URL
   if (!url) throw new Error('DATABASE_URL is not set')
   const { default: pg } = await import('pg')
-  const pool = new pg.Pool({ connectionString: url, max: 3, ssl: /localhost|127\.0\.0\.1/.test(url) ? undefined : { rejectUnauthorized: true } })
+  // TLS is always on for remote databases. Supabase signs with its own CA: paste it into DATABASE_SSL_CA (verified, preferred).
+  // DATABASE_SSL=no-verify is an encrypted-but-unverified fallback for when the CA is not at hand.
+  const ssl = /localhost|127\.0\.0\.1/.test(url) ? undefined
+    : process.env.DATABASE_SSL_CA ? { ca: process.env.DATABASE_SSL_CA, rejectUnauthorized: true }
+    : { rejectUnauthorized: process.env.DATABASE_SSL !== 'no-verify' }
+  const pool = new pg.Pool({ connectionString: url, max: 3, ssl })
   const wrap = (c: { query: (s: string, p?: unknown[]) => Promise<{ rows: unknown[]; rowCount: number | null }> }): Db => ({
     query: async (sql, params) => { const r = await c.query(sql, params); return { rows: r.rows as never[], rowCount: r.rowCount ?? 0 } },
     exec: async (sql) => { await c.query(sql) },
