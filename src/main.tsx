@@ -3,4 +3,18 @@ import { createRoot } from 'react-dom/client'
 import './ui/index.css'
 import App from './App'
 
+if (new URLSearchParams(location.search).get('debug') === '1') {
+  // Dev/e2e helper: jump a bot-played life to a given age. Not linked from the UI.
+  void import('./store').then(async ({ useGame }) => {
+    const bot = await import('@engine/bot')
+    ;(window as unknown as Record<string, unknown>).__nal = {
+      useGame,
+      jump: (age: number, kind: 'random' | 'scholar' | 'money' = 'scholar', seed = 7) => {
+        const r = bot.playLife(seed, kind, undefined, 4000, age)
+        useGame.setState({ life: r.state, screen: 'play', sheet: null })
+      },
+    }
+  })
+}
+
 createRoot(document.getElementById('root')!).render(<StrictMode><App /></StrictMode>)

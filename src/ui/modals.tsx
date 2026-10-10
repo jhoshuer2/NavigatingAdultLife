@@ -14,6 +14,7 @@ import { RENT_NAME } from '@engine/systems/economy'
 import { fmtTime, remainingSec, secondsToNextRefill, TOP_UP_PACKS } from '@platform/tokens'
 import type { NpcRole } from '@engine/core/types'
 import { audio } from '@platform/audio'
+import { HERITAGE_LABEL } from '@content/names'
 
 const RISK = { safe: ['🟢', 'Safe'], risky: ['🟠', 'Risky'], gamble: ['🔴', 'Gamble'] } as const
 const TIER_LABEL = { critSuccess: ['🌟', 'Brilliant!'], success: ['✅', 'It worked'], fail: ['😬', 'Not great'], critFail: ['💥', 'Disaster'] } as const
@@ -221,7 +222,7 @@ export function ProfileModal() {
         <div className="card p-1 pattern-ankara"><Avatar look={c.appearance} gender={c.gender} age={c.age} size={96} /></div>
         <div className="min-w-0">
           <div className="font-display text-3xl text-danfo leading-none">{c.nickname || c.name}</div>
-          <div className="text-xs opacity-70">{c.gender === 'male' ? 'Male' : 'Female'} · {c.heritage} · age {c.age}</div>
+          <div className="text-xs opacity-70">{c.gender === 'male' ? 'Male' : 'Female'} · {HERITAGE_LABEL[c.heritage]} · age {c.age}</div>
           <div className="text-xs mt-1">{arch.icon} {arch.title}</div>
           <div className="text-xs">{dream.icon} Dream: {dream.name}</div>
         </div>

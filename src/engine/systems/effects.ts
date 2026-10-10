@@ -60,6 +60,7 @@ export function setJob(ctx: Ctx, trackId: TrackId, level: number) {
   if (!def) return
   const c = s.character
   const t = (c.job?.trackId === trackId ? 0.3 : 0.2) + rng.next() * 0.5
+  s.flags.lastJob = def.title
   c.job = { trackId, level, years: 0, salary: Math.round((def.salary[0] + (def.salary[1] - def.salary[0]) * t) / 1000) * 1000, title: def.title }
   s.flags.hasWorked = true
   if (!s.roles.boss && level >= 1 && trackId !== 'creative') addNpc(ctx, 'boss', { closeness: 35 })

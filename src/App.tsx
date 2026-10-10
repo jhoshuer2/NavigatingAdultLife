@@ -6,7 +6,8 @@ import { Create } from './ui/screens/Create'
 import { Play } from './ui/screens/Play'
 import { Ending } from './ui/screens/Ending'
 import { Achievements, History, Settings, Unlocks } from './ui/screens/Misc'
-import { Dash } from './ui/screens/Dash'
+import { lazy, Suspense } from 'react'
+const Dash = lazy(() => import('./ui/screens/Dash'))
 import { audio } from '@platform/audio'
 
 export default function App() {
@@ -40,7 +41,7 @@ export default function App() {
       {screen === 'unlocks' && <Unlocks />}
       {screen === 'history' && <History />}
       {screen === 'settings' && <Settings />}
-      {screen === 'dash' && <Dash />}
+      {screen === 'dash' && <Suspense fallback={<div className="p-8 text-center font-display text-3xl text-danfo">Loading the road…</div>}><Dash /></Suspense>}
     </div>
   )
 }

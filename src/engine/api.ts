@@ -55,7 +55,7 @@ export function setLifestyle(state: GameState, lifestyle: Lifestyle): GameState 
   return withCtx(state, (ctx) => { ctx.s.character.lifestyle = lifestyle }).state
 }
 
-export interface MiniGameResult { coins: number; distance: number; closeCalls: number; passengers: number; mode: 'foot' | 'danfo'; score: number }
+export interface MiniGameResult { coins: number; distance: number; closeCalls: number; passengers: number; mode: 'foot' | 'danfo'; score: number; fares?: number; missionsDone?: number }
 
 /** Apply the result of a Go-Slow Dash run to the life sim. Pure; the cash-out cap is enforced here. */
 export function applyDashResult(state: GameState, r: MiniGameResult): { state: GameState; cash: number; capped: boolean } {
@@ -63,9 +63,9 @@ export function applyDashResult(state: GameState, r: MiniGameResult): { state: G
     const { s } = ctx
     const c = s.character
     const mult = { child: 0.5, teen: 1, youngAdult: 3, adult: 4, elder: 2 }[ageStage(c.age)]
-    const worth = Math.round((r.coins * 1000 + r.passengers * 2500) * mult)
+    const worth = Math.round((r.coins * 1000 + (r.fares ?? r.passengers * 1500)) * mult)
     const capped = c.dashCashouts >= 3
-    if (!capped) { c.dashCashouts += 1; if (worth) addStat(ctx, 'cash', worth, 'Go-Slow Dash') }
+    if (!capped) { c.dashCashouts += 1; if (worth) addStat(ctx, 'cash', worth, 'Go-Slow Dash'); s.cowriesEarnedLife += Math.min(3, r.missionsDone ?? 0) }
     const hp = Math.min(4, Math.floor(r.distance / 400)) + (traitSum(c, 'dashHearts') ? 1 : 0)
     if (hp) addStat(ctx, 'health', hp, 'Go-Slow Dash')
     addStat(ctx, 'happiness', 2, 'Go-Slow Dash')

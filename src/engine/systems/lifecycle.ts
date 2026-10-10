@@ -129,7 +129,7 @@ function npcYear(ctx: Ctx) {
         s.flags.lostName = n.name
         s.flags.lostRole = n.role === 'mother' ? 'mother' : n.role === 'father' ? 'father' : n.role === 'partner' ? 'partner' : n.role
         if (n.id === s.character.spouseId) s.flags.widowed = true
-        moment(s, `Lost ${n.name}, ${n.role === 'mother' ? 'their mother' : n.role === 'father' ? 'their father' : `their ${n.role}`}.`, 8)
+        moment(s, `Lost ${n.name}, ${n.role === 'mother' ? 'their mother' : n.role === 'father' ? 'their father' : `their ${n.role === 'friend2' ? 'friend' : n.role}`}.`, n.role === 'mother' || n.role === 'father' || n.role === 'partner' ? 7 : 4)
         s.scheduled.push({ eventId: 'evt_loss', fireAge: s.character.age + 1 })
       }
     }

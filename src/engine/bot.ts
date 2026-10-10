@@ -25,7 +25,7 @@ export function randomConfig(rng: Rng): NewLifeConfig {
 
 export interface BotRun { state: GameState; steps: number; error?: string }
 
-export function playLife(seed: number, kind: BotKind, config?: NewLifeConfig, maxSteps = 4000): BotRun {
+export function playLife(seed: number, kind: BotKind, config?: NewLifeConfig, maxSteps = 4000, stopAtAge?: number): BotRun {
   const rng = makeRng(seed ^ 0x9e3779b9)
   let state = createNewLife(config ?? randomConfig(rng), seed)
   let steps = 0
@@ -51,6 +51,7 @@ export function playLife(seed: number, kind: BotKind, config?: NewLifeConfig, ma
 
   while (state.phase !== 'ended' && steps < maxSteps) {
     steps++
+    if (stopAtAge !== undefined && state.character.age >= stopAtAge && state.phase === 'action' && !state.quiz) break
     try {
       if (state.phase === 'events') {
         if (state.activeEvent?.result) state = continueAfterEvent(state)

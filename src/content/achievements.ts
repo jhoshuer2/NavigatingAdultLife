@@ -2,7 +2,7 @@ import type { ConditionGroup } from '@engine/core/types'
 
 export interface AchievementDef { id: string; title: string; desc: string; icon: string; cowries: number; hidden?: boolean; when: ConditionGroup }
 
-export const ACHIEVEMENTS: AchievementDef[] = [
+const RAW: AchievementDef[] = [
   { id: 'first_dash', title: 'Oya Go!', desc: 'Play Go-Slow Dash for the first time.', icon: '🏃', cowries: 3, when: { all: [{ flag: 'dashPlayed' }] } },
   { id: 'dash_500', title: 'Five Hundred Meters of Wahala', desc: 'Run 500 m in a single Dash.', icon: '🛣️', cowries: 5, when: { all: [{ flag: 'dash500' }] } },
   { id: 'dash_1500', title: 'Danfo Legend', desc: 'Run 1,500 m in a single Dash.', icon: '🚌', cowries: 12, when: { all: [{ flag: 'dash1500' }] } },
@@ -30,4 +30,6 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'octo', title: 'Long Life, Long Gist', desc: 'Reach age 80.', icon: '🎂', cowries: 12, when: { all: [{ ageBetween: [80, 120] }] } },
   { id: 'dream', title: 'Dream Achieved', desc: 'Achieve your Dream.', icon: '🌠', cowries: 20, when: { all: [{ dreamDone: true }] } },
 ]
+// Cowries are scaled down so a first life earns roughly 25-50 and unlocks take several lives.
+export const ACHIEVEMENTS: AchievementDef[] = RAW.map((a) => ({ ...a, cowries: Math.max(1, Math.round(a.cowries / 2)) }))
 export const ACHIEVEMENT_BY_ID = Object.fromEntries(ACHIEVEMENTS.map((a) => [a.id, a]))

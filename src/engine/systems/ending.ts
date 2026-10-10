@@ -41,7 +41,7 @@ export function buildEnding(ctx: Ctx, cause: string): Ending {
   const moments = [...s.moments].sort((a, b) => b.weight - a.weight || a.age - b.age).slice(0, 5).sort((a, b) => a.age - b.age)
   const dream = DREAM_BY_ID[c.dreamId]
   const dp = dreamProgress(ctx)
-  const job = c.job?.title ?? (s.flags.pension ? 'a retired career' : 'a life of odd jobs')
+  const job = c.job?.title ?? (s.flags.lastJob ? String(s.flags.lastJob) : 'whatever honest work came along')
   const kids = c.childrenIds.length
   const intro = `${c.nickname || c.name} died at ${c.age}. ${cause}`
   const body = [
@@ -49,7 +49,7 @@ export function buildEnding(ctx: Ctx, cause: string): Ending {
     `Known as "${def.title}". Worked as ${job}, left behind ${kids ? `${kids} ${kids === 1 ? 'child' : 'children'}` : 'good memories'} and a net worth of ${fmtNaira(nw)}.`,
     s.dreamDone ? `They chased the dream of ${dream.name} and caught it.` : `Their dream, ${dream.name}, stayed unfinished (${dp.text}).`,
   ].filter(Boolean).join(' ')
-  const cowries = Math.max(3, Math.floor(legacy / 10)) + s.cowriesEarnedLife
+  const cowries = Math.max(2, Math.floor(legacy / 25)) + s.cowriesEarnedLife
   return {
     id: def.id, title: def.title, cause, obituary: `${intro} ${body}`, legacy, cowries,
     topMoments: moments.map((m) => `Age ${m.age}: ${m.text}`), netWorth: nw, dreamDone: s.dreamDone, achievements: [...s.achievements],
