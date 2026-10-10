@@ -17,7 +17,7 @@ This PRD is written to be consumed by a human team *and* by AI coding agents. Co
 - Numbers in this document (salaries, costs, probabilities) are **starting values for tuning**, not final balance. They live in data files (Section 14), never hard-coded.
 - Section 19 lists **assumptions** I made and Section 20 lists **open questions** that need a human decision.
 
-> **Note on the reference sites.** The three examples you linked (danfo.horpey.dev, lagoslife.app, campuslife.cubbes.app) could not be opened from the sandbox this PRD was written in (DNS lookup failed), so I have **not** reviewed them. Everything below is derived from your brief and general knowledge of the genres they represent (Nigerian-themed endless runner, Lagos life sim, campus-life sim). Please send screenshots or notes on what you like most about each, and I will reconcile this PRD against them (see Q1).
+> **Note on the reference sites.** The three examples (danfo.horpey.dev, lagoslife.app, campuslife.cubbes.app) could not be opened from the sandbox (DNS lookup failed). A screen recording of **danfo.horpey.dev** was later supplied and reviewed; it drove the revision of Section 7.1. **lagoslife.app and campuslife.cubbes.app have not been reviewed.** The rest is derived from the brief and general knowledge of those genres (Lagos life sim, campus-life sim). Send screenshots or notes on the other two and the PRD will be reconciled against them (see Q1).
 
 ---
 
@@ -304,27 +304,60 @@ choices:
 
 ## 7. Mini-games
 
-### 7.1 Danfo Dash (endless runner) — M1 flagship
-**Fantasy:** you're running through Lagos, dodging chaos, collecting naira. Variants by life stage re-skin the same engine: kid chasing the school bus → teen late for class → adult chasing the last danfo to the interview.
+### 7.1 Go-Slow Dash (endless runner) — M1 flagship
 
-**Core mechanics**
-- Auto-run to the right at increasing speed (starting ~280 px/s, +3%/10 s up to a cap).
-- **Jump** (tap / Space / ↑) with variable height (hold = higher) and coyote time (80 ms). **Slide/duck** (swipe down / ↓).
-- **Obstacles** (spawned from weighted patterns, never impossible — see "fairness rule"): pothole (jump), goat (jump), okada (jump or slide), wheelbarrow (jump), low signboard (slide), floodwater puddle (long jump), traffic cone cluster (jump), danfo bumper (slide or jump timing).
-- **Collectibles:** Naira coins (₦50 base; golden ₦200 rare), **power-ups**: *Suya* (speed boost & invulnerability 3 s), *Jollof* (shield, absorbs one hit), *Agbada* (coin magnet 5 s). One power-up active at a time.
-- **Lives:** 3 hearts per run; invulnerability 1 s after a hit; run ends at 0.
-- **Fairness rule:** the pattern generator validates that every obstacle sequence is solvable given jump distance/airtime at the current speed (unit-tested).
-- **Scoring:** distance (m) + coins × multiplier. Combo bonus for consecutive coin chains.
+> **Revised after reviewing a screen recording of danfo.horpey.dev ("Danfo Run").** That game is a **3D, behind-the-vehicle, multi-lane runner**: you *drive* a yellow danfo down real Lagos corridors (Oshodi, Ojuelegba under the flyover, a Mortala Mohammed Way-style road, BRT lane), with low-poly/voxel buildings, market umbrellas and pedestrians. Our original 2D side-scroller spec is replaced by the design below, which keeps the brief's *running, jumping, obstacle avoidance, coin collection* and adopts what made the reference compelling. **We take inspiration, not assets, names, copy, or layouts** (our title is deliberately different; all art, text and audio are original).
 
-**Integration with life sim**
-- Costs 10 Energy to play (free after a run completes if ≥ 500 m — "flow" bonus, MAY cut).
-- Rewards: coins → Cash (capped yearly, see 3.2), distance → +Health/Happiness (+1 per 400 m, max +4), high scores → Reputation events (Athletic trait bonus). Personal best stored per character and lifetime.
-- Cosmetics: runner outfits unlocked with Cowries; avatar appearance is reused.
+**Observed in the reference (design inputs)**
+| Observed | What we do with it |
+|---|---|
+| Third-person behind-view, 3–5 lanes, vehicle auto-advances, km/h readout (~70–125 km/h, speed ramps up) | Behind-view lane runner; speed ramp; speed shown as a HUD element |
+| Route is a real corridor split into **named stops** ("Next stop: Ojuelegba, 165 m"), segment progress bar at top | Each run follows a **Route** (data file) of named Lagos segments with a progress bar and "next stop" card |
+| **Passengers:** "Kerb lane → to load", "Brake to load!", "Oya! Ojuelegba dey here! (2 to drop)"; fares earned in ₦; "22 passengers" on results | Stop events are the **core scoring loop**: steer to the kerb lane and brake to load; drop at destination for fares |
+| **Close calls** (near-misses) tracked per run | Near-miss detection gives combo score and feeds missions |
+| Coins counter, collectibles (₦ coins), power-ups: **Magnet**, **Super Hop**, **Score** boost | Same trio, re-themed (below) |
+| Per-run **missions** ("Stay fast ×1.5 for 12 s", "5 close calls in one run", "Earn ₦180 in fares") with ₦ rewards, shown in the pause menu | 3 missions per run, rewarded in coins and Cowries |
+| **Daily streak** (7-day tracker), **Leaderboard**, **Garage** (vehicle cosmetics), **Share**, updates link | Streak + Garage in M1/M2; leaderboard in M3; share card in M1 |
+| Result screen: **"WAHALA!"** headline, big score, "New best!", stat ticket (coins, km, passengers, close calls), Go Again CTA | Same flow with our own copy ("Wahala dey! / Oga, you try!") and a *Go Again* primary button |
+| Dense Lagos set dressing (BRT lane, flyovers, kiosks, billboards, umbrellas), warm dusk palette, motion blur at speed | Procedural low-poly set dressing, warm palette, speed lines |
+
+**Game modes (one engine, two "avatars" so it fits the life sim and the brief's running/jumping)**
+- **On Foot (Child/Teen/early Young Adult):** your character runs the lanes — **swipe/arrow left-right to change lane, up = jump, down = slide**; dodge potholes, goats, wheelbarrows, okada, puddles; chase the school bus / beat the bell / catch the danfo. Coins (₦) and power-ups on the path.
+- **Danfo (Adult, requires "Conductor/Driver" hustle or owning a bus in M2):** drive the danfo — **lane change, brake, horn**; load/drop passengers at stops for fares; avoid traffic, okada, potholes, and the occasional LASTMA-style checkpoint (fictionalised). Jump is replaced by a "hop" power-up (Super Hop).
+- Both modes share the same lane/obstacle/coin/power-up/mission/route logic; only the player controller and obstacle sets differ.
+
+**Core mechanics (both modes)**
+- **Lanes:** 3 lanes in M1 (4–5 optional in Danfo mode, M2). Lane switching is snap-with-ease (≈120 ms); input is buffered for 100 ms.
+- **Speed:** starts at 60 "km/h" equivalent, rises smoothly to a cap (≈ 125) over ~90 s; speed bands change music layer and set-dressing density. "Stay fast" mission = holding ≥ 90% of cap.
+- **Obstacles** (spawned from weighted, hand-authored **patterns**; never impossible — the *fairness rule* below): pothole, goat, okada, wheelbarrow, traffic cone cluster, stalled danfo, low signboard (slide/steer), floodwater (long hop), BRT-lane barrier (can't enter).
+- **Hits:** 3 hearts (On Foot) or 3 "scratches" (Danfo); 1 s invulnerability after a hit; zero ends the run. (Reference-style instant-crash is a future "Hard" toggle.)
+- **Collectibles & power-ups (one active at a time, 5 s default):** ₦ coins (₦50 base; gold ₦200, rare); **Magnet** (pulls coins); **Super Hop** (extended jump/hop over obstacles); **Suya Boost** (score ×2 + invulnerability). Jollof shield is cut to keep the trio aligned with the reference feel.
+- **Close calls:** passing within ~0.6 lane-widths of an obstacle without a hit grants +25 score and a combo tick (combo decays after 3 s).
+- **Stops & passengers (Danfo mode; On Foot uses "pick-up points" for friends/classmates for bonus Happiness):** a stop appears 150 m ahead with a kerb-lane marker and call-out ("Oya! Ojuelegba!"). Slow below 30 km/h inside the zone for ≥ 1 s to load; fares paid on drop at the destination stop. Missing a stop costs nothing but forgoes fare.
+- **Missions:** each run draws 3 from a pool (distance, close calls, fares, coins, stay-fast, no-hit stretch); completing grants coins/Cowries; the daily streak adds a bonus.
+- **Fairness rule:** the pattern generator guarantees that, for every obstacle sequence at the current speed, at least one lane/action path is solvable with ≥ 250 ms reaction margin (unit-tested by a headless solver).
+- **Scoring:** `distance + coins*10 + fares*5 + closeCalls*25 + stopBonuses`, with combo multiplier up to ×3. Stored as **personal best per character and lifetime**.
+
+**Routes (data, expandable per city pack)**
+`Route { id, cityId, segments: [{ name, lengthM, ambience, setDressingTags[], stops[] }] }`. M1 ships 2 Lagos routes (e.g., Oshodi → Mushin → Ojuelegba, and Yaba → Surulere) ≈ 8–10 segments each, 90–150 s per run before looping at higher speed. M2+ routes per district; M3 per city (Abuja ring roads, Port Harcourt waterfront, etc.).
+
+**Integration with the life sim**
+- Costs 10 Energy to play. Rewards: coins → Cash (`coinToCash` and per-year cash-out cap as in 3.2); fares count as Cash in Danfo mode (same cap); distance → Health/Happiness (+1 per 400 m, max +4); close calls/streak feed Reputation events; Athletic trait grants lane-switch easing and +1 heart.
+- Cosmetics via **Garage** (danfo liveries/slogans — the funny painted bus slogans are a content opportunity; runner outfits reuse the avatar), unlocked with Cowries.
+- Daily streak and missions are meta-profile features; they never gate life-sim progress.
+
+**Rendering approach (decision for the T18 spike; recommendation below)**
+- **Recommended:** **Three.js** (tree-shaken, lazy-loaded), **procedural low-poly/voxel geometry** (instanced boxes + flat/vertex colours; no texture-heavy assets). This matches the reference's look, keeps the mini-game's asset payload tiny (~< 1 MB incl. audio), and is feasible on mid-range Android if draw calls ≤ ~150, instancing is used, shadows are baked/fake, and pixel ratio is capped (≤ 1.5) with an automatic **quality governor** (drops effects/resolution when FPS < 45 for 2 s).
+- **Fallback if the spike misses 55 FPS on the reference device:** a 2.5D pseudo-3D renderer in Phaser (scaled sprites along a road projection) using the **same engine logic**. The runner **simulation is a pure TypeScript module** (lanes, patterns, speed, collisions, scoring, missions) with no rendering imports, so the renderer is swappable and the sim is unit-testable and replayable from `seed + inputLog` (needed for M3 leaderboard validation).
+- Phaser remains the choice for the M2 top-down district map; both are lazy-loaded and never in the initial bundle.
 
 **Controls & accessibility**
-- Touch tap/swipe, keyboard, gamepad (MAY). "Assist mode": slower speed, bigger hit-forgiveness (hit box shrinks 20%); reduced-motion option.
+- Touch: swipe left/right (lane), up (jump/hop), down (slide/brake), tap-hold to brake at stops; on-screen buttons alternative. Keyboard: ←/→, ↑, ↓, Space = horn. Gamepad MAY.
+- **Assist mode:** slower speed cap, wider hit-forgiveness (hitbox −20%), auto-brake at stops. **Reduced motion:** disables camera shake/motion blur/speed lines. All HUD info has non-colour cues; captions for audio cues (horn, "Oya!").
 
-**Performance:** 60 FPS target on mid-range Android; sprite atlas ≤ 1 MB; object pooling for obstacles/coins; fixed-timestep update.
+**Performance & quality targets:** ≥ 55 FPS on a Tecno Spark/Infinix Hot-class Android in Chrome; ≤ 150 draw calls; initial load of the mini-game chunk ≤ 350 KB gz (Three.js tree-shaken + sim + HUD); memory ≤ 250 MB; object pooling for obstacles/coins/pedestrians; fixed-timestep simulation at 60 Hz independent of render rate.
+
+**Acceptance (in addition to AC-M1-06):** lane/jump/slide inputs respond within 100 ms; a headless solver clears 10,000 generated patterns with zero unsolvable sequences; replaying a recorded `seed + inputLog` reproduces the same score; missions, streak and cash-out cap behave per spec; the result screen shows score, coins, km, passengers/fares, close calls and a *Go Again* button.
 
 ### 7.2 Further mini-games (M2/M3)
 - **M2 — Balogun Haggle:** timing/slider bargaining mini-game that affects trade profit.
@@ -342,7 +375,7 @@ choices:
 - Quest log accessible from the HUD; at most 3 pinned.
 
 ### 8.2 Achievements
-- Persistent across lives (stored in the **MetaProfile**). Examples: *First Class Honours*, *Oga At The Top*, *Debt Free*, *Japa'd* (M3), *Mama's Favourite*, *Serial Entrepreneur*, *Jollof Judge*, *1,000m Danfo Dash*, *Never Missed a Sunday*, *Survived Harmattan*, *Married Twice*.
+- Persistent across lives (stored in the **MetaProfile**). Examples: *First Class Honours*, *Oga At The Top*, *Debt Free*, *Japa'd* (M3), *Mama's Favourite*, *Serial Entrepreneur*, *Jollof Judge*, *1,000m Go-Slow Dash*, *Never Missed a Sunday*, *Survived Harmattan*, *Married Twice*.
 - Tiers: Bronze/Silver/Gold where it makes sense. M1: 25, M2: 60, M3: 100+. Some are **hidden** until unlocked.
 - Rewards: Cowries, titles, cosmetic unlocks. Toast notification on unlock; Achievements screen shows progress.
 
@@ -389,7 +422,7 @@ Part of M1 but listed first so agents do it in order.
 | M1-F09 | Money | Yearly settlement, living cost, lifestyle toggle, debt flag, family-obligation requests, simple savings |
 | M1-F10 | Relationships (basic) | Parents, 1–2 siblings, 2 friends, 1 romantic partner at a time, marriage, children as count; meters, hang-out/call/gift, break-up/death events |
 | M1-F11 | Events | ≥ 90 events, 250 choices (Section 6.3), follow-ups, flags, templating, glossary tooltips for Nigerian terms |
-| M1-F12 | Mini-game: Danfo Dash | Per Section 7.1, 1 stage skin per life stage (3 colour/theme variants), 3 power-ups |
+| M1-F12 | Mini-game: Go-Slow Dash | Per Section 7.1: 3-lane behind-view runner, On Foot mode (+ Danfo-driving mode if the T18 spike is on budget; otherwise M2), 2 Lagos routes, 3 power-ups, close calls, 3 missions/run, daily streak, result screen |
 | M1-F13 | Coins | Mini-game coins → Cash; coin pickup/HUD animation; per-year cap |
 | M1-F14 | Quests | 8 starter quests, tracker, rewards |
 | M1-F15 | Achievements | 25 achievements, MetaProfile persistence, toast + screen |
@@ -406,7 +439,7 @@ Part of M1 but listed first so agents do it in order.
 **Out of scope for M1:** explorable map, inventory UI, businesses, skills system, loans/ajo, NYSC chain, multiple cities, cloud saves, leaderboards, voice acting, full localization.
 
 **Recommended build order (each step independently demoable)**
-1. Foundations (`M1-F00`s). 2. Engine + stats + yearly loop with a **text-only debug UI** (proves the sim) + automated bot test. 3. Character creation + HUD + scene cards. 4. Education + careers + money. 5. Event engine + first 30 events. 6. Relationships + family obligation. 7. Danfo Dash (standalone page first, then integrated). 8. Quests, achievements, Cowries. 9. Ending + legacy + share card. 10. Content to 90 events, tuning via bot simulations. 11. Audio, tutorial, PWA, accessibility pass. 12. Playtest and fix.
+1. Foundations (`M1-F00`s). 2. Engine + stats + yearly loop with a **text-only debug UI** (proves the sim) + automated bot test. 3. Character creation + HUD + scene cards. 4. Education + careers + money. 5. Event engine + first 30 events. 6. Relationships + family obligation. 7. Go-Slow Dash (standalone page first, then integrated). 8. Quests, achievements, Cowries. 9. Ending + legacy + share card. 10. Content to 90 events, tuning via bot simulations. 11. Audio, tutorial, PWA, accessibility pass. 12. Playtest and fix.
 
 **M1 Acceptance criteria**
 - **AC-M1-01** A new player can create a character and reach Year 1 in ≤ 90 s with ≤ 12 taps/clicks (excluding typing).
@@ -414,7 +447,7 @@ Part of M1 but listed first so agents do it in order.
 - **AC-M1-03** All five stats update correctly; clamping verified; every change appears in the year summary with a reason.
 - **AC-M1-04** Choosing different traits/family tiers produces measurably different outcomes (bot simulation shows distinct median final Cash and Happiness per tier, see tests).
 - **AC-M1-05** Fail an exam → resit path works; skipping university → Trade/Work path works; each of 5 career tracks is reachable and can be promoted in.
-- **AC-M1-06** Danfo Dash: runs ≥ 55 FPS on a reference mid-range Android (e.g., Tecno Spark/Infinix Hot class, Chrome); coin collection works; result screen shows converted Cash; yearly cap enforced.
+- **AC-M1-06** Go-Slow Dash: runs ≥ 55 FPS on a reference mid-range Android (e.g., Tecno Spark/Infinix Hot class, Chrome); coin collection works; result screen shows converted Cash; yearly cap enforced.
 - **AC-M1-07** ≥ 8 different endings are reachable (verified via bot + hand-crafted seeded scenarios) and each shows a distinct obituary.
 - **AC-M1-08** Save → close → reopen resumes at the right year with identical state and RNG sequence; export/import round-trips.
 - **AC-M1-09** Across 3 consecutive random lives, < 30% of events repeat.
@@ -453,7 +486,7 @@ Part of M1 but listed first so agents do it in order.
 | M2-F10 | Quests v2 | Branching quest chains with 30 quests; quest journal with hints; NPC-given quests |
 | M2-F11 | NYSC chain | Post-grad service year: camp, posting lottery, CDS group, side-hustle options |
 | M2-F12 | Additional career tracks | +Healthcare, +Agriculture/Agribusiness; job-hopping, side-gigs, remote work |
-| M2-F13 | Mini-games: Balogun Haggle, Oya Oya | Via common interface; plus Danfo Dash v2 (new obstacles per district, daily challenge seed) |
+| M2-F13 | Mini-games: Balogun Haggle, Oya Oya | Via common interface; plus Go-Slow Dash v2 (new obstacles per district, daily challenge seed) |
 | M2-F14 | Seasons & festivals | Harmattan, rainy season flooding, Detty December, Ramadan/Eid/Christmas/Easter community events, Independence Day; optional faith system (Christian/Muslim/Traditional/None) with respectful flavour events |
 | M2-F15 | Achievements v2 | 60 total, hidden and tiered |
 | M2-F16 | Content scale | 220 events, 650 choices, 14 endings |
@@ -497,8 +530,8 @@ Part of M1 but listed first so agents do it in order.
 | M3-F07 | Health & ageing depth | Chronic conditions, insurance (HMO), lifestyle, caregiving for parents, elderly legacy projects (foundation, school, community hall) |
 | M3-F08 | Legacy & meta progression | Dynasty tree, prestige titles, expanded Cowries shop, starting-scenario challenges ("Rags to Riches", "Last Born"), daily challenge seed |
 | M3-F09 | Cloud profile (optional login) | Email/magic-link or OAuth; cloud save sync; conflict resolution; guest play always available |
-| M3-F10 | Leaderboards & sharing | Weekly Danfo Dash leaderboard (anti-cheat via server-validated run summaries + seed replay), Legacy leaderboards, social share cards |
-| M3-F11 | Additional mini-games | Whot! and Ayo; Danfo Dash v3 (boss chase, weather) |
+| M3-F10 | Leaderboards & sharing | Weekly Go-Slow Dash leaderboard (anti-cheat via server-validated run summaries + seed replay), Legacy leaderboards, social share cards |
+| M3-F11 | Additional mini-games | Whot! and Ayo; Go-Slow Dash v3 (boss chase, weather) |
 | M3-F12 | Localization framework | i18n infrastructure; Pidgin as first-class language; French and Swahili scaffolding for future cities (strings externalised) |
 | M3-F13 | Content tools | Event/quest editor (web-based or CLI + VS Code snippets), validator, playtest-from-seed button, localisation export; community-ready City Pack template |
 | M3-F14 | Live-ops basics | Seasonal events (calendar-driven), remote config for balance, A/B toggles, feature flags |
@@ -547,7 +580,7 @@ TITLE            CREATE (step n/5)         HOME (Life Hub)
 └──────────┘     │ [ Next ►    ] │          │ └────────────────┘ │
                  └──────────────┘          │ [Study][Hustle]     │
                                            │ [Hang out][Rest]    │
-EVENT                  YEAR SUMMARY        │ [Play Danfo Dash]   │
+EVENT                  YEAR SUMMARY        │ [Play Go-Slow Dash]   │
 ┌────────────────┐     ┌────────────────┐  │ [End Year ►]       │
 │ NEPA took light│     │ 2031 · Age 18  │  └────────────────────┘
 │ (illustration) │     │ Headline       │
@@ -587,7 +620,7 @@ EVENT                  YEAR SUMMARY        │ [Play Danfo Dash]   │
 | Build | **Vite** | Fast dev loop, simple config, code splitting |
 | UI | **React 18 + Tailwind CSS** | Declarative menus/HUD/event cards; huge ecosystem; accessible DOM for text-heavy UI |
 | State | **Zustand** (+ immer) wrapping a **pure engine** | Simple, serialisable; engine remains framework-agnostic |
-| Mini-games & maps | **Phaser 3** (lazy-loaded) | Mature 2D engine, arcade physics, tilemaps (Tiled), touch input; ideal for runner + M2 maps |
+| Mini-games & maps | **Three.js** (runner, lazy-loaded, procedural low-poly) + **Phaser 3** (M2 district maps, lazy-loaded) | Three.js matches the 3D lane-runner look at tiny asset cost; Phaser gives tilemaps/touch for top-down maps. Runner sim is pure TS so the renderer is swappable (see 7.1) |
 | Content validation | **Zod** + custom linter | Runtime schema checks for JSON/YAML content |
 | Persistence | **localStorage → IndexedDB (via `idb`)** with versioned saves | Small saves; IndexedDB for MetaProfile growth |
 | Audio | **Howler.js** | Reliable cross-browser audio incl. mobile unlock behaviour |
@@ -619,8 +652,8 @@ EVENT                  YEAR SUMMARY        │ [Play Danfo Dash]   │
   /ui                # React components, screens, hooks
     /screens         # Title, Create, Hub, Event, Summary, Ending, Achievements, Settings
     /components      # Avatar, StatBar, ChoiceCard, Toast, Modal, Tooltip
-  /minigames         # Phaser scenes; each exports a MiniGame (Section 12.4)
-    /danfo-dash
+  /minigames         # Renderers (Three.js/Phaser) + pure sims; each exports a MiniGame (Section 12.4)
+    /go-slow-dash
   /world             # (M2) map scenes, pathfinding, NPC controllers
   /platform          # save.ts, storage.ts, audio.ts, analytics.ts, share.ts, pwa.ts
   /i18n
@@ -661,7 +694,7 @@ interface MiniGameResult { gameId: string; score: number; coins: number;
 
 ### 12.5 Performance and compatibility
 - Targets: Chrome Android (last 3 years), Safari iOS 15+, desktop evergreen. Minimum screen 320 px.
-- Budgets: initial JS ≤ 250 KB gz; menu route interactive ≤ 3 s on Fast 4G; images WebP/AVIF; audio as OGG/MP3 ≤ 2 MB total in M1 (stream music, preload SFX); sprite atlases ≤ 1 MB; Phaser lazy chunk ≤ 350 KB gz.
+- Budgets: initial JS ≤ 250 KB gz; menu route interactive ≤ 3 s on Fast 4G; images WebP/AVIF; audio as OGG/MP3 ≤ 2 MB total in M1 (stream music, preload SFX); sprite atlases ≤ 1 MB; runner chunk (Three.js + sim + HUD) ≤ 350 KB gz, Phaser map chunk (M2) ≤ 350 KB gz.
 - Data-saver: respect `navigator.connection.saveData`; "lite mode" (M2).
 - Avoid layout shifts and long main-thread tasks (>50 ms) during year resolution (engine work < 10 ms typical).
 
@@ -868,7 +901,7 @@ Warm, witty, a little teasing, never cruel; short paragraphs; second person ("yo
 | 10 | M1-F08 | Careers (5 tracks) | M1 | P0 | L | F07 |
 | 11 | M1-F09 | Money, lifestyle, black tax | M1 | P0 | M | F08 |
 | 12 | M1-F10 | Relationships (basic) + family | M1 | P0 | L | F11 |
-| 13 | M1-F12/F13 | Danfo Dash + coin integration | M1 | P0 | L | F03 |
+| 13 | M1-F12/F13 | Go-Slow Dash + coin integration | M1 | P0 | L | F03 |
 | 14 | M1-F17 | Endings, obituary, legacy, share card | M1 | P0 | M | F10 |
 | 15 | M1-F14/F15/F16 | Quests, achievements, Cowries | M1 | P0 | M | F11 |
 | 16 | M1-F21 | Tutorial | M1 | P1 | S | F04 |
@@ -941,7 +974,7 @@ Warm, witty, a little teasing, never cruel; short paragraphs; second person ("yo
 
 | # | Question | Why it matters | Default if unanswered |
 |---|---|---|---|
-| Q1 | What specifically do you like about the three reference sites (look, tone, systems)? They couldn't be loaded here. | Aligns visual/system direction | Use this PRD as written |
+| Q1 | What do you like about lagoslife.app and campuslife.cubbes.app (look, tone, systems)? Only the danfo.horpey.dev recording has been reviewed. | Aligns visual/system direction | Use this PRD as written |
 | Q2 | Target platform priority: phone-first PWA, or desktop-first? | Layout and input choices | Phone-first |
 | Q3 | Target age rating / maturity (PG-13 vs. more edgy BitLife-style)? | Event content scope | PG-13 |
 | Q4 | Final name, branding, and domain? | Share cards, store/PWA metadata | "Navigating Adult Life" |
@@ -956,6 +989,7 @@ Warm, witty, a little teasing, never cruel; short paragraphs; second person ("yo
 | Q13 | Offline expectation: must core gameplay work fully offline? | PWA caching strategy | Yes for M1+ |
 | Q14 | Language scope for launch: English + Pidgin flavour only, or Yoruba/Igbo/Hausa UI? | Localization cost | English + Pidgin flavour |
 | Q15 | Bride price/traditional marriage customs: depict explicitly, abstractly, or skip? | Sensitivity and reviewer approach | Abstract with reviewer-approved choices |
+| Q16 | Runner scope for M1: ship **On Foot + Danfo-driving** modes, or On Foot first and driving in M2? Is 3D (Three.js) acceptable given performance risk on low-end phones? | Largest single M1 schedule risk | On Foot in M1; driving if the T18 spike passes; Phaser pseudo-3D fallback |
 
 ---
 
@@ -968,14 +1002,14 @@ Warm, witty, a little teasing, never cruel; short paragraphs; second person ("yo
 5. **Test with every change.** New system → unit tests + at least one sim assertion. New content → linter must pass.
 6. **Small PRs** (< ~400 changed lines excluding content/data). Reference requirement IDs (e.g., "implements M1-F07").
 7. **Determinism rules.** No `Math.random()`/`Date.now()` in `/engine`. All RNG via injected PRNG.
-8. **Performance rules.** Respect budgets in 12.5; import Phaser only inside `/minigames` and `/world` via dynamic import.
+8. **Performance rules.** Respect budgets in 12.5; import Three.js/Phaser only inside `/minigames` and `/world` via dynamic import.
 9. **Accessibility rules.** Every interactive element reachable by keyboard; no information by colour alone.
 10. **Content rules.** Follow Section 16; mark any culturally uncertain content with `reviewNeeded: true` in the data so reviewers can filter it.
 11. **Document decisions.** Add an ADR (`/docs/adr/NNN-title.md`) for any deviation from this PRD.
 12. **Definition of Done per ticket:** typecheck, lint, tests, content lint, build, and (where UI) a Playwright check or screenshot attached.
 
 ### Suggested M1 ticket sequence (copy into your tracker)
-`T01` repo+CI+deploy · `T02` RNG + state + serialization + tests · `T03` stats/energy/money settlement · `T04` condition/effect evaluator + schemas + linter · `T05` event picker (weights, cooldowns, follow-ups) · `T06` yearly loop + debug UI · `T07` bot sim harness · `T08` education + exams · `T09` careers · `T10` relationships + family obligation · `T11` quests + achievements + MetaProfile · `T12` endings + obituary + legacy · `T13` save/load/export · `T14` React shell: title, settings, HUD · `T15` avatar layers + character creation · `T16` scene cards + activity UI · `T17` event/summary/ending screens · `T18` Danfo Dash prototype page → pattern generator tests → integration · `T19` content passes (30 → 60 → 90 events) with balance via sims · `T20` audio, tutorial, accessibility, PWA · `T21` share card · `T22` Lighthouse/perf budgets · `T23` playtest + bug bash.
+`T01` repo+CI+deploy · `T02` RNG + state + serialization + tests · `T03` stats/energy/money settlement · `T04` condition/effect evaluator + schemas + linter · `T05` event picker (weights, cooldowns, follow-ups) · `T06` yearly loop + debug UI · `T07` bot sim harness · `T08` education + exams · `T09` careers · `T10` relationships + family obligation · `T11` quests + achievements + MetaProfile · `T12` endings + obituary + legacy · `T13` save/load/export · `T14` React shell: title, settings, HUD · `T15` avatar layers + character creation · `T16` scene cards + activity UI · `T17` event/summary/ending screens · `T18` Go-Slow Dash **renderer spike (Three.js vs Phaser fallback on a real mid-range Android, gate: ≥ 55 FPS)** → prototype page → pattern generator tests → integration · `T19` content passes (30 → 60 → 90 events) with balance via sims · `T20` audio, tutorial, accessibility, PWA · `T21` share card · `T22` Lighthouse/perf budgets · `T23` playtest + bug bash.
 
 ---
 
