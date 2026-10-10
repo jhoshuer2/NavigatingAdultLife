@@ -26,7 +26,7 @@ await page.evaluate(() => window.__nal.useGame.getState().openSheet('profile'));
 await page.evaluate(() => window.__nal.useGame.getState().openSheet(null)); await page.evaluate(() => window.__nal.useGame.getState().openNpc(Object.values(window.__nal.useGame.getState().life.npcs)[0].id)); await shot('14-npc')
 await page.evaluate(() => window.__nal.useGame.getState().openSheet(null))
 await page.evaluate(() => window.__nal.useGame.getState().endActions()); await page.waitForTimeout(600); await shot('15-event')
-for (let i = 0; i < 12; i++) { if (await page.getByText('Next year ▶').count()) { await shot('16-summary'); break } const c = page.locator('.sheet .card-btn:not([disabled])'); if (await c.count()) await c.first().click().catch(() => {}); else await page.getByText(/Continue/).first().click().catch(() => {}); await page.waitForTimeout(400) }
+for (let i = 0; i < 12; i++) { if (await page.getByText('Next year').count()) { await shot('16-summary'); break } const c = page.locator('.sheet .card-btn:not([disabled])'); if (await c.count()) await c.first().click().catch(() => {}); else await page.getByText(/Continue/).first().click().catch(() => {}); await page.waitForTimeout(400) }
 await page.evaluate(() => window.__nal.useGame.getState().go('achievements')); await shot('17-achievements')
 await page.evaluate(() => window.__nal.useGame.getState().go('unlocks')); await shot('18-unlocks')
 await page.evaluate(() => window.__nal.useGame.getState().go('history')); await shot('19-history')
