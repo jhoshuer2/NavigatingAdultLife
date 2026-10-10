@@ -1,6 +1,6 @@
 # Navigating Adult Life
 
-A funny, replayable life simulator where you grow up Nigerian: school, hustle, love, family and legacy, from age 6 to old age. Mobile-first browser game (installable PWA). Starts in Lagos.
+A funny, replayable life simulator where you grow up Nigerian: school, hustle, love, family and legacy, from age 6 to old age. Mobile-first browser game (installable PWA). Starts in Lagos. You walk around a 3D neighbourhood (joystick, WASD or tap to walk), visit places (home, school, market, buka, pitch, bus stop, workplace, job centre), talk to people, and live your year there. A simple menu mode is available for older phones.
 
 **Status:** Milestone 1 (playable life simulation) is implemented. See [`docs/PRD.md`](docs/PRD.md) for the full product requirements and [`docs/STATUS.md`](docs/STATUS.md) for what is done against the M1 acceptance criteria.
 
@@ -24,6 +24,7 @@ End-to-end screenshots/flows use headless Chromium (`CHROME=<headless_shell path
 |---|---|
 | `src/engine` | Pure TypeScript simulation. No DOM/React/Three.js. Deterministic (seeded RNG), serialisable state. Public API in `src/engine/api.ts`. |
 | `src/content` | Data only: events, jobs, traits, quests, achievements, quiz bank, names. Add content here, not code. |
+| `src/world` | The walkable 3D district: layout and pathfinding (pure, tested), Three.js renderer, characters, guidance. |
 | `src/minigames/go-slow-dash` | Pure runner simulation (`sim.ts`) + Three.js renderer (`renderer.ts`). Lazy-loaded. |
 | `src/ui` | React screens, modals, avatar and scene art (SVG, procedural). |
 | `src/platform` | Saves, meta profile, playtime tokens, audio (synthesised placeholders), share card, feedback. |

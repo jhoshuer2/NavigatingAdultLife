@@ -1,0 +1,25 @@
+import { chromium } from 'playwright-core'
+import { mkdirSync } from 'node:fs'
+const OUT = process.env.OUT ?? '/tmp/claude-0/-home-user-NavigatingAdultLife/f97bb3da-afd4-5501-b372-1bb1d534ad7b/scratchpad/shots'
+mkdirSync(OUT, { recursive: true })
+const browser = await chromium.launch({ executablePath: process.env.CHROME, args: ['--no-sandbox', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--use-gl=angle'] })
+const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1.5 })
+page.setDefaultTimeout(10000)
+const errors = []
+page.on('pageerror', (e) => errors.push(String(e)))
+page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()) })
+await page.goto(process.env.BASE ?? 'http://localhost:4173/?unlimited=1&debug=1')
+await page.waitForFunction(() => window.__nal)
+await page.evaluate(() => { const g = window.__nal.useGame; g.setState({ meta: { ...g.getState().meta, seenTutorial: true } }); window.__nal.jump(+(new URLSearchParams(location.search).get('age') ?? 12), 'scholar', 5) })
+await page.waitForTimeout(2500)
+await page.screenshot({ path: `${OUT}/50-world-start.png` })
+await page.keyboard.down('ArrowRight'); await page.waitForTimeout(1200); await page.keyboard.up('ArrowRight')
+await page.keyboard.down('ArrowDown'); await page.waitForTimeout(800); await page.keyboard.up('ArrowDown')
+await page.screenshot({ path: `${OUT}/51-world-walk.png` })
+await page.evaluate(() => window.__nal.useGame.getState().goToPlace('school'))
+await page.waitForTimeout(9000)
+await page.screenshot({ path: `${OUT}/52-world-school.png` })
+await page.keyboard.press('e'); await page.waitForTimeout(500)
+await page.screenshot({ path: `${OUT}/53-place-panel.png` })
+console.log('errors', errors)
+await browser.close()

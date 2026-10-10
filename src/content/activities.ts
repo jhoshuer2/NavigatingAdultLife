@@ -45,6 +45,7 @@ export const ACTIVITIES: ActivityDef[] = [
     effects: [{ stat: 'happiness', delta: 7 }, { stat: 'stress', delta: -4 }], maxPerYear: 2, scene: 'market',
   },
   { id: 'shop', label: 'Shop', blurb: 'Buy things that actually help.', icon: '🛒', stages: [...SCHOOLISH, 'adult', 'elder'], cost: { energy: 5 }, special: 'shop', scene: 'market' },
+  { id: 'chat', label: 'Chat', blurb: 'A quick catch-up.', icon: '💬', stages: [...ALL], cost: { energy: 3 }, special: 'chat', maxPerYear: 6, hidden: true, scene: 'compound' },
   { id: 'quitJob', label: 'Resign', blurb: 'Walk away from your job. Bold. Possibly foolish.', icon: '🚪', stages: ['youngAdult', 'adult'], cost: { energy: 0 }, special: 'quitJob', requires: { all: [{ employed: true }] }, scene: 'office' },
 ]
 export const ACTIVITY_BY_ID = Object.fromEntries(ACTIVITIES.map((a) => [a.id, a]))

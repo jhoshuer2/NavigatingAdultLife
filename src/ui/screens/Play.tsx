@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { useGame } from '../../store'
 import { Btn, DeltaChips, StatBar, naira, nairaShort } from '../components'
 import { Avatar } from '../Avatar'
@@ -9,15 +9,19 @@ import { DREAM_BY_ID } from '@content/dreams'
 import { fmtTime, remainingSec } from '@platform/tokens'
 import { audio } from '@platform/audio'
 import { EventModal, QuizModal, SummaryModal, ShopModal, JobsModal, PickModal, QuestsModal, ProfileModal, LifestyleModal, PaywallModal, TutorialModal } from '../modals'
+import { NpcModal, PlaceModal, PlacesModal } from '../placeUi'
+const World = lazy(() => import('./World'))
+
+function webglOk(): boolean { try { const c = document.createElement('canvas'); return !!(c.getContext('webgl2') || c.getContext('webgl')) } catch { return false } }
 
 const STAGE_LABEL = { child: 'Childhood', teen: 'Teen years', youngAdult: 'Young adult', adult: 'Adult life', elder: 'Elder years' } as const
 
-export function Play() {
+function PlayMenu({ onWorld }: { onWorld?: () => void }) {
   const g = useGame()
-  const { life, meta, sheet } = g
+  const { life, meta } = g
   const [scene, setScene] = useState<string | null>(null)
   useEffect(() => { audio.playMusic('play') }, [])
-  const acts = useMemo(() => (life ? getActivities(life) : []), [life])
+  const acts = useMemo(() => (life ? getActivities(life).filter((a) => !a.def.hidden) : []), [life])
   if (!life) return null
   const c = life.character
   const stage = stageForAge(c.age)
@@ -53,6 +57,7 @@ export function Play() {
           <div className="text-xs opacity-75 truncate">{STAGE_LABEL[stage]} · {life.year}{inSchool ? ` · ${{ primary: 'Primary school', jss: 'Junior secondary', sss: 'Senior secondary', university: 'University', polytechnic: 'Polytechnic', apprentice: 'Apprenticeship', none: '' }[c.edu.level]}` : c.job ? ` · ${c.job.title}` : ''}</div>
         </div>
         <button className="chip shrink-0" onClick={() => g.openSheet('paywall')} aria-label="Play time left" title="Play time left">⏱ {fmtTime(left)}</button>
+        {onWorld && <button className="btn btn-primary !min-h-10 !px-3 text-sm" onClick={onWorld}>🗺 World</button>}
         <button className="btn btn-ghost !min-h-10 !px-3" onClick={() => g.go('settings')} aria-label="Settings">⚙️</button>
       </header>
 
@@ -111,6 +116,17 @@ export function Play() {
         <Btn variant="green" className="w-full !text-lg" disabled={phase !== 'action' || !!life.quiz} onClick={() => { audio.sfx('good'); g.endActions() }}>End year ▶ <span className="text-sm opacity-80">(age {c.age} → {c.age + 1})</span></Btn>
       </footer>
 
+    </div>
+  )
+}
+
+function Modals() {
+  const g = useGame()
+  const { life, meta, sheet } = g
+  if (!life) return null
+  const phase = life.phase
+  return (
+    <>
       {phase === 'events' && <EventModal />}
       {phase === 'summary' && <SummaryModal />}
       {(life.quiz || g.quizFeedback) && <QuizModal />}
@@ -121,7 +137,26 @@ export function Play() {
       {sheet === 'profile' && <ProfileModal />}
       {sheet === 'lifestyle' && <LifestyleModal />}
       {sheet === 'paywall' && <PaywallModal />}
+      {sheet === 'place' && <PlaceModal />}
+      {sheet === 'npc' && <NpcModal />}
+      {sheet === 'places' && <PlacesModal />}
       {!meta.seenTutorial && phase !== 'ended' && <TutorialModal />}
-    </div>
+    </>
+  )
+}
+
+export function Play() {
+  const { life, meta, updateSettings } = useGame()
+  const ok = useMemo(() => webglOk(), [])
+  useEffect(() => { audio.playMusic('play') }, [])
+  if (!life) return null
+  const lite = meta.settings.lite || !ok
+  return (
+    <>
+      {lite ? <PlayMenu onWorld={ok ? () => updateSettings({ lite: false }) : undefined} /> : (
+        <div className="fixed inset-0 mx-auto max-w-[480px] overflow-hidden"><Suspense fallback={<div className="p-8 text-center font-display text-3xl text-danfo">Loading your neighbourhood…</div>}><World /></Suspense></div>
+      )}
+      <Modals />
+    </>
   )
 }

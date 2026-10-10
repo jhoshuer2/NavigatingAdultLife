@@ -2,6 +2,10 @@
 
 _Last updated alongside the M1 build. Source of truth for requirements: `docs/PRD.md`._
 
+## Update: explorable world (pulled forward from M2)
+
+Playtest feedback was that the menu-driven hub did not feel like living a life. The explorable 3D district originally planned for M2 (M2-F01, F21, F23 in the PRD) was built early: walk with joystick / WASD / tap-to-walk with pathfinding, 9 places with action panels, persistent NPCs you can talk to, ambient pedestrians with speech bubbles, minimap, "next thing to do" guidance with auto-walk, month and season (Harmattan, rains, Detty December) shown in the world, and a Menu mode fallback. Layout and pathfinding are unit tested (every place reachable in all four districts). Not yet done: interiors, time-of-day lighting, Focus Days, and real-device performance measurement.
+
 ## Feature checklist (PRD section 9, Milestone 1)
 
 | ID | Feature | Status |

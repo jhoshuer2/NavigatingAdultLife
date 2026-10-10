@@ -96,6 +96,15 @@ export function performActivity(ctx: Ctx, id: string, args: ActivityArgs = {}): 
       text = `Family time with ${n?.name ?? 'family'}. Questions about marriage were asked.`
       break
     }
+    case 'chat': {
+      const role: NpcRole = args.target ?? 'friend'
+      const n = s.roles[role] ? s.npcs[s.roles[role]!] : undefined
+      addRel(ctx, role, 3 + (role === 'friend' || role === 'friend2' || role === 'partner' ? traitSum(c, 'socialBonus') / 2 : 0))
+      addStat(ctx, 'happiness', 1, 'Chat')
+      if (role === 'boss' || role === 'mentor' || role === 'colleague') addStat(ctx, 'reputation', 1, 'Chat')
+      text = `A quick chat with ${n?.name ?? 'someone'}.`
+      break
+    }
     case 'rest': {
       addStat(ctx, 'health', 5, 'Rest')
       addStat(ctx, 'stress', -9, 'Rest')

@@ -63,7 +63,7 @@ export function playLife(seed: number, kind: BotKind, config?: NewLifeConfig, ma
           state = submitQuizAnswer(state, rng.chance(ok) ? known.answer : rng.int(0, known.options.length - 1)).state
           continue
         }
-        const acts = getActivities(state).filter((a) => a.enabled && a.def.id !== 'dash' && a.def.id !== 'quitJob')
+        const acts = getActivities(state).filter((a) => a.enabled && !a.def.hidden && a.def.id !== 'dash' && a.def.id !== 'quitJob')
         if (!acts.length) { state = finishActions(state); continue }
         const pref = (id: string) => (kind === 'scholar' ? { study: 5, rest: 1 }[id as 'study' | 'rest'] ?? 2 : kind === 'money' ? { hustle: 5, overtime: 4, applyJob: 6, study: 2 }[id as 'hustle'] ?? 2 : 2)
         const pick = rng.weighted(acts, (a) => pref(a.def.id) + 0.3)!

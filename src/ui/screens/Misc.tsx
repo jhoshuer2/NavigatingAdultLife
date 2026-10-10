@@ -106,6 +106,7 @@ export function Settings() {
         <Toggle label="Music" on={s.music} onChange={(v) => { updateSettings({ music: v }); audio.configure({ ...s, music: v }) }} />
         <div className="card p-3"><label className="font-bold block mb-1" htmlFor="vol">Volume</label><input id="vol" type="range" min="0" max="1" step="0.05" value={s.volume} onChange={(e) => { const v = Number(e.target.value); updateSettings({ volume: v }); audio.configure({ ...s, volume: v }) }} className="w-full" /></div>
         <Toggle label="Reduced motion" on={s.reducedMotion} onChange={(v) => { updateSettings({ reducedMotion: v }); document.documentElement.classList.toggle('reduce-motion', v) }} />
+ <Toggle label="Simple menu mode (lighter on older phones)" on={s.lite} onChange={(v) => updateSettings({ lite: v })} />
         <Toggle label="Larger text" on={s.bigText} onChange={(v) => updateSettings({ bigText: v })} />
         <Toggle label="Dash assist mode (slower, forgiving)" on={s.assist} onChange={(v) => updateSettings({ assist: v })} />
         <Toggle label="Anonymous analytics (optional)" on={consent} onChange={(v) => { setConsent(v); useGame.setState({ meta: { ...meta, consentAnalytics: v } }) }} />

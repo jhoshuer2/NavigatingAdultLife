@@ -9,7 +9,9 @@ import { audio } from '@platform/audio'
 import { track } from '@platform/analytics'
 
 export type Screen = 'title' | 'create' | 'play' | 'ending' | 'achievements' | 'unlocks' | 'settings' | 'dash' | 'history'
-export type Sheet = null | 'shop' | 'jobs' | 'quests' | 'profile' | 'pick-social' | 'pick-family' | 'lifestyle' | 'paywall'
+export type Sheet = null | 'shop' | 'jobs' | 'quests' | 'profile' | 'pick-social' | 'pick-family' | 'lifestyle' | 'paywall' | 'place' | 'npc' | 'places'
+
+import type { PlaceId } from './world/layout'
 
 interface Toast { id: number; text: string; kind: 'ach' | 'info' }
 
@@ -23,6 +25,12 @@ interface Store {
   dashMode: 'foot' | 'danfo'
   lastDash: { result: MiniGameResult; cash: number; capped: boolean } | null
   endingRecorded: boolean
+  placeId: PlaceId | null
+  npcId: string | null
+  walkReq: { place: PlaceId; n: number } | null
+  openPlace: (id: PlaceId) => void
+  openNpc: (id: string) => void
+  goToPlace: (id: PlaceId) => void
   go: (s: Screen) => void
   openSheet: (s: Sheet) => void
   toast: (text: string, kind?: Toast['kind']) => void
@@ -71,7 +79,10 @@ export const useGame = create<Store>((set, get) => {
   }
   const setMeta = (meta: MetaProfile) => { saveMeta(meta); set({ meta }); audio.configure(meta.settings) }
   return {
-    screen: 'title', life: null, meta: defaultMeta(), sheet: null, toasts: [], quizFeedback: null, dashMode: 'foot', lastDash: null, endingRecorded: false,
+    screen: 'title', life: null, meta: defaultMeta(), sheet: null, toasts: [], quizFeedback: null, dashMode: 'foot', lastDash: null, endingRecorded: false, placeId: null, npcId: null, walkReq: null,
+    openPlace: (id) => set({ placeId: id, sheet: 'place' }),
+    openNpc: (id) => set({ npcId: id, sheet: 'npc' }),
+    goToPlace: (id) => set((st) => ({ walkReq: { place: id, n: (st.walkReq?.n ?? 0) + 1 }, sheet: null })),
     go: (screen) => { set({ screen, sheet: null }) },
     openSheet: (sheet) => set({ sheet }),
     toast: (text, kind = 'info') => {

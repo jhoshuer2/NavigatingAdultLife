@@ -76,6 +76,7 @@ export function yearStart(ctx: Ctx) {
   if (c.childrenIds.length) reserved += Math.min(12, c.childrenIds.length * 4)
   s.flags.__reserved = reserved
   c.stats.energy = Math.max(10, c.stats.maxEnergy - reserved)
+  s.flags.__startEnergy = c.stats.energy
   c.hustleIncome = 0
   c.dashCashouts = 0
   s.activityCounts = {}

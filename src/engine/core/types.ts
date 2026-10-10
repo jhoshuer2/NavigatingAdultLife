@@ -220,7 +220,8 @@ export interface ActivityDef {
   effects?: Effect[]
   check?: { stat: StatKey | 'hustle' | 'charm'; difficulty: number }
   outcomes?: Partial<Record<Tier, Outcome>>
-  special?: 'study' | 'dash' | 'applyJob' | 'socialise' | 'familyTime' | 'rest' | 'shop' | 'quitJob' | 'overtime'
+  special?: 'study' | 'dash' | 'applyJob' | 'socialise' | 'familyTime' | 'rest' | 'shop' | 'quitJob' | 'overtime' | 'chat'
+  hidden?: boolean
   maxPerYear?: number
   scene?: string
 }

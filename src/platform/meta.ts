@@ -1,6 +1,6 @@
 import type { GameState } from '@engine/core/types'
 
-export interface Settings { sound: boolean; music: boolean; volume: number; reducedMotion: boolean; bigText: boolean; assist: boolean }
+export interface Settings { sound: boolean; music: boolean; volume: number; reducedMotion: boolean; bigText: boolean; assist: boolean; lite: boolean }
 export interface LifeSummary { name: string; age: number; ending: string; legacy: number; netWorth: number; at: number; dream: string; dreamDone: boolean }
 export interface TokenState { freeSec: number; paidSec: number; lastRefillDay: string; welcomeGranted: boolean; unlimited: boolean }
 
@@ -24,7 +24,7 @@ export const FREE_CAP_SEC = 120 * 60
 export const defaultMeta = (): MetaProfile => ({
   version: 1, cowries: 0, unlocks: [], achievements: {},
   stats: { lives: 0, bestLegacy: 0, dashBest: 0, longestLife: 0 },
-  settings: { sound: true, music: true, volume: 0.6, reducedMotion: false, bigText: false, assist: false },
+  settings: { sound: true, music: true, volume: 0.6, reducedMotion: false, bigText: false, assist: false, lite: false },
   history: [], tokens: { freeSec: 0, paidSec: 0, lastRefillDay: '', welcomeGranted: false, unlimited: false },
   seenTutorial: false, consentAnalytics: false,
 })
