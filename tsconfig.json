@@ -15,7 +15,7 @@
     "isolatedModules": true,
     "types": ["vite/client", "vite-plugin-pwa/client"],
     "baseUrl": ".",
-    "paths": { "@engine/*": ["src/engine/*"], "@content/*": ["src/content/*"], "@ui/*": ["src/ui/*"], "@platform/*": ["src/platform/*"], "@minigames/*": ["src/minigames/*"] }
+    "paths": { "@engine/*": ["src/engine/*"], "@content/*": ["src/content/*"], "@ui/*": ["src/ui/*"], "@platform/*": ["src/platform/*"], "@minigames/*": ["src/minigames/*"], "@shared/*": ["shared/*"] }
   },
-  "include": ["src", "tests", "tools", "vite.config.ts"]
+  "include": ["src", "shared", "tests", "tools", "vite.config.ts"]
 }

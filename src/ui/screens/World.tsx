@@ -20,6 +20,7 @@ import { TalkTask, type Partner } from '../tasks/TalkTask'
 import type { Setting } from '@content/dialogue'
 import { npcSpot, placeActive, suggest } from '../../world/guide'
 import { audio } from '@platform/audio'
+import { track, setAnalyticsContext } from '@platform/analytics'
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
@@ -56,6 +57,16 @@ export default function World() {
   const [showHud, setShowHud] = useState(false)
   const [slow, setSlow] = useState(false)
   const [mapOpen, setMapOpen] = useState(false)
+  // telemetry only (no gameplay effect): where the player is and which task they run
+  const taskLog = useRef<{ t0: number; perf?: number; abandoned?: boolean } | null>(null)
+  useEffect(() => { setAnalyticsContext({ place: inside }); if (!inside) return; track('place_entered', { place: inside, hour: Math.floor(hourRef.current) }); return () => track('place_exited', { place: inside }) }, [inside])
+  useEffect(() => {
+    const k = task?.kind === 'talk' ? task.actId : task?.kind; if (!task || !k) return
+    const log = { t0: Date.now() } as { t0: number; perf?: number; abandoned?: boolean }; taskLog.current = log
+    const place = inside; track('task_started', { task: k, place })
+    return () => { const d = Math.round((Date.now() - log.t0) / 1000); if (log.abandoned) track('task_abandoned', { task: k, place, duration_s: d }); else track('task_completed', { task: k, place, perf: log.perf === undefined ? null : Math.round(log.perf * 100) / 100, duration_s: d }); taskLog.current = null }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [task?.kind])
   const [menuOpen, setMenuOpen] = useState(false)
   const [coach, setCoach] = useState(0)
   const [replay, setReplay] = useState(false)
@@ -78,7 +89,7 @@ export default function World() {
     if (!el || !life) return
     const c = life.character
     let r: WorldRenderer
-    try { r = new WorldRenderer(el, district, { look: c.appearance, age: c.age, uniform: c.edu.level !== 'none' && c.age < 18, month, hour: hourRef.current, spawn: SPAWN }) } catch { setFail(true); return }
+    try { r = new WorldRenderer(el, district, { look: c.appearance, age: c.age, uniform: c.edu.level !== 'none' && c.age < 18, month, hour: hourRef.current, spawn: SPAWN }) } catch { track('webgl_unavailable'); setFail(true); return }
     rendRef.current = r
     r.onNear(setNear)
     r.onNearInside((n) => {
@@ -86,7 +97,7 @@ export default function World() {
       if (intent.current === 'sleep' && n.hotspot === 'bed') { intent.current = null; setHotId('bed') }
     })
     r.onPosition((x, z, h) => setPos({ x, z, h }))
-    r.onSlow(() => setSlow(true))
+    r.onSlow(() => { setSlow(true); track('slow_device_detected') })
     const ro = new ResizeObserver(() => r.resize()); ro.observe(el)
     r.start()
     if (new URLSearchParams(location.search).get('debug') === '1') (window as unknown as { __world?: WorldRenderer }).__world = r
@@ -285,7 +296,7 @@ export default function World() {
     const npc = life.npcs[destPick.npcId]; const me = r.position
     r.addActor('buddy', { name: npc.name, gender: npc.gender, x: me.x + 1.5, z: me.z + 0.5 })
     r.hideNpc(npc.id, true); r.followPlayer('buddy', true)
-    setHang({ role: destPick.role, npcId: npc.id, name: npc.name, gender: npc.gender, dest }); setDestPick(null)
+    setHang({ role: destPick.role, npcId: npc.id, name: npc.name, gender: npc.gender, dest }); setDestPick(null); track('hangout_destination', { setting: dest })
     const p = district.places.find((x) => x.id === dest)
     if (p) r.walkTo(p.door.x, p.door.z)
     g.toast(`🚶 Walking to ${p?.name ?? 'there'} with ${npc.name}…`)
@@ -323,6 +334,7 @@ export default function World() {
 
   const endTask = (perf?: number, donation = 0) => {
     const r = rendRef.current; const t = task
+    if (taskLog.current) { taskLog.current.perf = perf; taskLog.current.abandoned = perf === undefined && t?.kind !== 'shop' }
     setTask(null)
     if (!t) return
     if (t.kind === 'penalty') { if (perf !== undefined) g.act(t.act, { perf }) }
@@ -356,7 +368,7 @@ export default function World() {
   // sleeping: fast-forward the clock, wake any time
   const startSleep = () => {
     const r = rendRef.current; if (!r) return
-    r.setSleeping(true); setSleep({ from: hour, elapsed: 0 }); audio.sfx('good')
+    r.setSleeping(true); setSleep({ from: hour, elapsed: 0 }); audio.sfx('good'); track('sleep_started', { appliances_on: (appl.tv ? 1 : 0) + (appl.fan ? 1 : 0) + (appl.light ? 1 : 0) })
   }
   useEffect(() => {
     if (!sleep) return
@@ -370,6 +382,7 @@ export default function World() {
     const raw = sleep.from + sleep.elapsed; const dayAdd = Math.floor(raw / 24); const h = raw % 24
     rendRef.current?.setSleeping(false)
     const on = (appl.tv ? 1 : 0) + (appl.fan ? 1 : 0) + (appl.light ? 1 : 0)
+    track('sleep_ended', { hours_slept: hrs, appliances_on: on })
     g.act('rest', { hours: Math.max(0.5, hrs), appliancesOn: on })
     g.setHourTo(h, dayAdd)
     rendRef.current?.setHour(h)
@@ -446,11 +459,11 @@ export default function World() {
               </div>
             )}
           </button>
-          {!inside && <Minimap district={district} x={pos.x} z={pos.z} h={pos.h} onOpen={() => setMapOpen(true)} />}
+          {!inside && <Minimap district={district} x={pos.x} z={pos.z} h={pos.h} onOpen={() => { track('map_opened'); setMapOpen(true) }} />}
         </div>
         <div className="flex gap-2 mt-1.5 items-center">
           <span className="chip pointer-events-auto" style={{ background: '#1e1a30ee' }} aria-label="Date and time">📅 {MONTHS[month]} · {isNight(sleep ? sleep.from + sleep.elapsed : hour) ? '🌙' : '☀️'} {fmtClock(sleep ? (sleep.from + sleep.elapsed) % 24 : hour)}</span>
-          {!sleep && <button className="chip pointer-events-auto" style={{ background: '#1e1a30ee' }} onClick={() => { g.advance(2); g.toast('⏳ Two hours pass.') }} aria-label="Wait two hours">⏳ Wait</button>}
+          {!sleep && <button className="chip pointer-events-auto" style={{ background: '#1e1a30ee' }} onClick={() => { track('wait_used'); g.advance(2); g.toast('⏳ Two hours pass.') }} aria-label="Wait two hours">⏳ Wait</button>}
           <button className="chip pointer-events-auto ml-auto" style={{ background: '#1e1a30ee' }} onClick={() => setMenuOpen((v) => !v)} aria-label="More">☰</button>
         </div>
         {menuOpen && (
@@ -489,7 +502,7 @@ export default function World() {
         )}
       </div>
 
-      {mapOpen && <MapModal district={district} x={pos.x} z={pos.z} h={pos.h} hour={hour} life={life} sugPlace={sug?.place ?? null} onClose={() => setMapOpen(false)} onGo={(id) => { setMapOpen(false); g.goToPlace(id) }} />}
+      {mapOpen && <MapModal district={district} x={pos.x} z={pos.z} h={pos.h} hour={hour} life={life} sugPlace={sug?.place ?? null} onClose={() => setMapOpen(false)} onGo={(id) => { track('map_travel', { place: id }); setMapOpen(false); g.goToPlace(id) }} />}
 
       {/* proximity prompts */}
       {!modalOpen && !inside && !task && (nearNpc || nearPlace) && (

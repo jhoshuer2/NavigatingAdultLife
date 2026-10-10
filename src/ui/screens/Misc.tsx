@@ -9,6 +9,8 @@ import { DREAM_BY_ID } from '@content/dreams'
 import type { DreamId } from '@engine/core/types'
 import { nairaShort } from '../components'
 import { clearFlags, exportFlags, loadFlags } from '@platform/feedback'
+import { analyticsAvailable, forgetMe, shortDeviceCode } from '@platform/analytics'
+import { PrivacyDetails } from './Consent'
 
 function Page({ title, children, back = 'title' }: { title: string; children: React.ReactNode; back?: 'title' | 'play' }) {
   const go = useGame((s) => s.go)
@@ -88,9 +90,9 @@ export function History() {
 }
 
 export function Settings() {
-  const { meta, updateSettings, exportJson, importJson, toast, setUnlimited, life } = useGame()
+  const { meta, updateSettings, exportJson, importJson, toast, setUnlimited, life, setConsent } = useGame()
   const file = useRef<HTMLInputElement>(null)
-  const [consent, setConsent] = useState(meta.consentAnalytics)
+  const [showPrivacy, setShowPrivacy] = useState(false)
   const s = meta.settings
   const Toggle = ({ label, on, onChange }: { label: string; on: boolean; onChange: (v: boolean) => void }) => (
     <button className="card-btn flex items-center justify-between w-full" onClick={() => onChange(!on)} role="switch" aria-checked={on}><span className="font-bold">{label}</span><span className="chip" style={{ background: on ? '#1d5a3a' : '#ffffff14' }}>{on ? 'On' : 'Off'}</span></button>
@@ -109,7 +111,10 @@ export function Settings() {
  <Toggle label="Simple menu mode (lighter on older phones)" on={s.lite} onChange={(v) => updateSettings({ lite: v })} />
         <Toggle label="Larger text" on={s.bigText} onChange={(v) => updateSettings({ bigText: v })} />
         <Toggle label="Dash assist mode (slower, forgiving)" on={s.assist} onChange={(v) => updateSettings({ assist: v })} />
-        <Toggle label="Anonymous analytics (optional)" on={consent} onChange={(v) => { setConsent(v); useGame.setState({ meta: { ...meta, consentAnalytics: v } }) }} />
+        <Toggle label="Share anonymous play statistics (optional)" on={meta.consentAnalytics} onChange={setConsent} />
+        <button className="text-xs underline opacity-70 text-left" onClick={() => setShowPrivacy(!showPrivacy)}>{showPrivacy ? 'Hide' : 'What is collected?'}</button>
+        {showPrivacy && <div className="card p-3"><PrivacyDetails />{analyticsAvailable() && <div className="text-xs mt-2 opacity-70">Your device code: <b>{shortDeviceCode()}</b></div>}</div>}
+        {analyticsAvailable() && <Btn variant="danger" onClick={async () => { if (!confirm('Delete the play statistics stored about this device?')) return; const ok = await forgetMe(); toast(ok ? 'Your statistics were deleted' : 'Could not reach the server. Try again later.') }}>🗑 Delete my statistics</Btn>}
       </div>
       <h2 className="font-display text-2xl text-danfo mt-5">Play time</h2>
       <div className="card p-3 mt-1 text-sm">Time left: <b>{fmtTime(remainingSec(meta))}</b>. Free time refills daily (up to 2 hours banked).

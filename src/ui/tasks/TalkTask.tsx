@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { WorldRenderer } from '../../world/WorldRenderer'
 import { buildConversation, groupOf, scoreOf, type Exchange, type Setting, type Tone } from '@content/dialogue'
 import { audio } from '@platform/audio'
+import { track } from '@platform/analytics'
 
 const TONE: Record<Tone, string> = { warm: '💚 Warm', funny: '😂 Funny', meh: '😐 Flat' }
 
@@ -33,7 +34,7 @@ export function TalkTask({ r, partner, role, setting, rounds, title, onDone }: {
 
   const choose = (k: number) => {
     const ex = convo[i], o = ex.options[k]
-    audio.sfx(o.tone === 'meh' ? 'bad' : 'good')
+    audio.sfx(o.tone === 'meh' ? 'bad' : 'good'); track('conversation_choice', { tone: o.tone, role, setting })
     scores.current.push(scoreOf(o.tone, g)); setLast({ tone: o.tone }); setPhase('wait')
     r.say('player', o.text, 4)
     setTimeout(() => { if (alive.current) r.say(partner.id, o.reply, 4) }, 1600)

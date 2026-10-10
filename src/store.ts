@@ -6,7 +6,7 @@ import { defaultMeta, mergeEnding, UNLOCKABLES, type MetaProfile, type Settings 
 import { loadLife, loadMeta, saveLife, saveMeta, importSave, exportSave } from '@platform/storage'
 import { addPaid, consume, refreshTokens, remainingSec } from '@platform/tokens'
 import { audio } from '@platform/audio'
-import { track } from '@platform/analytics'
+import { track, setLifeId, restoreLifeId, newLifeId, setAnalyticsConsent, setAnalyticsContext } from '@platform/analytics'
 import { ACTIVITY_HOURS } from './world/time'
 
 export type Screen = 'title' | 'create' | 'play' | 'ending' | 'achievements' | 'unlocks' | 'settings' | 'dash' | 'history'
@@ -78,6 +78,7 @@ interface Store {
   importJson: (t: string) => boolean
   setLife: (s: GameState) => void
   finishTutorial: () => void
+  setConsent: (granted: boolean) => void
 }
 
 let toastId = 1
@@ -91,9 +92,17 @@ export const useGame = create<Store>((set, get) => {
     const q = prev ? Object.entries(life.quests).filter(([id, s]) => s.done && !prev.quests[id]?.done) : []
     for (const [id] of q) get().toast(`✅ Quest complete: ${id.replace('q_', '').replace(/_/g, ' ')}`, 'info')
     set({ life })
+    if (prev) {
+      for (const a of life.achievements) if (!prev.achievements.includes(a)) track('achievement_unlocked', { id: a })
+      for (const [id] of q) track('quest_completed', { id })
+      if (life.character.age > prev.character.age && life.phase !== 'ended') track('year_ended', { age: life.character.age, life_index: get().meta.stats.lives })
+      if (life.activeEvent && life.activeEvent.eventId !== prev.activeEvent?.eventId) track('story_event_shown', { event_id: life.activeEvent.eventId })
+    }
     if (life.phase === 'ended' && !get().endingRecorded) {
       const meta = mergeEnding(get().meta, life)
-      track(meta.consentAnalytics, 'life_ended', life.ending?.id)
+      const st = life.character.stats
+      track('life_ended', { age: life.character.age, life_index: meta.stats.lives, ending_id: life.ending?.id ?? null, years_lived: life.character.age, final_stats: `cash:${Math.round(st.cash)} health:${Math.round(st.health)} happiness:${Math.round(st.happiness)}` })
+      setLifeId(null)
       saveMeta(meta); saveLife(null)
       set({ meta, endingRecorded: true, screen: 'ending' })
     }
@@ -114,8 +123,11 @@ export const useGame = create<Store>((set, get) => {
     openPlace: (id) => set({ placeId: id, sheet: 'place' }),
     openNpc: (id) => set({ npcId: id, sheet: 'npc' }),
     goToPlace: (id) => set((st) => ({ walkReq: { place: id, n: (st.walkReq?.n ?? 0) + 1 }, sheet: null })),
-    go: (screen) => { set({ screen, sheet: null }) },
-    openSheet: (sheet) => set({ sheet }),
+    go: (screen) => {
+      set({ screen, sheet: null }); setAnalyticsContext({ screen })
+      if (screen === 'title') track('title_viewed'); else if (screen === 'create') track('create_started')
+    },
+    openSheet: (sheet) => { set({ sheet }); if (sheet === 'paywall') track('paywall_seen'); else if (sheet === 'shop') track('shop_viewed') },
     toast: (text, kind = 'info') => {
       const id = toastId++
       set((s) => ({ toasts: [...s.toasts, { id, text, kind }] }))
@@ -127,17 +139,21 @@ export const useGame = create<Store>((set, get) => {
       saveMeta(meta)
       audio.configure(meta.settings)
       document.documentElement.classList.toggle('big-text', meta.settings.bigText)
+      setAnalyticsConsent(meta.consentAnalytics); restoreLifeId()
       const life = loadLife(); set({ meta, life, hour: life?.clock?.hour ?? 8, day: life?.clock?.day ?? 0 })
     },
     newLife: (cfg) => {
       const seed = (Math.random() * 2 ** 32) >>> 0
       const life = createNewLife(cfg, seed)
       saveLife(life)
-      track(get().meta.consentAnalytics, 'life_started')
+      setLifeId(newLifeId())
+      const cfgTrack = { archetype: cfg.archetypeId, gender: cfg.gender, district: cfg.homeId }
+      track('create_completed', cfgTrack)
+      track('life_started', { life_index: get().meta.stats.lives + 1 })
       set({ life, endingRecorded: false, screen: 'play', sheet: null, quizFeedback: null, hour: 8, day: 0 })
     },
     continueLife: () => { if (get().life) set({ screen: 'play' }) },
-    act: (id, args) => { const life = get().life; if (!life) return; const r = doActivity(life, id, args); if (r.ok) { commit(r.state); set({ sheet: null }); if (id !== 'rest' && ACTIVITY_HOURS[id]) get().advance(ACTIVITY_HOURS[id]) } },
+    act: (id, args) => { const life = get().life; if (!life) return; const r = doActivity(life, id, args); if (r.ok) { track(id === 'shop' ? 'item_bought' : 'activity_done', id === 'shop' ? { item_id: String(args?.itemId ?? '') } : { activity_id: id, energy_cost: Math.round(life.character.stats.energy - r.state.character.stats.energy), cash_delta: Math.round(r.state.character.stats.cash - life.character.stats.cash) }); commit(r.state); set({ sheet: null }); if (id !== 'rest' && ACTIVITY_HOURS[id]) get().advance(ACTIVITY_HOURS[id]) } },
     answer: (i) => {
       const life = get().life; if (!life) return
       const q = life.quiz?.questions[life.quiz.index]
@@ -147,7 +163,7 @@ export const useGame = create<Store>((set, get) => {
     },
     clearQuiz: () => set({ quizFeedback: null }),
     endActions: () => { const life = get().life; if (life) { commit(finishActions(life)) } },
-    choose: (id) => { const life = get().life; if (life) commit(chooseOption(life, id)) },
+    choose: (id) => { const life = get().life; if (life) { track('story_choice_made', { event_id: life.activeEvent?.eventId ?? null, choice_id: id }); commit(chooseOption(life, id)) } },
     proceed: () => { const life = get().life; if (life) commit(continueAfterEvent(life)) },
     nextYear: () => { const life = get().life; if (life) { commit(advanceYear(life)); set({ hour: 7 }) } },
     lifestyle: (l) => { const life = get().life; if (life) { commit(setLifestyle(life, l)); set({ sheet: null }) } },
@@ -155,19 +171,22 @@ export const useGame = create<Store>((set, get) => {
       const life = get().life; if (!life) return
       const mode: 'foot' | 'danfo' = life.character.job && life.character.age >= 22 && life.character.job.trackId !== 'creative' ? 'danfo' : 'foot'
       const r = doActivity(life, 'dash')
-      if (r.ok) { commit(r.state); set({ dashMode: mode, screen: 'dash', lastDash: null }) }
+      if (r.ok) { commit(r.state); track('dash_started', { mode }); setAnalyticsContext({ screen: 'dash' }); set({ dashMode: mode, screen: 'dash', lastDash: null }) }
     },
     finishDash: (res) => {
       const life = get().life; if (!life) return
       const r = applyDashResult(life, res)
       commit(r.state)
+      track('dash_finished', { mode: res.mode, distance: Math.round(res.distance), coins: res.coins })
+      setAnalyticsContext({ screen: 'play' })
       set({ lastDash: { result: res, cash: r.cash, capped: r.capped }, screen: 'play' })
     },
     abandonLife: () => { saveLife(null); set({ life: null, screen: 'title' }) },
-    updateSettings: (p) => { const m = get().meta; const settings = { ...m.settings, ...p }; setMeta({ ...m, settings }); document.documentElement.classList.toggle('big-text', settings.bigText) },
+    updateSettings: (p) => { const m = get().meta; const settings = { ...m.settings, ...p }; if (p.lite !== undefined && p.lite !== m.settings.lite) track('menu_mode_switched', { on: p.lite }); setMeta({ ...m, settings }); document.documentElement.classList.toggle('big-text', settings.bigText) },
     buyUnlock: (id) => {
       const m = get().meta; const u = UNLOCKABLES.find((x) => x.id === id)
       if (!u || m.unlocks.includes(id) || m.cowries < u.cost) return false
+      track('unlock_bought', { id })
       setMeta({ ...m, cowries: m.cowries - u.cost, unlocks: [...m.unlocks, id] }); return true
     },
     tick: (sec) => {
@@ -175,13 +194,14 @@ export const useGame = create<Store>((set, get) => {
       if (m.tokens.unlimited) return
       const next = consume(m, sec)
       saveMeta(next); set({ meta: next })
-      if (remainingSec(next) <= 0 && get().sheet !== 'paywall') set({ sheet: 'paywall' })
+      if (remainingSec(next) <= 0 && get().sheet !== 'paywall') { track('paywall_seen'); set({ sheet: 'paywall' }) }
     },
-    topUpTest: (minutes) => { setMeta(addPaid(get().meta, minutes)); set({ sheet: null }) },
+    topUpTest: (minutes) => { track('topup_completed', { item_id: `p${minutes}`, minutes, amount: 0, currency: 'MOCK' }); setMeta(addPaid(get().meta, minutes)); set({ sheet: null }) },
     setUnlimited: (v) => { const m = get().meta; setMeta({ ...m, tokens: { ...m.tokens, unlimited: v } }) },
     exportJson: () => exportSave(get().life, get().meta),
     importJson: (t) => { const r = importSave(t); if (!r) return false; setMeta(r.meta); saveLife(r.life); set({ life: r.life }); return true },
     setLife: (life) => { saveLife(life); set({ life }) },
-    finishTutorial: () => setMeta({ ...get().meta, seenTutorial: true }),
+    finishTutorial: () => { if (!get().meta.seenTutorial) track('tutorial_completed'); setMeta({ ...get().meta, seenTutorial: true }) },
+    setConsent: (granted) => { setMeta({ ...get().meta, consentAnalytics: granted, consentAsked: true }); setAnalyticsConsent(granted) },
   }
 })

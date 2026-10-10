@@ -6,6 +6,13 @@ _Last updated alongside the M1 build. Source of truth for requirements: `docs/PR
 
 Playtest feedback was that the menu-driven hub did not feel like living a life. The explorable 3D district originally planned for M2 (M2-F01, F21, F23 in the PRD) was built early: walk with joystick / WASD / tap-to-walk with pathfinding, 9 places with action panels, persistent NPCs you can talk to, ambient pedestrians with speech bubbles, minimap, "next thing to do" guidance with auto-walk, month and season (Harmattan, rains, Detty December) shown in the world, and a Menu mode fallback. Layout and pathfinding are unit tested (every place reachable in all four districts). Then added: a world clock with day/night lighting (dawn, sunset, lit windows and street lamps), opening hours (places lock at night, with a closed label), and enterable interiors (home, classroom, buka, place of worship, workplace, job centre) with furniture, people and hotspots. At home: "Rest & recover" walks you to bed; in the evening the light, TV and fan are on and can be switched off; sleep fast-forwards the clock with a Wake up button available any time (rest benefit scales with hours slept, appliances left on cost cash and spoil rest); plus meals, brushing teeth, TV, desk study. "End the year" is now a separate action. Then added playable in-world tasks: study in a classroom (teacher writes the question on the board, classmates react, 25s timer) or alone in the library corner or at your home desk; a swipe-to-shoot penalty shootout on the pitch (score feeds the play/exercise bonus); talking and hanging out as real scenes where both characters face each other and speak in bubbles (choose warm, funny or flat replies, which feed the bond), and friend hangouts that walk together to the pitch or the buka first. Also playable now: market hustle (serve and haggle with customers), household chores (walk the home tidying spots against a timer) and overtime (sort documents into trays). Worship is playable too (clap in time to a song, a short message with a question, an optional offering). Shopping is playable (walk the market aisles, stop at goods, buy or haggle). Exercise is a jog round the pitch (checkpoints, sprint stamina, dodging goats)., Focus Days and real-device performance measurement.
 
+## Update: analytics and admin console (docs/PRD-admin-analytics.md, Phases A to C)
+
+- **Game side (opt-in only):** `src/platform/analytics.ts` is now a consent-gated telemetry SDK (batching, offline queue, `sendBeacon`, 30 s heartbeat of active time). A first-run privacy screen asks for consent (off until the player agrees); Settings can withdraw it, show what is collected and the device code, and "Delete my statistics". Tracking calls are in `store.ts` and `World.tsx`; gameplay is unchanged. With no `VITE_COLLECTOR_URL` the game sends nothing and does not show the consent screen. Shared event schema: `shared/events.ts`.
+- **Admin project:** `admin/` (own package and Vercel project): collector (`/api/collect`, `/api/forget`), Postgres schema, retention job, admin API with email + password + authenticator-app login, four roles, audit log, and the console pages Overview, Players (list and detail), Geography, Engagement, Features, Settings. See `admin/README.md` for running locally, deploying and the deviations from the PRD.
+- **Phase C added:** Funnels, Content, Quality and Live pages, plus a weekly summary preview. The game now also reports conversation tone, content flags, slow-device and no-3D events, and page load time (all consent-gated).
+- **Not yet:** the weekly summary is not emailed (needs an email service account); revenue (needs payments). Needs your accounts before it can run live: a Postgres database and a second Vercel project.
+
 ## Feature checklist (PRD section 9, Milestone 1)
 
 | ID | Feature | Status |
@@ -33,7 +40,7 @@ Playtest feedback was that the menu-driven hub did not feel like living a life. 
 | M1-F20 | Audio | Done (synthesised placeholders) |
 | M1-F21 | Tutorial | Done (first-run modal) |
 | M1-F22 | Accessibility baseline | Partly: labels, keyboard on forms, reduced motion, large text; no full audit yet |
-| M1-F23 | Consent-gated analytics | Done (local counters only) |
+| M1-F23 | Consent-gated analytics | Done (opt-in SDK plus collector; see the update above) |
 | M1-F24 | PWA | Done (installable, precached) |
 | M1-F25 | Pop-quiz study (SHOULD) | Done (89 written questions plus generated maths; answer order shuffled) |
 | M1-F26 | Playtime Tokens (client side, mock top-up) | Done |
