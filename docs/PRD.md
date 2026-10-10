@@ -17,7 +17,7 @@ This PRD is written to be consumed by a human team *and* by AI coding agents. Co
 - Numbers in this document (salaries, costs, probabilities) are **starting values for tuning**, not final balance. They live in data files (Section 14), never hard-coded.
 - Section 19 lists **assumptions** I made and Section 20 lists **open questions** that need a human decision.
 
-> **Note on the reference sites.** The three examples (danfo.horpey.dev, lagoslife.app, campuslife.cubbes.app) could not be opened from the sandbox (DNS lookup failed). Screen recordings of **danfo.horpey.dev** (drove Section 7.1) and **campuslife.cubbes.app** (drove Section 5.6 and the M2 world scope) were later supplied and reviewed. **lagoslife.app has not been reviewed.** The rest is derived from the brief and the two recordings. Send a recording or screenshots of lagoslife.app and the PRD will be reconciled against it (see Q1).
+> **Note on the reference sites.** The three examples (danfo.horpey.dev, lagoslife.app, campuslife.cubbes.app) could not be opened from the sandbox (DNS lookup failed). Screen recordings of **danfo.horpey.dev** (drove Section 7.1), **campuslife.cubbes.app** (drove Section 5.6 and the M2 world scope) and **lagoslife.app** (drove Section 5.7 and character creation) were later supplied and reviewed. The rest is derived from the brief and the two recordings. Treat those three as inspiration only; no assets, names or copy are reused.
 
 ---
 
@@ -186,13 +186,15 @@ Each trait has one clear upside and one downside, both expressed as data modifie
 
 ## 4. Character creation
 
-### 4.1 Flow (≤ 90 seconds, skippable with "Randomise")
-1. **Name & identity:** first name (suggested pool by background, free text allowed with profanity filter), nickname (optional), gender.
-2. **Heritage/Background:** Yoruba · Igbo · Hausa · "Naija Mix" (M1). Affects name pools, food/event flavour, traditional-wear options, family events. M3 adds Edo, Ijaw, Efik/Ibibio, Tiv, Kanuri, Fulani, etc.
-3. **Family situation:** Struggling / Lower-middle / Middle / Comfortable (sets starting Cash, school type, home district, parental support events). Easier family = lower achievement multipliers? **No** — all achievements must be earnable from any start; hard starts get extra Cowries on a good ending (*underdog bonus*).
-4. **Look:** skin tone (10 curated swatches), face shape (4), hair (afro, low cut, cornrows, braids, locs, twists, shaved, bald; head-wrap/gele/hijab/cap options for outfits), facial hair (M), outfit sets (school uniform auto-applied in school; casual; traditional: buba & sokoto, agbada, iro & buba, boubou, kaftan, george, ankara), accessories.
-5. **Traits:** pick 2 of 10.
-6. **Confirm & start** — shows a "your story begins" intro card.
+### 4.1 Flow (≤ 120 seconds, skippable with "Randomise / Spin")
+Order revised after the Lagos Life reference (5.7). One decision per screen, with a progress indicator and Back.
+1. **Look:** gender, hairstyle (afro, low cut, cornrows, braids, twists, locs, bun, ponytail, shaved, bald; gele/hijab/cap as outfit options), face shape (4), facial hair (M), skin tone (10 curated swatches), hair colour, outfit type (casual, hoodie, office, chill, owambe, site work, traditional: buba & sokoto, agbada, iro & buba, boubou, kaftan), **fabric** (plain, Ankara, Adire, Aso-oke), top/bottom colours. Live preview with **drag-to-rotate**. School uniform is applied automatically in school.
+2. **Personality:** pick **2 of 10+ traits** as cards with a witty name and a one-line perk (3.8).
+3. **Dream:** pick one big life goal with a measurable target (8.5). Changeable once, at age 18.
+4. **Birth Lottery:** a **reveal** of your starting circumstances as a named archetype with explicit perks and constraints (e.g., a small starting loan with weekly repayments but faster skill learning; a comfortable start with family expectations). Sets starting Cash, school type, parental support and debts. **One re-roll** per life; hard starts earn the underdog Cowries bonus, and every achievement stays earnable from any start. Per life vs per account: Q19.
+5. **Home:** choose a starting home in your city from 2–3 options tagged *Hard start / Balanced / Big spender* with start cash and rent; a higher tier is shown **locked** ("work your way here"). Lagos only in M1 (Q20).
+6. **Heritage & name:** Yoruba · Igbo · Hausa · "Naija Mix" (M1; M3 adds Edo, Ijaw, Efik/Ibibio, Tiv, Kanuri, Fulani, etc.) affecting name pools, food/event flavour and family events; first name (pool suggestions, free text with profanity filter), nickname (optional).
+7. **Confirm & start:** a "your story begins" intro card.
 
 ### 4.2 Gender
 - M1 options: **Male, Female, Non-binary / Prefer not to say** (Q5: confirm this inclusion and wording for the target audience and legal/app-store context). Pronouns used in generated text: he/she/they, stored on the character. All narrative strings use template tokens (`{they}`, `{their}`) via a pronoun helper — never hard-coded.
@@ -266,6 +268,31 @@ Observed in the recording (a third-person, low-poly 3D walk-around of a real Lag
 8. **Contextual shortcut buttons** change with the place (Main Gate vs Lecture Hall), and the HUD shows a **"12 online"** presence badge, which we do **not** adopt (no multiplayer in v1–v3, see Q17).
 9. **Humour through specificity.** Place blurbs, lecturer quirks and ambient lines are the most shareable content; budget writing time for them.
 
+### 5.7 Lessons from the Lagos Life reference (lagoslife.app)
+Observed in the recording (a multi-step creation flow, then an isometric 3D home with a bottom nav of Home · Buy · Map · Phone):
+
+| Observed | What we do with it |
+|---|---|
+| **Look step:** Woman/Man; hairstyles (Braids, Afro, Bun, Ponytail, Long, Locs, Low-cut, Gele, Classic); outfits (Casual, Hoodie, Office, Chill, **Owambe**, **Site work**); **fabric** (Plain, **Ankara**, **Adire**, **Aso-oke**); skin-tone, hair, top and bottom colour swatches; "Drag to spin" 3D preview | Adopt in 4.1: outfit type × fabric × colour, drag-to-rotate preview. Our fabrics list and outfit types follow suit; art is original |
+| **Personality step:** "Choose 2 traits" from cards (Hustler, Foodie, Owambe Spirit, Gym Rat, Smooth Talker, Lazy Bone, Clean Pikin, Night Crawler, Tech Bro/Sis, Musical…) each with a one-line perk | Matches our 2-of-10 traits (3.8). Adopt the **card format with a one-line perk and a witty name**; add Foodie, Owambe Spirit, Night Crawler, Musical to the trait pool |
+| **Dream step:** pick a big life goal (Oga at the Top, Lekki Landlord, Afrobeats Star, Everybody's Padi, Yaba Unicorn), each with a measurable target | Adopt as **Dreams** (new, 8.5): a chosen life goal with progress tracking that feeds quests, the ending and the Legacy Score. Our own names and targets |
+| **Birth lottery:** a reveal of your starting circumstances as a named archetype ("LAPO Baby! Self-made hits different"), with a starting loan, weekly repayment, perks (skill starts at 2, learn skills 25% faster) and trade-offs; "Drag to spin"; decided once per account | Adopt as **Birth Lottery** (4.1 step 3), replacing the plain family-tier picker: named archetypes with explicit perks and constraints, an excited reveal, and limited re-rolls. Per life vs per account is Q19 |
+| **Home step:** choose city (Abuja/Lagos/PH) and a home with start cash and **weekly rent** ("Single room · Kubwa, Hard start, start with ₦76,000, rent ₦2,800/wk" ; "Mini flat · Gwarinpa, Balanced" ; "Serviced apartment · Wuse 2" locked: *work your way here*) | Adopt a **Home pick** with difficulty tags (Hard start / Balanced / Big spender), start cash and rent, and **locked aspirational tiers** shown but unavailable ("work your way here"). Starting city stays Lagos in M1 (Q20) |
+| **Isometric 3D home** (cutaway room), avatar with small need bars, **bottom nav: Home · Buy · Map · Phone** | Adopt as **My Space** (M2-F25) and the M2 navigation shell (Home · Buy · Map · Phone) |
+| **Buy mode / Catalogue:** category tabs (Design, Sleep, Kitchen, Bath, Comfort, Fun, Skills, Light), priced items (plastic chair ₦500, standing fan ₦2,200, velvet sofa, dining table, bean bag), place furniture in the room; wish chips ("Buy something for the house +2 …") | Adopt for housing (M2-F08/F25): items have a price, a comfort/skill effect and a wish/need tie-in; furniture placement on a grid |
+| **Top bar:** "Sat 10 · 10:44 AM", mood chip (*Happy*), wallet (₦1,090,000) with **+** button, **"74k online"** | Day/time + mood chip in Focus Days; wallet in HUD. The **+** (top-up) and "online" presence are **not adopted** (Q8, Q17) |
+| **Quest chips:** "Eat something: tap the cooker", "Daily gem hunt: find gems, ₦3,000" | Contextual starter chips ("Eat something", "Daily hunt") and a **daily collectible hunt** in the 3D world paying coins (M2) |
+| **Ledger toasts with personality:** "Rent paid: ₦6,000. Baba Landlord is smiling." | Adopt: every automatic money event gets a **flavoured one-line toast** (rent, black tax, salary, POS charges) |
+| **Owambe Invitation event** (3 choices with cost and status): *Buy aso-ebi & go (₦1,500)* · *Go & spray money BIG (₦5,000, "legendary status")* · *Not today (stay home)* | Matches our event model exactly; added as a worked example in 6.2 |
+| **Live announcement cards** from the team ("The Election for CBN Governor is now open! You can now go to the polls…") and a gift/compensation toast | Live-ops announcement card type (M3-F14). Civic/election events are allowed only as **fictionalised satire** (see Q11 and Section 16) |
+| **Phone** menu | **Phone** (M2): contacts, messages, wallet/bank (balance, loans, ajo), jobs board, map |
+
+**Design decisions taken from this reference**
+1. **Creation becomes a story, not a form.** Order: Look → Personality (2 traits) → **Dream** → **Birth Lottery** → **Home** → Name/Confirm. Each step is one screen; a Randomise/Spin shortcut skips to Start (see 4.1).
+2. **Dreams give runs a purpose** and make endings interpretable ("You chased *Big Oga* and caught *Everybody's Padi*").
+3. **Honest constraints as flavour.** Perks and trade-offs are stated in one witty line each, not hidden numbers.
+4. **Own names, own wording.** Dream names, archetype names and copy are original so we inspire without cloning.
+
 ---
 
 ## 6. Events and branching narrative
@@ -311,6 +338,36 @@ choices:
     label: "Beg Mr Sule next door for generator light"
     requires: { reputationAtLeast: 30 }
     effects: [{ reputation: +1 }, { relationship: { npc: "neighbour", delta: +5 } }, { knowledge: +2 }]
+```
+
+**Second worked example (inspired by an owambe invitation in the Lagos Life reference; original wording):**
+
+```yaml
+id: evt_owambe_invite
+title: "Owambe invitation"
+stage: [youngAdult, adult]
+weight: 7
+cooldownYears: 2
+conditions: { all: [ { reputationAtLeast: 20 } ] }
+text: |
+  {friend.name}'s cousin is getting married on Saturday. Aso-ebi is already in the family WhatsApp group.
+  Rice, suya, live band, and an MC who will not let you sit down.
+choices:
+  - id: buy_asoebi_go
+    label: "Buy the aso-ebi and go"
+    cost: { cash: 1500 }
+    riskLabel: safe
+    effects: [{ happiness: +4 }, { reputation: +2 }, { relationship: { npc: "friend", delta: +6 } }]
+  - id: spray_big
+    label: "Go and spray money like a boss"
+    cost: { cash: 5000 }
+    riskLabel: gamble
+    outcomes:
+      success: { effects: [{ reputation: +8 }, { flag: { set: "legendarySprayer" } }], text: "The MC calls your name three times. Legendary." }
+      fail:    { effects: [{ reputation: -1 }, { happiness: -2 }], text: "You spray everything and still end up behind the speakers." }
+  - id: not_today
+    label: "Not today, sapa is real"
+    effects: [{ energy: +8 }, { relationship: { npc: "friend", delta: -2 } }]
 ```
 
 ### 6.3 Content volume targets
@@ -412,6 +469,22 @@ choices:
 - **Storage:** inventory with slots (M2); in M1 items are *flags with effects* (no inventory UI) — a simple "Owned" list.
 - **Unlockables with Cowries:** extra clothing, hairstyles, runner skins, starting perks (+₦ start money, +1 Energy cap for first 5 years, "Big Family" with a stronger safety net), new backgrounds (M2+) and cities (M3).
 
+### 8.5 Dreams (chosen at creation)
+A **Dream** is a measurable long-term goal that shapes quests, event odds and the ending. Progress is shown on the profile and in the obituary; achieving it adds to the Legacy Score and grants Cowries. Names and targets below are our own (inspired by the Lagos Life reference):
+
+| Dream | Target (tunable) | Typical path |
+|---|---|---|
+| **Big Oga** | Reach career level 4 in any track | Education + steady promotions |
+| **Property Owner** | Own a home and reach net worth ₦X | Saving, business, investments (M2+) |
+| **Entertainment Star** | Creative track level 4 or Creativity skill 10 | Music/Nollywood/content path |
+| **Everybody's Padi** | Hold 4 relationships ≥ 80 closeness | Social investment, hosting, helping |
+| **Unicorn Founder** | Build a business valued above ₦X or get a startup funded | Tech/startup path (M2 businesses) |
+| **Scholar** | Highest degree + Knowledge ≥ 90 | Education path |
+| **Family Pillar** | Support all dependants through school and see grandchildren (M3) | Family path |
+| **Japa Dreamer** (M3) | Emigrate and sustain a household abroad | Visa/relocation branch |
+
+M1 ships the first five; Dreams can be changed once at age 18. All five must be completable by bots in the sim harness to avoid dead-end goals.
+
 ### 8.4 Legacy Score (end of life)
 `legacy = wealthTier*20 + happinessAvg*0.3 + knowledge*0.2 + reputation*0.3 + relationshipsScore + achievementsThisLife*5 + underdogBonus`. Converted to Cowries (`floor(legacy / 10)`). Tunable in config.
 
@@ -440,7 +513,7 @@ Part of M1 but listed first so agents do it in order.
 | ID | Feature | Details |
 |---|---|---|
 | M1-F01 | Title screen & main menu | New Life, Continue, Achievements, Settings, About/Credits |
-| M1-F02 | Character creation | Per Section 4: name, gender, heritage (Yoruba/Igbo/Hausa/Naija Mix), family tier, skin tone, hair, outfit (6 outfits), 2 of 10 traits, Randomise button |
+| M1-F02 | Character creation | Per Section 4.1: Look (incl. fabric and drag-to-rotate preview), 2 of 10 traits, Dream (5 goals), Birth Lottery (6 archetypes, 1 re-roll), Home pick, heritage/name, Randomise/Spin |
 | M1-F03 | Core engine | Yearly loop, stats, Energy, seeded RNG, state reducer, undo-free (no save-scumming: autosave each year; SHOULD allow "Resume from last year" only) |
 | M1-F04 | HUD | Name/age/stage, 5 stats with deltas, Energy bar, year counter, quick access to Quests/Achievements/Settings |
 | M1-F05 | Activity system | ≥ 12 activities with stage gating (study, play, chores, work, hustle, socialise, rest, exercise, worship/community, mini-game, shop, family time) |
@@ -471,7 +544,7 @@ Part of M1 but listed first so agents do it in order.
 1. Foundations (`M1-F00`s). 2. Engine + stats + yearly loop with a **text-only debug UI** (proves the sim) + automated bot test. 3. Character creation + HUD + scene cards. 4. Education + careers + money. 5. Event engine + first 30 events. 6. Relationships + family obligation. 7. Go-Slow Dash (standalone page first, then integrated). 8. Quests, achievements, Cowries. 9. Ending + legacy + share card. 10. Content to 90 events, tuning via bot simulations. 11. Audio, tutorial, PWA, accessibility pass. 12. Playtest and fix.
 
 **M1 Acceptance criteria**
-- **AC-M1-01** A new player can create a character and reach Year 1 in ≤ 90 s with ≤ 12 taps/clicks (excluding typing).
+- **AC-M1-01** A new player can create a character and reach Year 1 in ≤ 120 s with ≤ 20 taps/clicks (excluding typing); the Randomise/Spin path takes ≤ 3 taps.
 - **AC-M1-02** A complete life from age 6 to an ending can be played without a crash or soft-lock; the sim never enters a state with no available actions (End Year is always available).
 - **AC-M1-03** All five stats update correctly; clamping verified; every change appears in the year summary with a reason.
 - **AC-M1-04** Choosing different traits/family tiers produces measurably different outcomes (bot simulation shows distinct median final Cash and Happiness per tier, see tests).
@@ -510,8 +583,10 @@ Part of M1 but listed first so agents do it in order.
 | M2-F05 | Skills system | Hustle, Tech, Creativity, Charm, Fitness (0–10) with activity XP and gates |
 | M2-F06 | Businesses | Start/run 6 business types (provision store, POS kiosk, food stall, tailoring, tech freelance, ride-hailing/transport): capital, staff (up to 3), yearly P&L, risk events, closure/sale |
 | M2-F07 | Money tools | Savings account, loans (bank/loan-app with predatory-interest trap), **ajo/esusu** rotating savings with NPCs (trust/Reputation mechanics), black-tax scaling |
-| M2-F08 | Housing | Rent / own; landlord events; upgrade generator → inverter/solar; housing tier affects Energy/Happiness |
+| M2-F08 | Housing | Rent (**weekly rent tick shown in Focus Days**, yearly in the macro loop) / own; landlord events with flavoured toasts; generator → inverter/solar upgrade; housing tier affects Energy/Happiness; locked aspirational tiers |
 | M2-F09 | Inventory & shop | Slot-based inventory, shops in Markets, item effects, gifts to NPCs |
+| M2-F25 | My Space (home builder) | Isometric cutaway home; Buy mode with catalogue tabs (Sleep, Kitchen, Bath, Comfort, Fun, Skills, Light, Design); grid placement; items grant comfort/skill effects and satisfy wishes; shareable room screenshot |
+| M2-F26 | Phone & navigation shell | Bottom nav Home · Buy · Map · Phone; Phone = contacts, messages, wallet/bank (balance, loans, ajo), jobs board, map |
 | M2-F10 | Quests v2 | Branching quest chains with 30 quests; quest journal with hints; NPC-given quests |
 | M2-F11 | NYSC chain | Post-grad service year: camp, posting lottery, CDS group, side-hustle options |
 | M2-F12 | Additional career tracks | +Healthcare, +Agriculture/Agribusiness; job-hopping, side-gigs, remote work |
@@ -1010,7 +1085,7 @@ Warm, witty, a little teasing, never cruel; short paragraphs; second person ("yo
 
 | # | Question | Why it matters | Default if unanswered |
 |---|---|---|---|
-| Q1 | What do you like about lagoslife.app (look, tone, systems)? Only the danfo.horpey.dev and campuslife.cubbes.app recordings have been reviewed. | Aligns visual/system direction | Use this PRD as written |
+| Q1 | **Resolved:** all three references have been reviewed (Sections 5.6, 5.7, 7.1). | — | — |
 | Q2 | Target platform priority: phone-first PWA, or desktop-first? | Layout and input choices | Phone-first |
 | Q3 | Target age rating / maturity (PG-13 vs. more edgy BitLife-style)? | Event content scope | PG-13 |
 | Q4 | Final name, branding, and domain? | Share cards, store/PWA metadata | "Navigating Adult Life" |
@@ -1027,6 +1102,8 @@ Warm, witty, a little teasing, never cruel; short paragraphs; second person ("yo
 | Q15 | Bride price/traditional marriage customs: depict explicitly, abstractly, or skip? | Sensitivity and reviewer approach | Abstract with reviewer-approved choices |
 | Q17 | The campus reference shows a "12 online" presence badge and Cubbes account sign-in (multiplayer/social layer). Do we want any ambient presence, friends or shared leaderboards beyond M3's leaderboards? | Scope, backend, moderation cost | No; single-player, leaderboards only (M3) |
 | Q18 | **Resolved (owner):** content must relate to real Nigerian life, so we use real Nigerian institution, place, road and landmark names. Guardrails to confirm with legal review: names as setting only (no logos, trademarks, or implied endorsement), original art, fictional people (incl. lecturers/staff), no defamatory or real-person satire, jokes target situations not institutions. | Authenticity vs legal risk | Real names with guardrails |
+| Q19 | Birth Lottery: decided once per **account** (as in the reference) or fresh **per life**? | Replay variety vs. fairness | Per life, with one re-roll and an underdog Cowries bonus |
+| Q20 | Starting city selection: Lagos only in M1, or let players pick Abuja/Port Harcourt as the reference does? | Content volume per city | Lagos only in M1, more cities via City Packs in M3 |
 | Q16 | **Resolved (owner):** the game is about navigating life, so runner modes are **contextual and combined** (on foot where the story is on foot, driving where it is a commute or job). Both ship in M1. 3D remains the plan (as in the references) with the Canvas 2D fallback if the T18 spike fails. | Largest M1 schedule risk | Both modes in M1, sequenced F12a → F12b |
 
 ---
