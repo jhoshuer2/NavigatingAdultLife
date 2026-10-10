@@ -348,9 +348,10 @@ choices:
 | Result screen: **"WAHALA!"** headline, big score, "New best!", stat ticket (coins, km, passengers, close calls), Go Again CTA | Same flow with our own copy ("Wahala dey! / Oga, you try!") and a *Go Again* primary button |
 | Dense Lagos set dressing (BRT lane, flyovers, kiosks, billboards, umbrellas), warm dusk palette, motion blur at speed | Procedural low-poly set dressing, warm palette, speed lines |
 
-**Game modes (one engine, two "avatars" so it fits the life sim and the brief's running/jumping)**
+**Game modes (one engine, two "avatars"). The mode is chosen by life context, not from a menu; both ship in M1 (Q16).**
+- **Context mapping:** school run, late for class, chasing the bus, escaping a chase, market dash, exam-day sprint → **On Foot**. Commuting to work, danfo conductor/driver hustle, delivery/ride-hailing job, going to an interview or owambe across town → **Danfo** (or a vehicle skin: okada, car, BRT). Events and activities declare `miniGame: { id: 'go-slow-dash', mode: 'foot' | 'danfo', route }`, so the story decides which version appears.
 - **On Foot (Child/Teen/early Young Adult):** your character runs the lanes — **swipe/arrow left-right to change lane, up = jump, down = slide**; dodge potholes, goats, wheelbarrows, okada, puddles; chase the school bus / beat the bell / catch the danfo. Coins (₦) and power-ups on the path.
-- **Danfo (Adult, requires "Conductor/Driver" hustle or owning a bus in M2):** drive the danfo — **lane change, brake, horn**; load/drop passengers at stops for fares; avoid traffic, okada, potholes, and the occasional LASTMA-style checkpoint (fictionalised). Jump is replaced by a "hop" power-up (Super Hop).
+- **Danfo (any stage where the story puts you on the road: commute, conductor/driver hustle, delivery job; owning a bus in M2):** drive the danfo — **lane change, brake, horn**; load/drop passengers at stops for fares; avoid traffic, okada, potholes, and the occasional LASTMA-style checkpoint (fictionalised). Jump is replaced by a "hop" power-up (Super Hop).
 - Both modes share the same lane/obstacle/coin/power-up/mission/route logic; only the player controller and obstacle sets differ.
 
 **Core mechanics (both modes)**
@@ -449,7 +450,7 @@ Part of M1 but listed first so agents do it in order.
 | M1-F09 | Money | Yearly settlement, living cost, lifestyle toggle, debt flag, family-obligation requests, simple savings |
 | M1-F10 | Relationships (basic) | Parents, 1–2 siblings, 2 friends, 1 romantic partner at a time, marriage, children as count; meters, hang-out/call/gift, break-up/death events |
 | M1-F11 | Events | ≥ 90 events, 250 choices (Section 6.3), follow-ups, flags, templating, glossary tooltips for Nigerian terms |
-| M1-F12 | Mini-game: Go-Slow Dash | Per Section 7.1: 3-lane behind-view runner, On Foot mode (+ Danfo-driving mode if the T18 spike is on budget; otherwise M2), 2 Lagos routes, 3 power-ups, close calls, 3 missions/run, daily streak, result screen |
+| M1-F12 | Mini-game: Go-Slow Dash (both modes) | Per Section 7.1: 3-lane behind-view runner with **On Foot** and **Danfo-driving** modes, **chosen by life context** (see 7.1), 2 Lagos routes, 3 power-ups, close calls, 3 missions/run, daily streak, result screen. Built in two steps: F12a On Foot, then F12b Danfo mode on the same engine |
 | M1-F13 | Coins | Mini-game coins → Cash; coin pickup/HUD animation; per-year cap |
 | M1-F14 | Quests | 8 starter quests, tracker, rewards |
 | M1-F15 | Achievements | 25 achievements, MetaProfile persistence, toast + screen |
@@ -1026,7 +1027,7 @@ Warm, witty, a little teasing, never cruel; short paragraphs; second person ("yo
 | Q15 | Bride price/traditional marriage customs: depict explicitly, abstractly, or skip? | Sensitivity and reviewer approach | Abstract with reviewer-approved choices |
 | Q17 | The campus reference shows a "12 online" presence badge and Cubbes account sign-in (multiplayer/social layer). Do we want any ambient presence, friends or shared leaderboards beyond M3's leaderboards? | Scope, backend, moderation cost | No; single-player, leaderboards only (M3) |
 | Q18 | **Resolved (owner):** content must relate to real Nigerian life, so we use real Nigerian institution, place, road and landmark names. Guardrails to confirm with legal review: names as setting only (no logos, trademarks, or implied endorsement), original art, fictional people (incl. lecturers/staff), no defamatory or real-person satire, jokes target situations not institutions. | Authenticity vs legal risk | Real names with guardrails |
-| Q16 | Runner scope for M1: ship **On Foot + Danfo-driving** modes, or On Foot first and driving in M2? Is 3D (Three.js) acceptable given performance risk on low-end phones? | Largest single M1 schedule risk | On Foot in M1; driving if the T18 spike passes; Canvas 2D pseudo-3D fallback |
+| Q16 | **Resolved (owner):** the game is about navigating life, so runner modes are **contextual and combined** (on foot where the story is on foot, driving where it is a commute or job). Both ship in M1. 3D remains the plan (as in the references) with the Canvas 2D fallback if the T18 spike fails. | Largest M1 schedule risk | Both modes in M1, sequenced F12a → F12b |
 
 ---
 
