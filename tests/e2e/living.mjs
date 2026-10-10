@@ -13,7 +13,7 @@ const st = () => page.evaluate(() => { const c = window.__nal.useGame.getState()
 const goto = async (id) => { const p = await page.evaluate((i) => window.__world.hotspotPos(i), id); await page.evaluate((q) => window.__world.walkTo(q.x, q.z), p); for (let i = 0; i < 60; i++) { await page.waitForTimeout(250); const pos = await page.evaluate(() => window.__world.position); if (Math.hypot(pos.x - p.x, pos.z - p.z) < 1.2) break } await page.waitForTimeout(300) }
 console.log('before', await st())
 // sofa
-await goto('tv'); await page.keyboard.press('e'); await page.waitForTimeout(300)
+await goto('sofa'); await page.keyboard.press('e'); await page.waitForTimeout(300)
 await page.getByText('Sit on the sofa').click(); await page.waitForTimeout(1200)
 await page.screenshot({ path: `${OUT}/200-sofa.png` })
 await page.getByText('Stand up').click(); await page.waitForTimeout(800)

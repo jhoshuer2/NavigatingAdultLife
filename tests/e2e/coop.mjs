@@ -11,7 +11,7 @@ await page.waitForTimeout(1500)
 await page.evaluate(() => window.__nal.useGame.getState().startChores())
 await page.waitForTimeout(1200)
 await page.screenshot({ path: `${OUT}/240-coop-pick.png` })
-await page.getByText(/^🤝 With/).first().click()
+await page.locator('.tile:has-text("🤝")').first().click()
 for (let i = 0; i < 40; i++) { await page.waitForTimeout(300); if (await page.evaluate(() => window.__world.inside)) break }
 await page.waitForTimeout(6000)
 await page.screenshot({ path: `${OUT}/241-coop-chores.png` })

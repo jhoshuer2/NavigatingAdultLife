@@ -14,7 +14,7 @@ await page.evaluate(() => window.__nal.useGame.getState().enterPlace('home'))
 for (let i = 0; i < 40; i++) { await page.waitForTimeout(300); if (await page.evaluate(() => window.__world.inside)) break }
 await page.waitForTimeout(800)
 await page.screenshot({ path: `${OUT}/220-bare-home.png` })
-await page.getByRole('button', { name: /Outside/ }).click(); await page.waitForTimeout(1200)
+await page.getByRole('button', { name: /outside/i }).last().click(); await page.waitForTimeout(1200)
 // shop
 await page.evaluate(() => window.__nal.useGame.getState().startShop())
 await page.waitForTimeout(2000)
