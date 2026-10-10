@@ -56,7 +56,7 @@ Most life sims are Western-default. *Navigating Adult Life* makes the Nigerian (
 - No real-time multiplayer or chat. No user-generated content in v1–v3. No real-money gambling or real-money payouts.
 - No 3D. No native app stores (PWA only) unless demand justifies it.
 - No attempt at statistically accurate Nigerian economics: the economy is *plausible and funny*, tuned for fun.
-- No real people, real political parties, or real brands as characters (parody/fictional equivalents only).
+- No real people, real political parties, or real brands as *characters*. Real Nigerian places, roads and institutions may appear **as settings** under the guardrails in Q18 (no logos, no endorsement, no defamation).
 
 ---
 
@@ -245,7 +245,7 @@ Observed in the recording (a third-person, low-poly 3D walk-around of a real Lag
 | Observed | What we do with it |
 |---|---|
 | Third-person 3D walk-around of a campus; roads, hostels, lecture halls, trees; ambient students with speech bubbles ("Shuuu, queue don long") | M2 explorable districts (M2-F01) in the same low-poly language as the runner; ambient NPC chatter lines are data (`ambientLines`) |
-| Persistent HUD: profile chip ("Fresher · Visiting …"), **Energy**, **Vibe** (mood), **Pocket money (₦)**, a counter (6/27), time-of-day chip (Morning, 11:24 AM), minimap | Our stats map directly: Energy, Happiness (surfaced as **Vibe** in copy), Cash (**Pocket money** for under-18s), plus a **time-of-day chip** in Focus Days and a minimap in M2. The meaning of the extra counter was not clear from the recording (Q17) |
+| Persistent HUD: profile chip ("Fresher · Visiting …"), **Energy**, **Vibe** (mood), **Pocket money (₦)**, a **Found X/N** counter (places discovered), time-of-day chip (Morning, 11:24 AM), minimap | Our stats map directly: Energy, Happiness (surfaced as **Vibe** in copy), Cash (**Pocket money** for under-18s), plus a **time-of-day chip** in Focus Days and a minimap in M2. The **Found 8/27** counter is a *places-discovered* tracker (tooltip: "Places you've found on this campus. Walk around, or use Places under the minimap."). We adopt it as the **Places Found** counter per district/city, which also drives exploration rewards and achievements. Other tooltips worth copying: Energy ("sleep, eat, or hang around and rest; lectures, sports and hustles use it up") and Pocket money ("Enrol to find out your family's budget and monthly allowance") |
 | Left menu: Explore · Campus tour · People & events · Become a student | M2 side menu: Explore · Tour · People & Events · Quests |
 | Discovery toasts ("Found Jaja & Moremi Halls"), place signs | **Place discovery** log (M2); first visit grants small Reputation/Knowledge/Cowries |
 | "Talk to Femi — *New face*" proximity prompts | NPC proximity prompts with a *New face* tag until met; tied to relationship meters |
@@ -259,8 +259,12 @@ Observed in the recording (a third-person, low-poly 3D walk-around of a real Lag
 1. **Focus Days (M2-F21).** The macro unit stays the year, but key moments (first day at university, first day at a job, owambe, market day, NYSC camp) play as **day-scale vignettes** in the 3D world with a clock. A Focus Day spends part of that year's Energy and then rejoins the normal year loop, giving campus-style moment-to-moment play without simulating 80 years day by day.
 2. **One renderer.** Both references are low-poly 3D, so the runner and the world share one lazy-loaded Three.js module. The M1 scene-card UI doubles as **Lite mode** on low-end devices.
 3. **Place panels everywhere** (scene cards in M1, 3D world in M2) so the UI grammar is learned once.
-4. **University campus pack (M2-F24).** A **fictional** campus (Q18) with live classes, quirky lecturers, hostel life, societies, exam weeks, a JAMB-to-admission storyline and NYSC follow-on.
-5. **Humour through specificity.** Place blurbs, lecturer quirks and ambient lines are the most shareable content; budget writing time for them.
+4. **University campus pack (M2-F24).** A **real-Nigeria-grounded** campus (Q18: real institution, hall and place names, original art and fictional people) with live classes, quirky lecturers, hostel life, societies, exam weeks, a JAMB-to-admission storyline and NYSC follow-on.
+5. **Profile screen and tiers.** The campus profile (About me · Personality · My look · Badges · Belongings · My space · Goals, with Projected GPA, Reputation tier "2 · Unknown", Study streak, Style points) is a template for our M2-F19 screen. Social Reputation (0–100) gets **named tiers** (Unknown → Known → Respected → Big Name → Legend) so the number has meaning.
+6. **Visitor → Enrol onboarding.** The reference lets you explore as a *Campus visitor* and "Become a student" to reveal your family budget and allowance. We use the same try-before-you-commit idea: the M1 tutorial can start with a short guided visit (a Lagos street or school gate) before character creation, and the family tier is *revealed* at the start of the story.
+7. **Ambient wit.** Speech bubbles such as "Sapa is real", "2001 or SUB?", "Omo, this sun!" are tone-setting lines; ≥ 60 ambient lines per location type in M2.
+8. **Contextual shortcut buttons** change with the place (Main Gate vs Lecture Hall), and the HUD shows a **"12 online"** presence badge, which we do **not** adopt (no multiplayer in v1–v3, see Q17).
+9. **Humour through specificity.** Place blurbs, lecturer quirks and ambient lines are the most shareable content; budget writing time for them.
 
 ---
 
@@ -516,12 +520,12 @@ Part of M1 but listed first so agents do it in order.
 | M2-F16 | Content scale | 220 events, 650 choices, 14 endings |
 | M2-F17 | Pidgin & glossary | Pidgin flavour toggle ("Naija Pidgin mode") for narration; in-game glossary |
 | M2-F18 | UX polish | Animated transitions, juicy number popups, haptics (Vibration API), richer audio, 5 new music tracks |
-| M2-F19 | Local profile & stats screen | Lives history (last 20 lives), lifetime stats, best runs, share cards |
+| M2-F19 | Profile & stats screen | Tabs: About me · Personality (trait) · My look · Badges · Belongings · My space · Goals. Fields: institution, course, hall/home, life stage, **Projected GPA**, **Reputation tier** (e.g., 2 · Unknown → named tiers), academic/career rank, **Study streak**, style points (cosmetic currency, = Cowries unlocks), Cash; lives history (last 20), lifetime stats, share cards |
 | M2-F20 | Performance & data-saver mode | Lazy-load per district, geometry instancing, quality governor, lite mode (scene cards only) for low-end devices |
 | M2-F21 | Focus Days | Day-scale 3D vignettes with a clock for key life moments; spend part of the year's Energy; place panels, NPC proximity prompts, suggested-next card, Wait |
 | M2-F22 | Lectures & in-scene quizzes | Live classes, lecturer cards, mid-lecture questions, class-over summary, after-class revision quiz feeding Knowledge and relationships |
 | M2-F23 | World UX kit | Minimap, fast travel (Map/Home/Main Gate), guided Tour, place-discovery log, ambient chatter, "New face" tags |
-| M2-F24 | University campus pack | Fictional campus district: halls, lecture theatres, hostels, societies, exam weeks, JAMB-to-admission chain (5.6, Q18) |
+| M2-F24 | University campus pack | Nigerian university district grounded in real names (e.g., a UNILAG-style campus with halls, lecture theatres, cafeteria, medical centre), hostels, societies, exam weeks, JAMB-to-admission chain, "Visitor → Enrol" onboarding (5.6, Q18) |
 
 **Out of scope:** multi-city, generational play, cloud sync, leaderboards, Whot/Ayo.
 
@@ -1020,8 +1024,8 @@ Warm, witty, a little teasing, never cruel; short paragraphs; second person ("yo
 | Q13 | Offline expectation: must core gameplay work fully offline? | PWA caching strategy | Yes for M1+ |
 | Q14 | Language scope for launch: English + Pidgin flavour only, or Yoruba/Igbo/Hausa UI? | Localization cost | English + Pidgin flavour |
 | Q15 | Bride price/traditional marriage customs: depict explicitly, abstractly, or skip? | Sensitivity and reviewer approach | Abstract with reviewer-approved choices |
-| Q17 | The campus reference's HUD shows a "6/27" counter beside pocket money; its meaning wasn't clear from the recording. Do we want a similar secondary counter (meals, attendance, days left in semester)? | HUD and campus loop | Attendance-style counter in the campus pack only |
-| Q18 | Real institution and place names versus fictional equivalents? The reference uses real names. | Trademark/sensitivity | Fictional names with recognisable nods |
+| Q17 | The campus reference shows a "12 online" presence badge and Cubbes account sign-in (multiplayer/social layer). Do we want any ambient presence, friends or shared leaderboards beyond M3's leaderboards? | Scope, backend, moderation cost | No; single-player, leaderboards only (M3) |
+| Q18 | **Resolved (owner):** content must relate to real Nigerian life, so we use real Nigerian institution, place, road and landmark names. Guardrails to confirm with legal review: names as setting only (no logos, trademarks, or implied endorsement), original art, fictional people (incl. lecturers/staff), no defamatory or real-person satire, jokes target situations not institutions. | Authenticity vs legal risk | Real names with guardrails |
 | Q16 | Runner scope for M1: ship **On Foot + Danfo-driving** modes, or On Foot first and driving in M2? Is 3D (Three.js) acceptable given performance risk on low-end phones? | Largest single M1 schedule risk | On Foot in M1; driving if the T18 spike passes; Canvas 2D pseudo-3D fallback |
 
 ---
