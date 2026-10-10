@@ -187,7 +187,7 @@ export function performActivity(ctx: Ctx, id: string, args: ActivityArgs = {}): 
       addStat(ctx, 'happiness', Math.round(p * 2), 'Fellowship'); addStat(ctx, 'stress', -Math.round(p * 2), 'Peace of mind')
       const give = Math.max(0, Math.min(args.donation ?? 0, c.stats.cash))
       if (give > 0) { addStat(ctx, 'cash', -give, 'Offering'); addStat(ctx, 'reputation', give >= 3000 ? 2 : 1, 'Generosity'); addStat(ctx, 'happiness', 1, 'Giving') }
-    } else if (id === 'chores') { addRel(ctx, 'mother', Math.round(p * 3)); addStat(ctx, 'reputation', Math.round(p), 'Well done') }
+    } else if (id === 'chores') { addRel(ctx, args.target ?? 'mother', Math.round(p * 3)); addStat(ctx, 'reputation', Math.round(p), 'Well done'); if (args.target) addStat(ctx, 'happiness', 1, 'Teamwork') }
     else if (id === 'overtime') { addStat(ctx, 'reputation', Math.round(p * 2), 'Great work'); addStat(ctx, 'knowledge', Math.round(p), 'Great work') }
     else if (id === 'hustle') applyEffects(ctx, [{ hustleIncome: Math.round(p * 90000) }], 'Great sales')
     else if (id === 'play' || id === 'exercise') { addStat(ctx, 'happiness', Math.round(p * 3), 'Great game'); addStat(ctx, 'health', Math.round(p * 2), 'Great game') }

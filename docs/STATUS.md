@@ -82,3 +82,12 @@ First tuning pass, based on simulation and unit tests rather than player data (p
 - Time: activities now take roughly half the in-world hours they did before, so a year's energy budget fits in about one day and places do not all close by early evening.
 - Conversations: tone now matters per person (funny wins with friends and siblings, warm with family, partners and the boss; flat is always worst).
 - Chores 40s (was 60s), jog is two laps in 32s (was one lap in 50s, too easy), worship clap window tightened to about 180 ms either side.
+
+
+## Living world update
+
+- People have routines (`src/world/residents.ts`): family cook, eat, watch TV, play, go to work or school, sleep (off screen), and only sometimes appear outside, wandering near where they hang out. No more fixed doorstep spots.
+- At home you can sit on the sofa, lie on the bed, cook a meal (pick ingredients, stir), ask family for food, or eat at the buka (sit, order, wait, eat, pay).
+- Rented and owned homes start bare; buy a TV, fridge, fan or air conditioner at the market, hire a loader, and watch the delivery arrive at home.
+- Football: find a team (three squads) and play a three-a-side match with AI teammates, rivals and goalkeepers.
+- Co-op: chores can be done together with a family member who is home. Real multiplayer is planned in `docs/PRD-multiplayer.md` (needs accounts and a realtime server).

@@ -11,7 +11,7 @@ import type { NpcRole } from '@engine/core/types'
 import { StudyTask, type StudyMode } from '../tasks/StudyTask'
 import { PenaltyTask } from '../tasks/PenaltyTask'
 import { MarketTask } from '../tasks/MarketTask'
-import { ChoresTask } from '../tasks/ChoresTask'
+import { ChoresTask, type Helper } from '../tasks/ChoresTask'
 import { OvertimeTask } from '../tasks/OvertimeTask'
 import { WorshipTask } from '../tasks/WorshipTask'
 import { ShopTask } from '../tasks/ShopTask'
@@ -47,7 +47,7 @@ export default function World() {
     | { kind: 'study'; mode: StudyMode }
     | { kind: 'penalty'; act: string }
     | { kind: 'market' }
-    | { kind: 'chores' }
+    | { kind: 'chores'; helper?: Helper }
     | { kind: 'overtime' }
     | { kind: 'service' }
     | { kind: 'shop' }
@@ -59,6 +59,8 @@ export default function World() {
     | { kind: 'talk'; partner: Partner; role: NpcRole; setting: Setting; rounds: number; title: string; actId: string; hidden?: string; greet?: string; script?: Exchange[] }
   const [task, setTask] = useState<Task | null>(null)
   const [hang, setHang] = useState<{ role: NpcRole; npcId: string; name: string; gender: 'male' | 'female'; dest: PlaceId } | null>(null)
+  const [coopPick, setCoopPick] = useState<Helper[] | null>(null)
+  const pendingChores = useRef<((h?: Helper) => void) | null>(null)
   const [destPick, setDestPick] = useState<{ role: NpcRole; npcId: string } | null>(null)
   const hourRef = useRef(hour); hourRef.current = hour
   const host = useRef<HTMLDivElement>(null)
@@ -87,7 +89,7 @@ export default function World() {
   const district = useMemo<District>(() => buildDistrict(districtId), [districtId])
   const age = life?.character.age ?? 6
   const ageBand = age < 12 ? 0 : age < 18 ? 1 : 2
-  const modalOpen = !!g.sheet || life?.phase !== 'action' || (!!life?.quiz && !task) || (!!task && task.kind !== 'chores' && task.kind !== 'shop' && task.kind !== 'jog' && task.kind !== 'match') || !!destPick || !!hotId || !!sleep || fade || mapOpen
+  const modalOpen = !!g.sheet || life?.phase !== 'action' || (!!life?.quiz && !task) || (!!task && task.kind !== 'chores' && task.kind !== 'shop' && task.kind !== 'jog' && task.kind !== 'match') || !!destPick || !!coopPick || !!hotId || !!sleep || fade || mapOpen
 
   const month = useMemo(() => {
     if (!life) return 0
@@ -339,8 +341,12 @@ export default function World() {
   const beginChores = () => {
     const r = rendRef.current; if (!r) return
     const why = enabledAct('chores'); if (why) { g.toast(why); return }
-    if (r.inside === 'home') { setTask({ kind: 'chores' }); return }
-    enter('home', undefined, () => setTask({ kind: 'chores' }))
+    // anyone at home right now can lend a hand
+    const home: Helper[] = []
+    if (life!.character.housing.type === 'family') for (const n of Object.values(life!.npcs)) { if (!n.alive || !['mother', 'father', 'sibling'].includes(n.role)) continue; if (presenceAt(n.role, hour, n.id).where === 'home') home.push({ name: n.name, gender: n.gender, role: n.role }) }
+    const go = (helper?: Helper) => { if (r.inside === 'home') setTask({ kind: 'chores', helper }); else enter('home', undefined, () => setTask({ kind: 'chores', helper })) }
+    if (home.length) { pendingChores.current = go; setCoopPick(home); return }
+    go()
   }
   useEffect(() => { if (g.startChoresReq) beginChores() /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [g.startChoresReq])
 
@@ -403,13 +409,13 @@ export default function World() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hang, task, fade])
 
-  const endTask = (perf?: number, donation = 0, spendAmt = 0) => {
+  const endTask = (perf?: number, donation = 0, spendAmt = 0, helperRole?: string) => {
     const r = rendRef.current; const t = task
     if (taskLog.current) { taskLog.current.perf = perf; taskLog.current.abandoned = perf === undefined && t?.kind !== 'shop' }
     setTask(null)
     if (!t) return
     if (t.kind === 'penalty') { if (perf !== undefined) g.act(t.act, { perf }) }
-    else if (t.kind === 'chores') { if (perf !== undefined) g.act('chores', { perf }) }
+    else if (t.kind === 'chores') { if (perf !== undefined) g.act('chores', { perf, target: helperRole as NpcRole | undefined }) }
     else if (t.kind === 'cook' || t.kind === 'dine') { if (perf !== undefined) g.act('meal', { perf, spend: spendAmt }) }
     else if (t.kind === 'match') { if (perf !== undefined && perf >= 0) g.act(t.actAs, { perf }) }
     else if (t.kind === 'jog') { if (perf !== undefined) g.act('exercise', { perf }) }
@@ -605,7 +611,7 @@ export default function World() {
 
       {task?.kind === 'study' && rendRef.current && <StudyTask r={rendRef.current} mode={task.mode} onDone={() => setTask(null)} />}
       {task?.kind === 'penalty' && rendRef.current && <PenaltyTask r={rendRef.current} pitch={district.places.find((p) => p.id === 'pitch')!.rect} onDone={(perf) => endTask(perf)} />}
-      {task?.kind === 'chores' && rendRef.current && <ChoresTask r={rendRef.current} motherId={INTERIORS.home?.people.find((p) => p.persistent === 'mother')?.id ?? null} onDone={(perf) => endTask(perf)} />}
+      {task?.kind === 'chores' && rendRef.current && <ChoresTask r={rendRef.current} motherId={INTERIORS.home?.people.find((p) => p.persistent === 'mother')?.id ?? null} helper={task.helper} onDone={(perf, hr) => endTask(perf, 0, 0, hr)} />}
       {task?.kind === 'pose' && rendRef.current && <PoseTask r={rendRef.current} mode={task.mode} tvOn={appl.tv} onToggleTv={() => toggle('tv')} onWatch={() => { const why = enabledAct('tv'); if (why) g.toast(why); else g.act('tv') }} onSleep={() => startSleep()} onDone={() => setTask(null)} />}
       {task?.kind === 'cook' && rendRef.current && <CookTask r={rendRef.current} free={life.character.housing.type === 'family'} onDone={(perf, sp) => endTask(perf, 0, sp)} />}
       {task?.kind === 'dine' && rendRef.current && <DineTask r={rendRef.current} cash={life.character.stats.cash} onDone={(perf, sp) => endTask(sp ? perf : undefined, 0, sp)} />}
@@ -618,6 +624,16 @@ export default function World() {
       {task?.kind === 'talk' && rendRef.current && <TalkTask r={rendRef.current} partner={task.partner} role={task.role} setting={task.setting} rounds={task.rounds} title={task.title} greet={task.greet} script={task.script} onDone={(perf) => endTask(perf)} />}
       {hang && !task && (
         <div className="absolute left-3 right-3 bottom-[5.4rem] z-20 card px-3 py-2 flex items-center gap-2 pointer-events-auto" style={{ background: '#1d3a2aee' }}><span className="flex-1 text-sm font-bold">🚶 With {hang.name} → {district.places.find((p) => p.id === hang.dest)?.name}</span><button className="chip" onClick={cancelHang}>✖ Cancel</button></div>
+      )}
+      {coopPick && (
+        <Modal onClose={() => setCoopPick(null)}>
+          <div className="font-display text-3xl text-danfo">Do the chores together?</div>
+          <div className="text-sm opacity-75 mb-3">Working as a team is faster, and it brings you closer.</div>
+          <div className="grid gap-2">
+            {coopPick.map((h) => <button key={h.role} className="card-btn" onClick={() => { const f = pendingChores.current; setCoopPick(null); f?.(h) }}><b>🤝 With {h.name}</b><div className="text-xs opacity-75">{h.role}</div></button>)}
+            <button className="card-btn" onClick={() => { const f = pendingChores.current; setCoopPick(null); f?.() }}><b>🧍 On my own</b></button>
+          </div>
+        </Modal>
       )}
       {destPick && (
         <Modal onClose={() => setDestPick(null)}>
