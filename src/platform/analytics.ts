@@ -69,7 +69,7 @@ export function createClient(d: Deps) {
     const batch = queue.slice(0, MAX_BATCH)
     const payload = body(batch)
     try {
-      if (unloading && d.beacon && d.beacon(d.endpoint, new Blob([payload], { type: 'application/json' }))) { queue = queue.slice(batch.length); persist(); return }
+      if (unloading && d.beacon && d.beacon(d.endpoint, new Blob([payload], { type: 'text/plain' }))) { queue = queue.slice(batch.length); persist(); return }
       const res = await d.fetch(d.endpoint, { method: 'POST', headers: { 'content-type': 'application/json' }, body: payload, keepalive: true })
       if (res.ok || (res.status >= 400 && res.status < 500 && res.status !== 429)) { queue = queue.slice(batch.length); failures = 0; persist() } // 4xx: bad batch, drop it
       else throw new Error(String(res.status))
