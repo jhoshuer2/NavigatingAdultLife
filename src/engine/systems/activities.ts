@@ -47,7 +47,7 @@ function finish(ctx: Ctx, before: StatDelta[], text: string) {
   log(ctx.s, 'activity', text)
 }
 
-export interface ActivityArgs { target?: NpcRole; track?: TrackId; itemId?: string; hours?: number; appliancesOn?: number; perf?: number; donation?: number }
+export interface ActivityArgs { target?: NpcRole; track?: TrackId; itemId?: string; hours?: number; appliancesOn?: number; perf?: number; donation?: number; pricePct?: number }
 
 export function performActivity(ctx: Ctx, id: string, args: ActivityArgs = {}): boolean {
   const { s, rng } = ctx
@@ -153,11 +153,13 @@ export function performActivity(ctx: Ctx, id: string, args: ActivityArgs = {}): 
     }
     case 'shop': {
       const item = args.itemId ? ITEM_BY_ID[args.itemId] : undefined
-      if (!item || c.items.includes(item.id) || c.age < item.minAge || c.stats.cash < item.price) { c.stats.energy += def.cost.energy; s.activityCounts[id] -= 1; return false }
-      addStat(ctx, 'cash', -item.price, 'Shopping')
+      const pct = Math.min(1, Math.max(0.5, args.pricePct ?? 1))
+      const cost = item ? Math.round(item.price * pct) : 0
+      if (!item || c.items.includes(item.id) || c.age < item.minAge || c.stats.cash < cost) { c.stats.energy += def.cost.energy; s.activityCounts[id] -= 1; return false }
+      addStat(ctx, 'cash', -cost, 'Shopping')
       c.items.push(item.id)
       applyEffects(ctx, item.effects, item.name)
-      text = `You bought: ${item.name}.`
+      text = pct < 1 ? `You bought: ${item.name}, haggled down ${Math.round((1 - pct) * 100)}%.` : `You bought: ${item.name}.`
       break
     }
     default: {

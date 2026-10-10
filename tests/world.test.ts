@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildDistrict, DISTRICTS, SPAWN } from '../src/world/layout'
+import { buildDistrict, DISTRICTS, SPAWN, SHOP_SPOTS } from '../src/world/layout'
 import { HOME_CHORES } from '../src/world/interiors'
 import { buildNav, findPath, walkable, moveWithCollision } from '../src/world/nav'
 
@@ -86,4 +86,13 @@ describe('chores spots', () => {
       expect(findPath(nav, def.spawn, { x: c.x, z: c.z }), `path ${c.id}`).not.toBeNull()
     }
   })
+})
+
+describe('shop spots', () => {
+  for (const id of Object.keys(DISTRICTS)) {
+    it(`${id}: every market shop spot is reachable from the market door`, () => {
+      const d = buildDistrict(id); const nav = buildNav(d); const door = d.places.find((p) => p.id === 'market')!.door
+      for (const s of SHOP_SPOTS) { expect(walkable(nav, s.x, s.z), `${id} ${s.x},${s.z}`).toBe(true); expect(findPath(nav, door, s), `${id} path ${s.x},${s.z}`).not.toBeNull() }
+    })
+  }
 })

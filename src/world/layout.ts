@@ -82,6 +82,13 @@ const r = (x0: number, x1: number, z0: number, z1: number): Rect => ({ x0, x1, z
 export const inRect = (x: number, z: number, q: Rect, pad = 0) => x > q.x0 - pad && x < q.x1 + pad && z > q.z0 - pad && z < q.z1 + pad
 const overlaps = (a: Rect, b: Rect, pad = 0) => a.x0 < b.x1 + pad && a.x1 > b.x0 - pad && a.z0 < b.z1 + pad && a.z1 > b.z0 - pad
 
+/** Aisle spots in the market where goods are displayed for the shopping task. */
+export const SHOP_SPOTS: { x: number; z: number }[] = [
+  { x: 14.8, z: 11.4 }, { x: 19.5, z: 11.4 }, { x: 24.5, z: 11.4 },
+  { x: 14.2, z: 16.4 }, { x: 19.2, z: 16.4 }, { x: 24.2, z: 16.4 }, { x: 29.2, z: 16.4 },
+  { x: 14.2, z: 21.2 }, { x: 19.2, z: 21.2 }, { x: 24.2, z: 21.2 },
+]
+
 export function buildDistrict(districtId: string): District {
   const theme = DISTRICTS[districtId] ?? DISTRICTS.surulere
   const places = placesFor(theme)

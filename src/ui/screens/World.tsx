@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useGame } from '../../store'
 import { DeltaChips, Modal, StatBar, naira, nairaShort } from '../components'
-import { getActivities } from '@engine/api'
+import { getActivities, getShopItems } from '@engine/api'
 import { useActivityRouter } from '../useActivities'
 import { buildDistrict, DISTRICTS, SPAWN, WORLD, type District, type PlaceId } from '../../world/layout'
 import { WorldRenderer, type Near, type NearInside, type WorldNpc } from '../../world/WorldRenderer'
@@ -14,6 +14,7 @@ import { MarketTask } from '../tasks/MarketTask'
 import { ChoresTask } from '../tasks/ChoresTask'
 import { OvertimeTask } from '../tasks/OvertimeTask'
 import { WorshipTask } from '../tasks/WorshipTask'
+import { ShopTask } from '../tasks/ShopTask'
 import { TalkTask, type Partner } from '../tasks/TalkTask'
 import type { Setting } from '@content/dialogue'
 import { npcSpot, placeActive, suggest } from '../../world/guide'
@@ -39,6 +40,7 @@ export default function World() {
     | { kind: 'chores' }
     | { kind: 'overtime' }
     | { kind: 'service' }
+    | { kind: 'shop' }
     | { kind: 'talk'; partner: Partner; role: NpcRole; setting: Setting; rounds: number; title: string; actId: string; hidden?: string }
   const [task, setTask] = useState<Task | null>(null)
   const [hang, setHang] = useState<{ role: NpcRole; npcId: string; name: string; gender: 'male' | 'female'; dest: PlaceId } | null>(null)
@@ -60,7 +62,7 @@ export default function World() {
   const district = useMemo<District>(() => buildDistrict(districtId), [districtId])
   const age = life?.character.age ?? 6
   const ageBand = age < 12 ? 0 : age < 18 ? 1 : 2
-  const modalOpen = !!g.sheet || life?.phase !== 'action' || (!!life?.quiz && !task) || (!!task && task.kind !== 'chores') || !!destPick || !!hotId || !!sleep || fade || mapOpen
+  const modalOpen = !!g.sheet || life?.phase !== 'action' || (!!life?.quiz && !task) || (!!task && task.kind !== 'chores' && task.kind !== 'shop') || !!destPick || !!hotId || !!sleep || fade || mapOpen
 
   const month = useMemo(() => {
     if (!life) return 0
@@ -217,6 +219,16 @@ export default function World() {
     setTimeout(() => { if (r.inside) { r.exitInterior(); setInside(null); setHotId(null) } setTask({ kind: 'penalty', act: actId }); setFade(false) }, 280)
   }
   useEffect(() => { if (g.penaltyReq) startPenalty(g.penaltyReq.act) /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [g.penaltyReq])
+
+  const startShop = () => {
+    const r = rendRef.current; if (!r || fade) return
+    const why = enabledAct('shop'); if (why) { g.toast(why); return }
+    if (!isOpen('market', hour)) { g.toast(`🔒 The market is closed. Opens at ${fmtClock(opensAt('market'))}.`); return }
+    const d = district.places.find((p) => p.id === 'market')!
+    setFade(true)
+    setTimeout(() => { if (r.inside) { r.exitInterior(); setInside(null); setHotId(null) } r.placePlayer(d.door.x, d.door.z + 1.2, Math.PI); setTask({ kind: 'shop' }); setFade(false) }, 280)
+  }
+  useEffect(() => { if (g.startShopReq) startShop() /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [g.startShopReq])
 
   const startMarket = () => {
     const r = rendRef.current; if (!r || fade) return
@@ -468,7 +480,7 @@ export default function World() {
       {mapOpen && <MapModal district={district} x={pos.x} z={pos.z} h={pos.h} hour={hour} life={life} sugPlace={sug?.place ?? null} onClose={() => setMapOpen(false)} onGo={(id) => { setMapOpen(false); g.goToPlace(id) }} />}
 
       {/* proximity prompts */}
-      {!modalOpen && !inside && (nearNpc || nearPlace) && (
+      {!modalOpen && !inside && !task && (nearNpc || nearPlace) && (
         <div className="absolute right-3 bottom-[6.2rem] flex flex-col items-end gap-2 pointer-events-none">
           {nearNpc && <button className="btn btn-primary pointer-events-auto pop" onClick={() => g.openNpc(near.npc!)} aria-label="Talk">💬 Talk to {nearNpc.name}</button>}
           {nearPlace && INTERIORS[nearPlace.id] && (
@@ -493,6 +505,7 @@ export default function World() {
       {task?.kind === 'study' && rendRef.current && <StudyTask r={rendRef.current} mode={task.mode} onDone={() => setTask(null)} />}
       {task?.kind === 'penalty' && rendRef.current && <PenaltyTask r={rendRef.current} pitch={district.places.find((p) => p.id === 'pitch')!.rect} onDone={(perf) => endTask(perf)} />}
       {task?.kind === 'chores' && rendRef.current && <ChoresTask r={rendRef.current} motherId={INTERIORS.home?.people.find((p) => p.persistent === 'mother')?.id ?? null} onDone={(perf) => endTask(perf)} />}
+      {task?.kind === 'shop' && rendRef.current && <ShopTask r={rendRef.current} items={getShopItems(life)} cash={life.character.stats.cash} energy={life.character.stats.energy} onBuy={(itemId, pricePct) => g.act('shop', { itemId, pricePct })} onDone={() => endTask()} />}
       {task?.kind === 'service' && rendRef.current && <WorshipTask r={rendRef.current} cash={life.character.stats.cash} onDone={(perf, don) => endTask(perf, don)} />}
       {task?.kind === 'overtime' && rendRef.current && <OvertimeTask r={rendRef.current} onDone={(perf) => endTask(perf)} />}
       {task?.kind === 'market' && rendRef.current && <MarketTask r={rendRef.current} spot={{ x: district.places.find((p) => p.id === 'market')!.door.x, z: district.places.find((p) => p.id === 'market')!.door.z + 2.1 }} onDone={(perf) => endTask(perf)} />}
@@ -513,7 +526,7 @@ export default function World() {
       )}
 
       {/* joystick */}
-      {(!task || task.kind === 'chores') && <div className="absolute left-4 bottom-[5.2rem] w-28 h-28 rounded-full touch-none" style={{ background: '#ffffff22', border: '3px solid #ffffff55', touchAction: 'none' }}
+      {(!task || task.kind === 'chores' || task.kind === 'shop') && <div className="absolute left-4 bottom-[5.2rem] w-28 h-28 rounded-full touch-none" style={{ background: '#ffffff22', border: '3px solid #ffffff55', touchAction: 'none' }}
         onPointerDown={onJoyDown} onPointerMove={onJoyMove} onPointerUp={onJoyUp} onPointerCancel={onJoyUp} aria-label="Movement joystick">
         <div className="absolute w-12 h-12 rounded-full" style={{ left: 'calc(50% - 24px)', top: 'calc(50% - 24px)', transform: `translate(${knob.x}px, ${knob.y}px)`, background: knob.on ? '#ffd23f' : '#ffffffaa', border: '3px solid #1c1b22' }} />
       </div>}
