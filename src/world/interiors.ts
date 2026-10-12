@@ -38,9 +38,9 @@ export const INTERIORS: Partial<Record<PlaceId, Interior>> = {
       { kind: 'bed', rect: r(-9.6, -6.4, -6.8, -2.6), h: 0.9, color: 0xd9534f, id: 'bed' },
       { kind: 'wardrobe', rect: r(-6, -3.6, -6.9, -5.9), h: 3, color: 0x7a4a2a },
       { kind: 'desk', rect: r(-9.8, -7.4, -1.6, -0.6), h: 1, color: 0x8a5a32 }, { kind: 'chair', rect: r(-9.0, -8.3, -0.4, 0.3), h: 0.6, color: 0x2b3a8c },
-      { kind: 'tvunit', rect: r(-1, 2, -3.7, -2.9), h: 1.1, color: 0x4a3320, id: 'tv', appl: 'tv' }, { kind: 'sofa', rect: r(-1.5, 1.6, -1.2, 0.4), h: 0.9, color: 0x2f7a5a, appl: 'sofa' },
+      { kind: 'tvunit', rect: r(-1, 2, -4.5, -3.7), h: 1.1, color: 0x4a3320, id: 'tv', appl: 'tv' }, { kind: 'sofa', rect: r(-1.5, 1.6, -1.2, 0.4), h: 0.9, color: 0x2f7a5a, appl: 'sofa' },
       { kind: 'ac', rect: r(2.4, 3.8, -7.0, -6.55), h: 0, color: 0xf2f2f6, appl: 'ac', blocks: false },
-      { kind: 'rug', rect: r(-1.8, 2.8, -2.8, -1.3), h: 0.04, color: 0xc4562a, blocks: false },
+      { kind: 'rug', rect: r(-1.8, 2.8, -3.5, -1.5), h: 0.04, color: 0xc4562a, blocks: false },
       { kind: 'fan', rect: r(3.2, 3.7, 2.2, 2.8), h: 1.6, color: 0x4a6a8a, id: 'fan', appl: 'fan' },
       { kind: 'cooker', rect: r(4.6, 6.4, -6.9, -5.9), h: 1.0, color: 0x888888, appl: 'cooker' }, { kind: 'counter', rect: r(6.4, 8.6, -6.9, -5.9), h: 1.0, color: 0x9a7a5a },
       { kind: 'fridge', rect: r(8.8, 9.9, -6.0, -4.9), h: 2.3, color: 0xe8e8ee, appl: 'fridge' },
@@ -72,8 +72,8 @@ export const INTERIORS: Partial<Record<PlaceId, Interior>> = {
       { id: 'table1', kind: 'table', x: 6.8, z: -1.3, ax: 6.8, az: -0.6, pose: 'sit', face: Math.PI },
       { id: 'table2', kind: 'table', x: 7.8, z: -1.3, ax: 7.8, az: -0.6, pose: 'sit', face: Math.PI },
       { id: 'cook1', kind: 'cook', x: 5.5, z: -5.0, ax: 5.5, az: -5.0, pose: 'stand', face: Math.PI },
-      { id: 'rug1', kind: 'rug', x: 0.9, z: -2.1, ax: 0.9, az: -2.1, pose: 'sit', face: 0, floor: true },
-      { id: 'rug2', kind: 'rug', x: -0.6, z: -1.9, ax: -0.6, az: -1.9, pose: 'sit', face: 0.8, floor: true },
+      { id: 'rug1', kind: 'rug', x: 0.9, z: -2.6, ax: 0.9, az: -2.6, pose: 'sit', face: 0, floor: true },
+      { id: 'rug2', kind: 'rug', x: -0.6, z: -2.4, ax: -0.6, az: -2.4, pose: 'sit', face: 0.8, floor: true },
       { id: 'st1', kind: 'stand', x: -4.2, z: 2.4, ax: -4.2, az: 2.4, pose: 'stand', face: 0.5 },
       { id: 'st2', kind: 'stand', x: 2.4, z: 3.6, ax: 2.4, az: 3.6, pose: 'stand', face: -0.6 },
       { id: 'st3', kind: 'stand', x: 6.6, z: 0.3, ax: 6.6, az: 0.3, pose: 'stand', face: 0 },
@@ -165,7 +165,7 @@ export const INTERIORS: Partial<Record<PlaceId, Interior>> = {
 
 /** Things to tidy during the chores task (home interior). */
 export const HOME_CHORES: { id: string; x: number; z: number; emoji: string; note: string }[] = [
-  { id: 'c1', x: 0.5, z: -3.3, emoji: '🧹', note: 'Sweep the sitting room' },
+  { id: 'c1', x: 0.5, z: -2.6, emoji: '🧹', note: 'Sweep the sitting room' },
   { id: 'c2', x: 6.5, z: 0.4, emoji: '🍽️', note: 'Wash the plates' },
   { id: 'c3', x: -4.2, z: -3.0, emoji: '🧺', note: 'Fold the laundry' },
   { id: 'c4', x: -6.0, z: 4.6, emoji: '🧹', note: 'Sweep the corridor' },
