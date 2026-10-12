@@ -2,11 +2,12 @@
 import type { GameState } from '@engine/core/types'
 import type { District, PlaceId } from './layout'
 import { INTERIORS } from './interiors'
+import { errandSpot, type ErrandKind } from './errands'
 import { say, type Say } from '@content/lang'
 import { ACTIVITY_BY_ID } from '@content/activities'
 import { DREAM_BY_ID, type DreamStage, type DreamVerb } from '@content/dreams'
 
-export interface Suggestion { id: string; place: PlaceId; text: string; icon: string; say: Say; act?: string }
+export interface Suggestion { id: string; place: PlaceId; text: string; icon: string; say: Say; act?: string; /** a side trip to a spot in the neighbourhood instead of a place */ errand?: ErrandKind }
 const S = (id: string, place: PlaceId, icon: string, en: string, pcm: string, act?: string): Suggestion => ({ id, place, text: en, icon, say: say(en, pcm), act })
 /** Every thing the guide can suggest. Each has a recorded voice clip named `sug_<id>` (see src/content/voiceLines.ts). */
 export const SUGS = {
@@ -58,7 +59,18 @@ export function dreamGoal(life: GameState): DreamGoal | null {
   return { index, total: def.stages.length, stage, suggestion, doable: doable && !capped && !tired, note: capped ? 'You have done this enough for the year. Sleep at home to start the next year.' : tired ? 'You are too tired for this now. Rest first.' : undefined }
 }
 
-export function suggest(life: GameState): Suggestion | null {
+/** Free-time ideas for the part of the day between the day's work and bedtime. */
+const FUN = {
+  dash: S('dashFun', 'busstop', '🪙', 'Play Go-Slow Dash at the bus stop and collect coins', 'Go the bus stop play Go-Slow Dash, collect coins', 'dash'),
+  visit: { ...S('visitFriend', 'home', '🏘️', "Visit a friend at their house", 'Go visit your padi for house'), errand: 'visit' as ErrandKind },
+  explore: { ...S('exploreRoute', 'home', '🧭', 'Find a new route: follow the compass', 'Find new road: follow the compass'), errand: 'explore' as ErrandKind },
+  evening: S('eveningSleep', 'home', '🌙', 'It is evening. Go home and sleep to start a new year', 'Evening don reach. Go house sleep, make new year start', 'sleep'),
+}
+/** The kind of errand and where it is, for the guide, the map pin and the arrival check. */
+export const errandSeed = (life: GameState, kind: ErrandKind) => life.seed + life.character.age * 7 + (kind === 'visit' ? 1 : 2)
+
+/** `hour` is the time of day (default morning). From 7 pm the guide only wants you in bed, wherever you are. */
+export function suggest(life: GameState, hour = 8): Suggestion | null {
   if (life.phase !== 'action' || life.quiz) return null
   const c = life.character
   const used = (id: string) => Number(life.activityCounts[id] ?? 0)
@@ -67,13 +79,18 @@ export function suggest(life: GameState): Suggestion | null {
   if (c.stats.health < 40) return SUGS.restSick
   if (c.stats.happiness < 35) return SUGS.cheer
   if (c.stats.stress > 70) return SUGS.stress
+  if (hour >= 19) return FUN.evening
   const goal = dreamGoal(life)
   if (goal?.doable) return goal.suggestion
   if (inSchool && used('study') < 2) return SUGS.study
+  // the day's work is done: free time until evening (play the Dash, visit a friend, find a new route)
+  if (c.age >= 6 && used('dash') < 1 && c.stats.energy >= 18) return FUN.dash
   if (!c.job && !inSchool && c.age >= 18 && c.age < 62) return SUGS.job
   if (c.job && used('overtime') < 1 && c.age < 60) return SUGS.boss
   if (c.age >= 14 && used('hustle') < 1 && c.stats.energy >= 22) return SUGS.hustle
   if (c.age < 14 && used('play') < 1) return SUGS.playKid
+  if (c.age >= 8 && !life.flags[`d_visit_${c.age}`] && c.stats.energy >= 14) return FUN.visit
+  if (c.age >= 8 && !life.flags[`d_explore_${c.age}`] && c.stats.energy >= 12) return FUN.explore
   if (used('socialise') < 1 && c.stats.energy >= 15) return SUGS.friend
   if (used('familyTime') < 1) return SUGS.family
   return SUGS.endYear
@@ -123,6 +140,7 @@ export interface GuideStep { key: string; icon: string; say: Say; /** id of the 
 
 export interface GuideCtx {
   life: GameState
+  hour?: number
   district: District
   inside: PlaceId | null
   /** outdoors: the place whose door you are standing at */
@@ -146,13 +164,19 @@ export function bearing(from: { x: number; z: number }, to: { x: number; z: numb
 export function guideStep(ctx: GuideCtx): GuideStep | null {
   const { life, district, inside, near, pos, stuck, track } = ctx
   if (life.phase !== 'action' || life.quiz) return null
-  const sug = track ?? suggest(life)
+  const sug = track ?? suggest(life, ctx.hour)
   if (!sug) return null
   const pl = district.places.find((p) => p.id === sug.place)
   const placeName = pl?.name ?? 'the place'
   const icon = 'icon' in sug ? (sug as Suggestion).icon : '📍'
   if (stuck === 1) return { key: 'stuck-q', icon: '🎯', say: GEN.stuckQ, voice: 'g_stuckQ', target: { t: 'ui', el: 'quests' } }
   if (stuck === 2) return { key: 'stuck-m', icon: '🗺️', say: GEN.stuckM, voice: 'g_stuckM', target: { t: 'ui', el: 'map' } }
+  const errand = 'errand' in sug ? (sug as Suggestion).errand : undefined
+  if (errand) {
+    if (inside) return { key: 'exit', icon: '🚪', say: GEN.exit, detail: 'Then: your errand', voice: 'g_exit', target: { t: 'exit' }, aim: INTERIORS[inside]?.door }
+    const sp = errandSpot(district, errand, errandSeed(life, errand)); const b = bearing(pos, sp)
+    return { key: `errand-${errand}`, icon, say: sug.say, detail: `${b.dir} · ${b.steps} steps`, target: { t: 'none' }, aim: sp }
+  }
   const act = sug.act
   if (inside) {
     if (inside === sug.place) {

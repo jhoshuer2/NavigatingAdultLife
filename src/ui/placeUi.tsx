@@ -53,8 +53,8 @@ export function PlaceModal() {
   const closed = !isOpen(placeId, hour)
   const lastDelta = life.lastAction?.deltas ?? []
   const idle = life.phase !== 'action'
-  const sug = guideOn ? suggest(life) : null
-  const mine = sug?.place === placeId ? sug : null
+  const sug = guideOn ? suggest(life, hour) : null
+  const mine = sug?.place === placeId && !sug.errand ? sug : null
   const run = (def: (typeof rows)[number]['def']) => {
     audio.sfx('click')
     if (def.id === 'rest' && placeId === 'home') { enterPlace('home', 'sleep'); return }

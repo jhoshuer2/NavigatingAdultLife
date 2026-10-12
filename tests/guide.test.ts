@@ -82,4 +82,18 @@ describe('voice', () => {
     expect(dreamGoal(l)!.doable).toBe(false)
     expect(dreamGoal(l)!.note).toMatch(/Sleep at home/)
   })
+  it('fills the afternoon with fun things, then says go to bed from 7 pm wherever you are', () => {
+    const l = life(); l.character.dreamId = 'unsureLagos'; l.dreamStage = 0; l.character.edu.level = 'sss'; l.character.stats.energy = 90
+    l.character.stats.happiness = 70; l.character.stats.stress = 20; l.character.stats.health = 90
+    l.activityCounts.study = 2
+    expect(suggest(l, 14)!.id).toBe('dashFun') // done studying: go and play the Dash
+    l.activityCounts.dash = 1; l.activityCounts.hustle = 1
+    l.character.age = 16; l.character.edu.level = 'none'; l.character.job = undefined as never; l.character.dreamId = 'bigOga'
+    const a = suggest(l, 14)!; expect(a.errand).toBe('visit')
+    l.flags[`d_visit_${l.character.age}`] = true
+    expect(suggest(l, 14)!.errand).toBe('explore')
+    expect(suggest(l, 20)!.id).toBe('eveningSleep') // 7 pm or later
+    l.character.stats.energy = 5
+    expect(suggest(l, 14)!.id).toBe('sleepTired') // too tired always wins
+  })
 })

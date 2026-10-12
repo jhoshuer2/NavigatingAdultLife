@@ -12,6 +12,7 @@ import { fmtClock, isNight, isOpen, opensAt } from '../../world/time'
 import type { NpcRole } from '@engine/core/types'
 import { StudyTask, type StudyMode } from '../tasks/StudyTask'
 import { EatTask } from '../tasks/EatTask'
+import { errandSpot } from '../../world/errands'
 import { PenaltyTask } from '../tasks/PenaltyTask'
 import { MarketTask } from '../tasks/MarketTask'
 import { ChoresTask, type Helper } from '../tasks/ChoresTask'
@@ -25,7 +26,7 @@ import { CookTask } from '../tasks/CookTask'
 import { DineTask } from '../tasks/DineTask'
 import { TalkTask, type Partner } from '../tasks/TalkTask'
 import type { Exchange, Setting } from '@content/dialogue'
-import { bearing, guideStep, placeActive, suggest } from '../../world/guide'
+import { bearing, errandSeed, guideStep, placeActive, suggest, type Suggestion } from '../../world/guide'
 import { GuideCard, GuideCompass, LangPicker, Lines, TaskCoach } from '../Guide'
 import { HOWTO } from '@content/taskGuide'
 import { speakLine } from '@platform/voice'
@@ -205,7 +206,8 @@ export default function World() {
   }
   useEffect(() => { const r = rendRef.current; if (r?.inside) r.setResidents(residentMap(r.inside), false) /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [hour, inside, life?.npcs])
 
-  const sug = useMemo(() => (life ? suggest(life) : null), [life])
+  const hourNow = Math.floor(hour)
+  const sug = useMemo(() => (life ? suggest(life, hourNow) : null), [life, hourNow])
   // --- guide: what to do next, what to highlight, and a nudge when the player seems stuck ---
   const lang = meta.settings.lang ?? 'en'
   const guideOn = meta.settings.guide !== false
@@ -223,9 +225,32 @@ export default function World() {
     }, 2000)
     return () => window.clearInterval(id)
   }, [])
-  const step = useMemo(() => (life && guideOn ? guideStep({ life, district, inside, near: near.place, pos, stuck: modalOpen ? 0 : stuck, track: g.guideTrack }) : null), [life, guideOn, district, inside, near.place, pos, stuck, modalOpen, g.guideTrack])
+  const step = useMemo(() => (life && guideOn ? guideStep({ life, hour: hourNow, district, inside, near: near.place, pos, stuck: modalOpen ? 0 : stuck, track: g.guideTrack }) : null), [life, hourNow, guideOn, district, inside, near.place, pos, stuck, modalOpen, g.guideTrack])
   useEffect(() => { if (g.guideTrack && inside === g.guideTrack.place) g.setGuideTrack(null) }, [inside, g.guideTrack]) // eslint-disable-line react-hooks/exhaustive-deps
   const tgt = step?.target
+  // --- side trips: a pin in the neighbourhood (find a new route, visit a friend) and what happens when you get there ---
+  const errandKind = sug && 'errand' in sug ? (sug as Suggestion).errand : undefined
+  const errandAt = useMemo(() => (errandKind && life ? errandSpot(district, errandKind, errandSeed(life, errandKind)) : null), [errandKind, district, life?.seed, life?.character.age]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const r = rendRef.current; if (!r) return
+    if (errandAt && errandKind && !inside) r.addMark('errand', errandAt.x, errandAt.z, errandKind === 'visit' ? '🏘️' : '🧭'); else r.removeMark('errand')
+    return () => r.removeMark('errand')
+  }, [errandAt, errandKind, inside, district])
+  const arrivedAt = useRef('')
+  useEffect(() => {
+    if (!errandAt || !errandKind || !life) { arrivedAt.current = ''; return }
+    if (inside || task || sleep || g.sheet || fade) return
+    if (Math.hypot(pos.x - errandAt.x, pos.z - errandAt.z) > 2.6) return
+    const key = `${errandKind}-${life.character.age}`
+    if (arrivedAt.current === key) return
+    arrivedAt.current = key
+    const r = rendRef.current; if (!r) return
+    const why = enabledAct(errandKind); if (why) { g.toast(why); return }
+    if (errandKind === 'explore') { g.act('explore'); g.toast('🧭 You found a new route! A shortcut, a view and a few coins.'); setCheer((n) => n + 1); setTimeout(() => setCheer(0), 3200); return }
+    const fr = life.npcs[life.roles.friend ?? '']; if (!fr) { g.toast('Your friend is not home today.'); return }
+    r.addActor('buddy', { name: fr.name, gender: fr.gender, x: errandAt.x + 1.4, z: errandAt.z, heading: -Math.PI / 2 })
+    setTask({ kind: 'talk', partner: { id: 'buddy', name: fr.name }, role: 'friend', setting: 'home', rounds: 2, title: `Visiting ${fr.name} at home`, actId: 'visit', greet: 'Come in, come in! Sit down.' })
+  }, [pos]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     const r = rendRef.current; if (!r) return
     r.setHighlight(tgt && (tgt.t === 'place' || tgt.t === 'enter') ? tgt.place : null)
