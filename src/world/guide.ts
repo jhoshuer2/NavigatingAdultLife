@@ -64,12 +64,15 @@ const FUN = {
   dash: S('dashFun', 'busstop', '🪙', 'Play Go-Slow Dash at the bus stop and collect coins', 'Go the bus stop play Go-Slow Dash, collect coins', 'dash'),
   visit: { ...S('visitFriend', 'home', '🏘️', "Visit a friend at their house", 'Go visit your padi for house'), errand: 'visit' as ErrandKind },
   explore: { ...S('exploreRoute', 'home', '🧭', 'Find a new route: follow the compass', 'Find new road: follow the compass'), errand: 'explore' as ErrandKind },
+  pitch: S('pitchFun', 'pitch', '🏃', 'Exercise at the pitch', 'Go the pitch do exercise', 'exercise'),
+  treat: S('treatFun', 'mamaput', '🍨', 'Treat yourself at the buka', 'Go the buka treat yourself', 'treat'),
+  wait: S('waitEvening', 'home', '🛋️', 'Take it easy at home until evening', 'Rest for house till evening come', 'sleep'),
   evening: S('eveningSleep', 'home', '🌙', 'It is evening. Go home and sleep to start a new year', 'Evening don reach. Go house sleep, make new year start', 'sleep'),
 }
 /** The kind of errand and where it is, for the guide, the map pin and the arrival check. */
 export const errandSeed = (life: GameState, kind: ErrandKind) => life.seed + life.character.age * 7 + (kind === 'visit' ? 1 : 2)
 
-/** `hour` is the time of day (default morning). From 7 pm the guide only wants you in bed, wherever you are. */
+/** `hour` is the time of day (default morning). From 7 pm until the early hours the guide only wants you in bed, wherever you are. */
 export function suggest(life: GameState, hour = 8): Suggestion | null {
   if (life.phase !== 'action' || life.quiz) return null
   const c = life.character
@@ -79,7 +82,7 @@ export function suggest(life: GameState, hour = 8): Suggestion | null {
   if (c.stats.health < 40) return SUGS.restSick
   if (c.stats.happiness < 35) return SUGS.cheer
   if (c.stats.stress > 70) return SUGS.stress
-  if (hour >= 19) return FUN.evening
+  if (hour >= 19 || hour < 5) return FUN.evening // night: bed
   const goal = dreamGoal(life)
   if (goal?.doable) return goal.suggestion
   if (inSchool && used('study') < 2) return SUGS.study
@@ -93,7 +96,9 @@ export function suggest(life: GameState, hour = 8): Suggestion | null {
   if (c.age >= 8 && !life.flags[`d_explore_${c.age}`] && c.stats.energy >= 12) return FUN.explore
   if (used('socialise') < 1 && c.stats.energy >= 15) return SUGS.friend
   if (used('familyTime') < 1) return SUGS.family
-  return SUGS.endYear
+  if (c.age >= 10 && used('exercise') < 2 && c.stats.energy >= 20) return FUN.pitch
+  if (used('treat') < 1 && c.stats.cash >= 40000 && c.stats.energy >= 10) return FUN.treat
+  return FUN.wait
 }
 
 /** The fixed guide lines that are not tied to a place name. Each has a recorded voice clip named `g_<id>`. */

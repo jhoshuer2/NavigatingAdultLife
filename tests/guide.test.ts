@@ -93,6 +93,8 @@ describe('voice', () => {
     l.flags[`d_visit_${l.character.age}`] = true
     expect(suggest(l, 14)!.errand).toBe('explore')
     expect(suggest(l, 20)!.id).toBe('eveningSleep') // 7 pm or later
+    expect(suggest(l, 3)!.id).toBe('eveningSleep') // and in the small hours
+    expect(suggest(l, 7)!.id).not.toBe('eveningSleep') // a new morning moves on
     l.character.stats.energy = 5
     expect(suggest(l, 14)!.id).toBe('sleepTired') // too tired always wins
   })

@@ -551,6 +551,9 @@ export default function World() {
     g.setHourTo(h, dayAdd)
     rendRef.current?.setHour(h)
     setSleep(null)
+    // a proper night's sleep (started in the evening, at least five hours) ends the year and starts the next one
+    const nightSleep = sleep.from >= 19 || sleep.from < 5
+    if (nightSleep && sleep.elapsed >= 5) setTimeout(() => useGame.getState().endActions(), 500)
     g.toast(on ? `☀️ You woke up. Everything was left on: ₦${(on * 2500).toLocaleString()} gone on power.` : '☀️ You woke up rested.')
   }
 
