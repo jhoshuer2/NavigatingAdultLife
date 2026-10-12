@@ -1,8 +1,9 @@
 import { useMemo } from 'react'
 import { useGame } from '../store'
-import { Btn, Confetti, CountUp, DeltaChips, Modal, Tile, naira, nairaShort } from './components'
+import { Btn, Confetti, CountUp, DeltaChips, Modal, Ribbon, Tile, naira, nairaShort } from './components'
 import { Icon } from './icons'
 import { Lines } from './Guide'
+import { ACTIVITY_BY_ID } from '@content/activities'
 import { QUEST_HINTS, dreamGoal } from '../world/guide'
 import { Avatar } from './Avatar'
 import { currentEvent, getDreamProgress, getJobOptions, getShopItems } from '@engine/api'
@@ -78,9 +79,14 @@ export function EventModal() {
 }
 
 export function QuizModal() {
-  const { life, answer, quizFeedback, clearQuiz } = useGame()
+  const { life, answer, quizFeedback, clearQuiz, toast } = useGame()
   if (!life) return null
   const fb = quizFeedback
+  // studying counts in rounds (twice a year): say which round this is, and celebrate only when the last one is done
+  const cap = ACTIVITY_BY_ID.study?.maxPerYear ?? 2
+  const round = Math.min(Number(life.activityCounts.study ?? 1), cap)
+  const yearDone = !!fb?.last && round >= cap
+  const moreToDo = !!fb?.last && round < cap
   const quiz = life.quiz
   const q = fb ? fb.q : quiz?.questions[quiz.index]
   if (!q) return null
@@ -90,6 +96,7 @@ export function QuizModal() {
     <Modal wide title="Pop quiz!">
       <div className="flex items-center gap-2">
         <span className="chip chip-pink uppercase">{q.subject}</span>
+        <span className="chip !py-0.5">Round {round} of {cap}</span>
         <div className="flex gap-1.5 flex-1 justify-end">{Array.from({ length: total }, (_, i) => <span key={i} className="w-7 h-2 rounded-full" style={{ background: i < n ? 'var(--gold)' : 'rgba(255,255,255,.18)' }} />)}</div>
       </div>
       <p className="text-xl font-bold leading-snug mt-3">{q.q}</p>
@@ -110,7 +117,9 @@ export function QuizModal() {
         <div className="mt-3 pop">
           <div className={`chip !text-sm ${fb.correct ? 'chip-green' : 'chip-red'}`}>{fb.correct ? 'Correct!' : 'Not quite'}</div>
           <div className="hud-glass rounded-2xl p-3 mt-2 text-sm">{fb.funny ?? (fb.correct ? '+Knowledge' : 'It happens to the best of us.')}</div>
-          <Btn variant="green" className="w-full mt-3" onClick={clearQuiz}>{fb.last ? 'Finish' : 'Next'} <Icon name="chevron" size={18} /></Btn>
+          {moreToDo && <div className="rounded-2xl p-3 mt-2 text-sm font-bold leading-snug" style={{ background: 'rgba(255,210,63,.16)', boxShadow: 'inset 0 0 0 1.5px rgba(255,210,63,.55)' }}>📚 Round {round} of {cap} done. You still need to study {cap - round === 1 ? 'one more time' : `${cap - round} more times`} to finish studying for this year.</div>}
+          {yearDone && <><Confetti n={40} /><div className="text-center mt-3"><Ribbon>Congratulations!</Ribbon><div className="font-display text-xl mt-2 text-gold">You finished studying for the year!</div></div></>}
+          <Btn variant="green" className="w-full mt-3" onClick={() => { clearQuiz(); if (moreToDo) toast(`📚 Round ${round} of ${cap} done. Study once more to finish this year.`) }}>{yearDone ? 'Continue' : fb.last ? 'Finish' : 'Next'} <Icon name="chevron" size={18} /></Btn>
         </div>
       )}
     </Modal>

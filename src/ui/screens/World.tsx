@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useGame } from '../../store'
-import { Btn, DeltaChips, Mentor, Modal, RoundBtn, StatBadge, naira, nairaShort } from '../components'
+import { Btn, Confetti, DeltaChips, Mentor, Modal, RoundBtn, StatBadge, naira, nairaShort } from '../components'
 import { Icon, type IconName } from '../icons'
 import { Avatar } from '../Avatar'
 import { getActivities, getShopItems } from '@engine/api'
@@ -454,11 +454,13 @@ export default function World() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hang, task, fade])
 
+  const [cheer, setCheer] = useState(0)
   const endTask = (perf?: number, donation = 0, spendAmt = 0, helperRole?: string) => {
     const r = rendRef.current; const t = task
     if (taskLog.current) { taskLog.current.perf = perf; taskLog.current.abandoned = perf === undefined && t?.kind !== 'shop' }
     setTask(null)
     if (!t) return
+    if (perf !== undefined && perf >= 0 && t.kind !== 'shop' && t.kind !== 'pose') { setCheer((n) => n + 1); setTimeout(() => setCheer(0), 3200) } // task completed: confetti
     if (t.kind === 'penalty') { if (perf !== undefined) g.act(t.act, { perf }) }
     else if (t.kind === 'chores') { if (perf !== undefined) g.act('chores', { perf, target: helperRole as NpcRole | undefined }) }
     else if (t.kind === 'cook' || t.kind === 'dine') { if (perf !== undefined) g.act('meal', { perf, spend: spendAmt }) }
@@ -646,6 +648,7 @@ export default function World() {
         </div>
       )}
 
+      {cheer > 0 && <Confetti key={cheer} n={34} />}
       {task?.kind === 'study' && !holdTask && rendRef.current && <StudyTask r={rendRef.current} mode={task.mode} onDone={() => setTask(null)} />}
       {task?.kind === 'penalty' && !holdTask && rendRef.current && <PenaltyTask r={rendRef.current} pitch={district.places.find((p) => p.id === 'pitch')!.rect} onDone={(perf) => endTask(perf)} />}
       {task?.kind === 'chores' && !holdTask && rendRef.current && <ChoresTask r={rendRef.current} motherId={INTERIORS.home?.people.find((p) => p.persistent === 'mother')?.id ?? null} helper={task.helper} onDone={(perf, hr) => endTask(perf, 0, 0, hr)} />}
