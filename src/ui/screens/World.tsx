@@ -236,6 +236,13 @@ export default function World() {
   const needCoach = !!coachKey && guideOn && !!HOWTO[coachKey] && (meta.tips?.[coachKey] ?? 0) < 2
   const [coached, setCoached] = useState<unknown>(null)
   const holdTask = needCoach && coached !== task
+  // game time keeps counting while you walk about (1 game hour per real minute); it pauses in tasks, sleep, sheets, quizzes and events
+  const clockBusy = useRef(false)
+  clockBusy.current = !!task || !!sleep || fade || !!g.sheet || !!holdTask || !life || life.phase !== 'action' || !!life.quiz || !!life.activeEvent
+  useEffect(() => {
+    const iv = setInterval(() => { if (!document.hidden && !clockBusy.current) useGame.getState().tickClock(1 / 60) }, 1000)
+    return () => clearInterval(iv)
+  }, [])
   useEffect(() => {
     if (!coachOn || !meta.langAsked || !voiceOn) return
     const line = COACH[coach]

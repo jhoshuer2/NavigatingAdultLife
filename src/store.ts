@@ -57,6 +57,7 @@ interface Store {
   enterPlace: (id: PlaceId, intent?: 'sleep') => void
   advance: (hours: number) => void
   setHourTo: (hour: number, dayAdd?: number) => void
+  tickClock: (hours: number) => void
   openPlace: (id: PlaceId) => void
   openNpc: (id: string) => void
   goToPlace: (id: PlaceId) => void
@@ -97,6 +98,7 @@ interface Store {
 }
 
 let toastId = 1
+let clockTicks = 0
 
 export const useGame = create<Store>((set, get) => {
   const commit = (life: GameState) => {
@@ -156,6 +158,15 @@ export const useGame = create<Store>((set, get) => {
     startPenalty: (act) => set((st) => ({ penaltyReq: { act, n: (st.penaltyReq?.n ?? 0) + 1 }, sheet: null })),
     enterPlace: (id, intent) => set((st) => ({ enterReq: { place: id, intent, n: (st.enterReq?.n ?? 0) + 1 }, sheet: null })),
     advance: (hours) => { const { hour, day } = get(); let h = hour + hours, d = day; while (h >= 24) { h -= 24; d++ }; get().setHourTo(h, d - day) },
+    // the clock runs while you walk about: a cheap in-memory tick, saved to the life every ~20 ticks
+    tickClock: (dh) => {
+      const st = get(); let h = st.hour + dh, d = st.day
+      while (h >= 24) { h -= 24; d++ }
+      set({ hour: h, day: d })
+      clockTicks++
+      if (st.life && clockTicks % 20 === 0) { const l = setClock(st.life, h, d); saveLife(l); set({ life: l }) }
+      if (Math.floor(h) !== Math.floor(st.hour)) get().deliverDue()
+    },
     setHourTo: (h, dayAdd = 0) => { const st = get(); const day = st.day + dayAdd; set({ hour: h, day }); if (st.life) { const l = setClock(st.life, h, day); saveLife(l); set({ life: l }) }; get().deliverDue() },
     openPlace: (id) => set({ placeId: id, sheet: 'place' }),
     openNpc: (id) => set({ npcId: id, sheet: 'npc' }),
