@@ -81,7 +81,7 @@ export type GuideTarget =
   | { t: 'exit' }
   | { t: 'ui'; el: 'quests' | 'map' | 'places' | 'home' }
   | { t: 'none' }
-export interface GuideStep { key: string; icon: string; say: Say; /** id of the recorded voice clip for this line, if any */ voice?: string; target: GuideTarget; /** where the compass should point (world x,z) */ aim?: { x: number; z: number } }
+export interface GuideStep { key: string; icon: string; say: Say; /** id of the recorded voice clip for this line, if any */ voice?: string; /** extra on-screen detail that is not spoken (place name, direction, steps) */ detail?: string; target: GuideTarget; /** where the compass should point (world x,z) */ aim?: { x: number; z: number } }
 
 export interface GuideCtx {
   life: GameState
@@ -105,8 +105,6 @@ export function bearing(from: { x: number; z: number }, to: { x: number; z: numb
   return { dir, steps: Math.max(1, Math.round(Math.hypot(dx, dz) / 0.8)), deg }
 }
 
-const dot = (t: string) => t.replace(/[.\s]+$/, '')
-
 export function guideStep(ctx: GuideCtx): GuideStep | null {
   const { life, district, inside, near, pos, stuck, track } = ctx
   if (life.phase !== 'action' || life.quiz) return null
@@ -122,16 +120,16 @@ export function guideStep(ctx: GuideCtx): GuideStep | null {
     if (inside === sug.place) {
       const spot = act ? SPOT[inside]?.[act] : undefined
       const h = spot ? INTERIORS[inside]?.hotspots.find((x) => x.id === spot) : undefined
-      if (h) return { key: `spot-${h.id}`, icon: h.icon, say: say(`Walk to: ${h.name}. Then tap the green button.`, `Waka go: ${h.name}. Then press the green button.`), voice: 'g_spot', target: { t: 'hotspot', id: h.id }, aim: { x: h.x, z: h.z } }
+      if (h) return { key: `spot-${h.id}`, icon: h.icon, say: GEN.spot, detail: h.name, voice: 'g_spot', target: { t: 'hotspot', id: h.id }, aim: { x: h.x, z: h.z } }
       return { key: `look-${inside}`, icon, say: GEN.look, voice: 'g_look', target: { t: 'none' } }
     }
     const door = INTERIORS[inside]?.door
-    return { key: 'exit', icon: '🚪', say: say(`Go outside first, then to ${placeName}.`, `Comot outside first, then go ${placeName}.`), voice: 'g_exit', target: { t: 'exit' }, aim: door }
+    return { key: 'exit', icon: '🚪', say: GEN.exit, detail: `Then: ${placeName}`, voice: 'g_exit', target: { t: 'exit' }, aim: door }
   }
   if (!pl) return null
-  if (near === sug.place) return { key: `enter-${sug.place}`, icon, say: say(`You are at ${placeName}. Tap the big green button.`, `You don reach ${placeName}. Press the big green button.`), voice: 'g_enter', target: { t: 'enter', place: sug.place } }
+  if (near === sug.place) return { key: `enter-${sug.place}`, icon, say: GEN.enter, detail: placeName, voice: 'g_enter', target: { t: 'enter', place: sug.place } }
   const b = bearing(pos, pl.door)
-  return { key: `go-${sug.place}`, icon, say: say(`${dot(sug.say.en)}. Walk ${b.dir}, about ${b.steps} steps.`, `${dot(sug.say.pcm)}. Waka go ${b.dir}, about ${b.steps} steps.`), voice: 'id' in sug ? `sug_${sug.id}` : sug.voice, target: { t: 'place', place: sug.place }, aim: pl.door }
+  return { key: `go-${sug.place}`, icon, say: sug.say, detail: `${b.dir} · ${b.steps} steps`, voice: 'id' in sug ? `sug_${sug.id}` : sug.voice, target: { t: 'place', place: sug.place }, aim: pl.door }
 }
 
 export function placeActive(life: GameState, id: PlaceId): boolean {

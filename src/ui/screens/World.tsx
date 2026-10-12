@@ -579,7 +579,7 @@ export default function World() {
             </span>
           </button>
           {!inside
-            ? <Minimap pulse={ping('map')} district={district} x={pos.x} z={pos.z} h={pos.h} onOpen={() => { track('map_opened'); setMapOpen(true) }} />
+            ? <Minimap lang={lang} hour={hour} pulse={ping('map')} district={district} x={pos.x} z={pos.z} h={pos.h} onOpen={() => { track('map_opened'); setMapOpen(true) }} />
             : <div className="hud-glass pointer-events-none rounded-2xl px-3 py-2 flex items-center gap-1.5 max-w-[40%]"><Icon name="door" size={18} /><span className="font-display text-[14px] uppercase leading-tight truncate">{INTERIORS[inside]?.name}</span></div>}
         </div>
         <div className="flex items-center gap-2 px-2 mt-2">
@@ -783,7 +783,29 @@ function drawPlayer(g: CanvasRenderingContext2D, S: number, x: number, z: number
   g.fillStyle = '#ffd23f'; g.strokeStyle = '#1c1b22'; g.lineWidth = Math.max(2, size / 3); g.beginPath(); g.moveTo(0, -size); g.lineTo(size * 0.78, size * 0.9); g.lineTo(-size * 0.78, size * 0.9); g.closePath(); g.fill(); g.stroke(); g.restore()
 }
 
-function Minimap({ district, x, z, h, onOpen, pulse }: { pulse?: boolean; district: District; x: number; z: number; h: number; onOpen: () => void }) {
+/** Which place pin is under a pointer on a square map canvas (null if none). `reach` is in world units. */
+function placeAtPointer(district: District, el: HTMLElement, cx: number, cy: number, reach: number): { place: District['places'][number]; px: number; py: number } | null {
+  const r = el.getBoundingClientRect()
+  const wx = ((cx - r.left) / r.width) * WORLD.half * 2 - WORLD.half, wz = ((cy - r.top) / r.height) * WORLD.half * 2 - WORLD.half
+  let best: District['places'][number] | null = null, bd = reach
+  for (const p of district.places) { const d = Math.hypot(p.door.x - wx, p.door.z - wz); if (d < bd) { bd = d; best = p } }
+  return best ? { place: best, px: cx - r.left, py: cy - r.top } : null
+}
+
+/** Name, which way and how far, shown when you hover (or touch and hold) a place on a map. */
+function PlaceTip({ place, from, lang, open, px, py, small }: { place: District['places'][number]; from: { x: number; z: number }; lang: Lang; open: boolean; px: number; py: number; small?: boolean }) {
+  const b = bearing(from, place.door)
+  const way = say(`${b.dir}, about ${b.steps} steps`, `${b.dir}, about ${b.steps} steps`)
+  return (
+    <div className="absolute z-20 pointer-events-none rounded-2xl px-3 py-2 hud-glass pop" style={{ left: px, top: py, transform: small || py < 100 ? 'translate(-50%, 14px)' : 'translate(-50%, calc(-100% - 14px))', width: 'max-content', maxWidth: 230, boxShadow: '0 8px 22px rgba(0,0,0,.55)' }} role="tooltip">
+      <div className="flex items-center gap-2"><span className="text-2xl leading-none">{open ? place.icon : '🔒'}</span><span className="font-display uppercase text-[14px] leading-tight">{place.name}</span></div>
+      <div className="text-[12px] font-bold opacity-85 mt-1 leading-snug"><Icon name="pin" size={11} /> <Lines lang={lang} s={way} /></div>
+      <div className="text-[11px] opacity-65 mt-0.5">{open ? (small ? 'Tap the map for the way' : 'Click to select, then Go') : `Closed. Opens ${fmtClock(opensAt(place.id))}`}</div>
+    </div>
+  )
+}
+
+function Minimap({ district, x, z, h, onOpen, pulse, lang, hour }: { lang: Lang; hour: number; pulse?: boolean; district: District; x: number; z: number; h: number; onOpen: () => void }) {
   const ref = useRef<HTMLCanvasElement>(null)
   const S = 92, R = S * 2
   const base = useMemo(() => {
@@ -797,8 +819,10 @@ function Minimap({ district, x, z, h, onOpen, pulse }: { pulse?: boolean; distri
     const g = cv.getContext('2d')!
     g.clearRect(0, 0, R, R); g.drawImage(base, 0, 0); drawPlayer(g, R, x, z, h, 9)
   }, [base, x, z, h])
+  const [tip, setTip] = useState<{ place: District['places'][number]; px: number; py: number } | null>(null)
   return (
-    <button className={`relative rounded-full pointer-events-auto shrink-0 p-0 ${pulse ? 'guide-glow' : ''}`} style={{ width: S, height: S }} onClick={onOpen} aria-label="Open the full map">
+    <button className={`relative rounded-full pointer-events-auto shrink-0 p-0 ${pulse ? 'guide-glow' : ''}`} style={{ width: S, height: S }} onClick={onOpen} aria-label="Open the full map" onPointerMove={(e) => setTip(placeAtPointer(district, e.currentTarget, e.clientX, e.clientY, 9))} onPointerLeave={() => setTip(null)}>
+      {tip && <PlaceTip small place={tip.place} from={{ x, z }} lang={lang} open={isOpen(tip.place.id, hour)} px={tip.px} py={tip.py} />}
       <canvas ref={ref} width={R} height={R} className="rounded-full" style={{ width: S, height: S, border: '3px solid rgba(255,255,255,.85)', boxShadow: '0 0 0 3px #3b22a8, 0 6px 16px rgba(0,0,0,.5)' }} />
       <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 chip chip-gold !py-0 !px-1.5 !text-[10px]"><Icon name="map" size={11} color="#3b2300" />MAP</span>
     </button>
@@ -831,18 +855,20 @@ function MapModal({ district, x, z, h, hour, life, sugPlace, onClose, onGo, trai
     drawPlayer(g, S, x, z, h, 16)
     g.font = '800 20px system-ui'; g.textAlign = 'center'; g.lineWidth = 5; g.strokeStyle = '#2a1a7a'; g.strokeText('YOU', PX, PY + 52); g.fillStyle = '#fff'; g.fillText('YOU', PX, PY + 52)
   }, [base, x, z, h, sel, sugPlace, hour, trail, aim])
+  const [hover, setHover] = useState<{ place: District['places'][number]; px: number; py: number } | null>(null)
   const tap = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    const r = e.currentTarget.getBoundingClientRect()
-    const wx = ((e.clientX - r.left) / r.width) * WORLD.half * 2 - WORLD.half, wz = ((e.clientY - r.top) / r.height) * WORLD.half * 2 - WORLD.half
-    let best: PlaceId | null = null, bd = 12
-    for (const p of district.places) { const d = Math.hypot(p.door.x - wx, p.door.z - wz); if (d < bd) { bd = d; best = p.id } }
-    if (best) setSel(best)
+    const hit = placeAtPointer(district, e.currentTarget, e.clientX, e.clientY, 12)
+    if (hit) { setSel(hit.place.id); if (e.pointerType !== 'mouse') setHover(hit) }
   }
+  const move = (e: React.PointerEvent<HTMLCanvasElement>) => setHover(placeAtPointer(district, e.currentTarget, e.clientX, e.clientY, 9))
   const place = district.places.find((p) => p.id === sel)
   const st = sel ? stateOf(sel) : null
   return (
     <Modal title={DISTRICTS[life.character.housing.districtId]?.name ?? 'Your area'} onClose={onClose}>
-      <canvas ref={ref} width={S} height={S} className="w-full rounded-3xl touch-none" style={{ border: '3px solid rgba(255,255,255,.7)', boxShadow: '0 8px 24px rgba(0,0,0,.5)', aspectRatio: '1 / 1' }} onPointerUp={tap} aria-label="Map. Tap a place to select it." />
+      <div className="relative">
+      <canvas ref={ref} width={S} height={S} className="w-full rounded-3xl touch-none" style={{ border: '3px solid rgba(255,255,255,.7)', boxShadow: '0 8px 24px rgba(0,0,0,.5)', aspectRatio: '1 / 1' }} onPointerUp={tap} onPointerMove={move} onPointerLeave={() => setHover(null)} aria-label="Map. Tap a place to select it." />
+        {hover && <PlaceTip place={hover.place} from={{ x, z }} lang={lang} open={stateOf(hover.place.id) !== 'closed'} px={hover.px} py={hover.py} />}
+      </div>
       <div className="flex gap-1.5 mt-2 text-[11px] font-bold opacity-80"><span className="chip !py-0.5">▲ You</span><span className="chip chip-gold !py-0.5">Next stop</span><span className="chip !py-0.5">🔒 Closed</span></div>
       {place ? (() => {
         const b = bearing({ x, z }, place.door)

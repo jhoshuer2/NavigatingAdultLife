@@ -23,7 +23,7 @@ export function GuideCard({ step, lang, voice, onTap }: { step: GuideStep; lang?
     <div key={step.key} className="pointer-events-auto mt-2 mx-2 flex items-center gap-1.5 rounded-2xl pl-1.5 pr-2 py-1.5 hud-glass pop" style={stuck ? { boxShadow: '0 0 0 2px var(--gold), 0 8px 24px rgba(0,0,0,.5)' } : undefined}>
       <button className="flex items-center gap-2.5 flex-1 min-w-0 text-left active:scale-[.99] transition-transform" onClick={onTap} aria-label="Guide">
         <span className="shrink-0"><Conductor size={42} mood={stuck ? 'hmm' : 'hype'} /></span>
-        <span className="flex-1 min-w-0 text-[14px] font-bold leading-snug"><Lines lang={lang} s={step.say} /></span>
+        <span className="flex-1 min-w-0 text-[14px] font-bold leading-snug"><Lines lang={lang} s={step.say} />{step.detail && <span className="chip chip-gold !py-0 !text-[11px] mt-1 capitalize"><Icon name="pin" size={11} color="#3b2300" />{step.detail}</span>}</span>
         <span className="grid place-items-center w-9 h-9 rounded-full text-[19px] shrink-0 guide-nudge" style={{ background: 'linear-gradient(180deg,#ffe27a,#f59e0b)' }}>{step.icon}</span>
       </button>
       <button className="grid place-items-center w-9 h-9 rounded-full bg-white/10 shrink-0 text-[16px]" aria-label="Hear it again" onClick={() => void speakLine({ id: step.voice, lang: vlang(lang), text: plain(lang, step.say) })}>🔊</button>

@@ -131,3 +131,8 @@ Players said they were not sure where to begin, so the game now tells them, GTA 
 - Regenerate or change a line: edit the text (`guide.ts`, `taskGuide.ts`, `voiceLines.ts`), run `npx tsx scripts/voice-lines.ts`, generate the changed lines, and add the file to `public/voice` and the manifest. Old clips for edited lines must be replaced or they will say the old words.
 - The Pidgin wording is still a first draft; re-record after a native-speaker review.
 - Test: `tests/e2e/voice.mjs`.
+
+## Map tooltips and spoken text now match the screen
+- Hovering a place on the full map or the minimap shows a tooltip: name, compass direction and step count, and whether it is open (touch: tap a pin). `tests/e2e/maptip.mjs`.
+- The spoken line is now exactly the line on the card. Variable parts (direction and steps, place name, spot name) moved into a small gold chip under the line and are not spoken.
+- Voice likeness: the 94 clips were made with `eleven_v4`; the owner reports they do not sound like the "Joshua Jumbo" clone. Test takes with other models were generated for comparison; re-record everything once a model is chosen.

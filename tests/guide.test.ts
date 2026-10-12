@@ -21,7 +21,8 @@ describe('guide', () => {
     const l = life(); const sug = suggest(l)!
     const far = guideStep(base({ life: l }))!
     expect(far.target).toEqual({ t: 'place', place: sug.place })
-    expect(far.say.pcm).toMatch(/Waka/)
+    expect(far.say).toEqual(sug.say)
+    expect(far.detail).toMatch(/steps/)
     expect(guideStep(base({ life: l, near: sug.place }))!.target).toEqual({ t: 'enter', place: sug.place })
   })
   it('sends you out of the wrong building and to the right spot in the right one', () => {
