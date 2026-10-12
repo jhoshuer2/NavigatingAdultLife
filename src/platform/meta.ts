@@ -1,6 +1,6 @@
 import type { GameState } from '@engine/core/types'
 
-export interface Settings { sound: boolean; music: boolean; volume: number; reducedMotion: boolean; bigText: boolean; assist: boolean; lite: boolean; lang?: 'en' | 'pcm' | 'both'; guide?: boolean }
+export interface Settings { sound: boolean; music: boolean; volume: number; reducedMotion: boolean; bigText: boolean; assist: boolean; lite: boolean; lang?: 'en' | 'pcm' | 'both'; guide?: boolean; voice?: boolean }
 export interface LifeSummary { name: string; age: number; ending: string; legacy: number; netWorth: number; at: number; dream: string; dreamDone: boolean }
 export interface TokenState { freeSec: number; paidSec: number; lastRefillDay: string; welcomeGranted: boolean; unlimited: boolean }
 
@@ -15,6 +15,8 @@ export interface MetaProfile {
   tokens: TokenState
   seenTutorial: boolean
   langAsked?: boolean
+  /** how many times each task or the Dash has been explained, so the how-to card stops showing after two plays */
+  tips?: Record<string, number>
   consentAnalytics: boolean
   /** True once the player has seen the first-run privacy screen (either answer). */
   consentAsked: boolean

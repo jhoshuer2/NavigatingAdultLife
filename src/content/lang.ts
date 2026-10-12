@@ -12,7 +12,7 @@ export const say = (en: string, pcm: string): Say => ({ en, pcm })
 /** The line to show for a language. In "both", Pidgin leads and English is the small second line. */
 export function pick(lang: Lang | undefined, s: Say): { main: string; sub?: string } {
   if (lang === 'pcm') return { main: s.pcm }
-  if (lang === 'both') return { main: s.pcm, sub: s.en }
+  if (lang === 'both') return s.pcm === s.en ? { main: s.pcm } : { main: s.pcm, sub: s.en }
   return { main: s.en }
 }
 export const plain = (lang: Lang | undefined, s: Say) => (lang === 'pcm' || lang === 'both' ? s.pcm : s.en)

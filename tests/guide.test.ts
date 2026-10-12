@@ -49,3 +49,26 @@ describe('guide', () => {
     expect(pick('both', s)).toEqual({ main: 'Go house', sub: 'Go home' })
   })
 })
+
+import { HOWTO } from '../src/content/taskGuide'
+describe('how-to cards', () => {
+  it('cover every task kind and the Dash, each with steps and a goal in both languages', () => {
+    for (const k of ['study', 'talk', 'penalty', 'market', 'chores', 'overtime', 'service', 'shop', 'jog', 'match', 'cook', 'dine', 'dash', 'dashDanfo']) {
+      const h = HOWTO[k]; expect(h, k).toBeTruthy()
+      expect(h.steps.length).toBeGreaterThan(0)
+      for (const s of [h.title, h.goal, ...h.steps.map((x) => x.say)]) { expect(s.en.length).toBeGreaterThan(0); expect(s.pcm.length).toBeGreaterThan(0) }
+    }
+  })
+})
+
+describe('voice', () => {
+  it('does nothing (and does not throw) when speech is unavailable or off, and never repeats a keyed line too soon', async () => {
+    const spoken: string[] = []
+    class U { text: string; constructor(t: string) { this.text = t } voice: unknown; lang = ''; rate = 1; volume = 1 }
+    ;(globalThis as unknown as { window: unknown }).window = { speechSynthesis: { cancel() {}, speak: (u: U) => spoken.push(u.text), getVoices: () => [{ lang: 'en-NG', name: 'x' }] } }
+    ;(globalThis as unknown as { SpeechSynthesisUtterance: unknown }).SpeechSynthesisUtterance = U
+    const v = await import('../src/platform/voice')
+    v.configureVoice({ on: false, volume: 1 }); v.speak('off'); expect(spoken).toEqual([])
+    v.configureVoice({ on: true, volume: 1 }); v.speak('Waka go ₦5 🙂', 'k1'); v.speak('again', 'k1'); expect(spoken).toEqual(['Waka go naira 5 '])
+  })
+})

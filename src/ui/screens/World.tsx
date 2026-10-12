@@ -25,8 +25,10 @@ import { DineTask } from '../tasks/DineTask'
 import { TalkTask, type Partner } from '../tasks/TalkTask'
 import type { Exchange, Setting } from '@content/dialogue'
 import { bearing, guideStep, placeActive, suggest } from '../../world/guide'
-import { GuideCard, GuideCompass, LangPicker, Lines } from '../Guide'
-import { say, type Lang } from '@content/lang'
+import { GuideCard, GuideCompass, LangPicker, Lines, TaskCoach } from '../Guide'
+import { HOWTO } from '@content/taskGuide'
+import { speak } from '@platform/voice'
+import { plain, say, type Lang } from '@content/lang'
 import { installedSet } from '@content/appliances'
 import { ITEM_BY_ID } from '@content/items'
 import { outdoorAnchor, presenceAt, type Activity } from '../../world/residents'
@@ -226,6 +228,16 @@ export default function World() {
   }, [tgt?.t, tgt && 'place' in tgt ? tgt.place : null, tgt && 'id' in tgt ? tgt.id : null, inside]) // eslint-disable-line react-hooks/exhaustive-deps
   const trail = useRef<{ x: number; z: number }[]>([])
   useEffect(() => { const t = trail.current, l = t[t.length - 1]; if (!l || Math.hypot(l.x - pos.x, l.z - pos.z) > 2.5) { t.push({ x: pos.x, z: pos.z }); if (t.length > 160) t.shift() } }, [pos])
+  const voiceOn = meta.settings.sound && meta.settings.voice !== false
+  const coachKey = task && task.kind !== 'pose' ? task.kind : null
+  const needCoach = !!coachKey && guideOn && !!HOWTO[coachKey] && (meta.tips?.[coachKey] ?? 0) < 2
+  const [coached, setCoached] = useState<unknown>(null)
+  const holdTask = needCoach && coached !== task
+  useEffect(() => {
+    if (!coachOn || !meta.langAsked || !voiceOn) return
+    const line = coach === 0 ? say('Drag the stick to walk. Tap the ground works too!', 'Drag the stick to waka. You fit tap the ground too!') : coach === 1 ? say('Walk to the glowing ring, then tap the green button.', 'Waka go the shining ring, then press the green button.') : say('Actions cost energy. Done for the year? Go home and end it.', 'Everything dey cost energy. You don finish the year? Go house end am.')
+    speak(plain(lang, line), `coach${coach}`, 60000)
+  }, [coachOn, coach, meta.langAsked, voiceOn, lang]) // eslint-disable-line react-hooks/exhaustive-deps
   const ping = (el: 'quests' | 'map' | 'places' | 'home') => tgt?.t === 'ui' && tgt.el === el || (el === 'home' && tgt?.t === 'exit')
 
   // walk requests (from the Places list or the guidance card)
@@ -590,12 +602,13 @@ export default function World() {
           </div>
         )}
         {slow && <div className="hud-glass mt-2 mx-2 px-3 py-2 rounded-2xl text-sm flex items-center gap-2 pointer-events-auto"><span className="flex-1">Running slowly?</span><Btn size="sm" onClick={() => g.updateSettings({ lite: true })}>Menu mode</Btn></div>}
-        {step && !coachOn && !modalOpen && <GuideCard step={step} lang={lang} onTap={() => { audio.sfx('click'); if (tgt?.t === 'ui' && tgt.el === 'quests') g.openSheet('quests'); else setMapOpen(true) }} />}
+        {step && !coachOn && !modalOpen && <GuideCard step={step} lang={lang} voice={voiceOn} onTap={() => { audio.sfx('click'); if (tgt?.t === 'ui' && tgt.el === 'quests') g.openSheet('quests'); else setMapOpen(true) }} />}
         {flash && life.lastAction && !modalOpen && !coachOn && (
           <div className="mx-2 mt-2 flex justify-center" key={flash} aria-label={life.lastAction.text}><DeltaChips deltas={life.lastAction.deltas} limit={5} /></div>
         )}
       </div>
 
+      {holdTask && coachKey && <TaskCoach kind={coachKey} lang={lang} onStart={() => { g.seeTip(coachKey); setCoached(task) }} />}
       {!meta.langAsked && life?.phase === 'action' && !task && !g.sheet && <LangPicker />}
       {guideOn && step?.aim && !modalOpen && !coachOn && <GuideCompass r={rendRef.current} pos={pos} aim={step.aim} />}
       {coachOn && meta.langAsked && !modalOpen && (
@@ -630,19 +643,19 @@ export default function World() {
         </div>
       )}
 
-      {task?.kind === 'study' && rendRef.current && <StudyTask r={rendRef.current} mode={task.mode} onDone={() => setTask(null)} />}
-      {task?.kind === 'penalty' && rendRef.current && <PenaltyTask r={rendRef.current} pitch={district.places.find((p) => p.id === 'pitch')!.rect} onDone={(perf) => endTask(perf)} />}
-      {task?.kind === 'chores' && rendRef.current && <ChoresTask r={rendRef.current} motherId={INTERIORS.home?.people.find((p) => p.persistent === 'mother')?.id ?? null} helper={task.helper} onDone={(perf, hr) => endTask(perf, 0, 0, hr)} />}
-      {task?.kind === 'pose' && rendRef.current && <PoseTask r={rendRef.current} mode={task.mode} tvOn={appl.tv} onToggleTv={() => toggle('tv')} onWatch={() => { const why = enabledAct('tv'); if (why) g.toast(why); else g.act('tv') }} onSleep={() => startSleep()} onDone={() => setTask(null)} />}
-      {task?.kind === 'cook' && rendRef.current && <CookTask r={rendRef.current} free={life.character.housing.type === 'family'} onDone={(perf, sp) => endTask(perf, 0, sp)} />}
-      {task?.kind === 'dine' && rendRef.current && <DineTask r={rendRef.current} cash={life.character.stats.cash} onDone={(perf, sp) => endTask(sp ? perf : undefined, 0, sp)} />}
-      {task?.kind === 'match' && rendRef.current && <MatchTask r={rendRef.current} pitch={district.places.find((p) => p.id === 'pitch')!.rect} actAs={task.actAs} onDone={(perf) => endTask(perf)} />}
-      {task?.kind === 'jog' && rendRef.current && <JogTask r={rendRef.current} pitch={district.places.find((p) => p.id === 'pitch')!.rect} onDone={(perf) => endTask(perf)} />}
-      {task?.kind === 'shop' && rendRef.current && <ShopTask r={rendRef.current} items={getShopItems(life)} cash={life.character.stats.cash} energy={life.character.stats.energy} onBuy={(itemId, pricePct) => g.act('shop', { itemId, pricePct })} onDeliver={(id, mode) => g.orderDelivery(id, mode === 'loader' ? 2 : 0, mode === 'loader' ? 3000 : 0)} onDone={() => endTask()} />}
-      {task?.kind === 'service' && rendRef.current && <WorshipTask r={rendRef.current} cash={life.character.stats.cash} onDone={(perf, don) => endTask(perf, don)} />}
-      {task?.kind === 'overtime' && rendRef.current && <OvertimeTask r={rendRef.current} onDone={(perf) => endTask(perf)} />}
-      {task?.kind === 'market' && rendRef.current && <MarketTask r={rendRef.current} spot={{ x: district.places.find((p) => p.id === 'market')!.door.x, z: district.places.find((p) => p.id === 'market')!.door.z + 2.1 }} onDone={(perf) => endTask(perf)} />}
-      {task?.kind === 'talk' && rendRef.current && <TalkTask r={rendRef.current} partner={task.partner} role={task.role} setting={task.setting} rounds={task.rounds} title={task.title} greet={task.greet} script={task.script} onDone={(perf) => endTask(perf)} />}
+      {task?.kind === 'study' && !holdTask && rendRef.current && <StudyTask r={rendRef.current} mode={task.mode} onDone={() => setTask(null)} />}
+      {task?.kind === 'penalty' && !holdTask && rendRef.current && <PenaltyTask r={rendRef.current} pitch={district.places.find((p) => p.id === 'pitch')!.rect} onDone={(perf) => endTask(perf)} />}
+      {task?.kind === 'chores' && !holdTask && rendRef.current && <ChoresTask r={rendRef.current} motherId={INTERIORS.home?.people.find((p) => p.persistent === 'mother')?.id ?? null} helper={task.helper} onDone={(perf, hr) => endTask(perf, 0, 0, hr)} />}
+      {task?.kind === 'pose' && !holdTask && rendRef.current && <PoseTask r={rendRef.current} mode={task.mode} tvOn={appl.tv} onToggleTv={() => toggle('tv')} onWatch={() => { const why = enabledAct('tv'); if (why) g.toast(why); else g.act('tv') }} onSleep={() => startSleep()} onDone={() => setTask(null)} />}
+      {task?.kind === 'cook' && !holdTask && rendRef.current && <CookTask r={rendRef.current} free={life.character.housing.type === 'family'} onDone={(perf, sp) => endTask(perf, 0, sp)} />}
+      {task?.kind === 'dine' && !holdTask && rendRef.current && <DineTask r={rendRef.current} cash={life.character.stats.cash} onDone={(perf, sp) => endTask(sp ? perf : undefined, 0, sp)} />}
+      {task?.kind === 'match' && !holdTask && rendRef.current && <MatchTask r={rendRef.current} pitch={district.places.find((p) => p.id === 'pitch')!.rect} actAs={task.actAs} onDone={(perf) => endTask(perf)} />}
+      {task?.kind === 'jog' && !holdTask && rendRef.current && <JogTask r={rendRef.current} pitch={district.places.find((p) => p.id === 'pitch')!.rect} onDone={(perf) => endTask(perf)} />}
+      {task?.kind === 'shop' && !holdTask && rendRef.current && <ShopTask r={rendRef.current} items={getShopItems(life)} cash={life.character.stats.cash} energy={life.character.stats.energy} onBuy={(itemId, pricePct) => g.act('shop', { itemId, pricePct })} onDeliver={(id, mode) => g.orderDelivery(id, mode === 'loader' ? 2 : 0, mode === 'loader' ? 3000 : 0)} onDone={() => endTask()} />}
+      {task?.kind === 'service' && !holdTask && rendRef.current && <WorshipTask r={rendRef.current} cash={life.character.stats.cash} onDone={(perf, don) => endTask(perf, don)} />}
+      {task?.kind === 'overtime' && !holdTask && rendRef.current && <OvertimeTask r={rendRef.current} onDone={(perf) => endTask(perf)} />}
+      {task?.kind === 'market' && !holdTask && rendRef.current && <MarketTask r={rendRef.current} spot={{ x: district.places.find((p) => p.id === 'market')!.door.x, z: district.places.find((p) => p.id === 'market')!.door.z + 2.1 }} onDone={(perf) => endTask(perf)} />}
+      {task?.kind === 'talk' && !holdTask && rendRef.current && <TalkTask r={rendRef.current} partner={task.partner} role={task.role} setting={task.setting} rounds={task.rounds} title={task.title} greet={task.greet} script={task.script} onDone={(perf) => endTask(perf)} />}
       {hang && !task && (
         <div className="absolute left-3 right-3 bottom-[5.4rem] z-20 card px-3 py-2 flex items-center gap-2 pointer-events-auto" style={{ background: '#1d3a2aee' }}><span className="flex-1 text-sm font-bold">🚶 With {hang.name} → {district.places.find((p) => p.id === hang.dest)?.name}</span><button className="chip" onClick={cancelHang}>✖ Cancel</button></div>
       )}

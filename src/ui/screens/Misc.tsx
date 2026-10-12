@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react'
 import { useGame } from '../../store'
 import { Btn, CountUp, Ribbon, RoundBtn, Tile } from '../components'
-import { LANGS } from '@content/lang'
+import { LANGS, plain, say } from '@content/lang'
+import { speak, voiceAvailable } from '@platform/voice'
 import { Icon, type IconName } from '../icons'
 import { ACHIEVEMENTS } from '@content/achievements'
 import { UNLOCKABLES } from '@platform/meta'
@@ -113,7 +114,7 @@ export function History() {
 }
 
 export function Settings() {
-  const { meta, updateSettings, exportJson, importJson, toast, setUnlimited, life, setConsent } = useGame()
+  const { meta, updateSettings, exportJson, importJson, toast, setUnlimited, life, setConsent, resetTips } = useGame()
   const file = useRef<HTMLInputElement>(null)
   const [showPrivacy, setShowPrivacy] = useState(false)
   const s = meta.settings
@@ -130,7 +131,7 @@ export function Settings() {
       <div className="grid grid-cols-3 gap-2.5">
         {LANGS.map((l) => <Tile key={l.id} emoji={l.emoji} label={l.label} sub={l.sub} on={(s.lang ?? 'en') === l.id} onClick={() => updateSettings({ lang: l.id })} />)}
       </div>
-      <div className="grid gap-2 mt-2.5"><Toggle label="Show me what to do next" on={s.guide !== false} onChange={(v) => updateSettings({ guide: v })} /></div>
+      <div className="grid gap-2 mt-2.5"><Toggle label="Show me what to do next" on={s.guide !== false} onChange={(v) => updateSettings({ guide: v })} />{voiceAvailable() && <Toggle label="Guide voice (speaks the tips)" on={s.voice !== false} onChange={(v) => { updateSettings({ voice: v }); if (v) speak(plain(s.lang, say('Hello! I go guide you.', 'How far! I go guide you.'))) }} />}<Btn variant="ghost" onClick={() => { resetTips(); toast('Tips will show again') }}>Show the how-to tips again</Btn></div>
       <h2 className="font-display text-xl text-white/90 uppercase tracking-wide mt-6 mb-1">Sound and display</h2>
       <div className="grid gap-2">
         <Toggle label="Sound effects" on={s.sound} onChange={(v) => { updateSettings({ sound: v }); audio.configure({ ...s, sound: v }) }} />

@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useGame } from '../../store'
 import { Btn, naira } from '../components'
+import { HowToBody } from '../Guide'
+import { HOWTO } from '@content/taskGuide'
+import { plain } from '@content/lang'
+import { speak, stopSpeaking } from '@platform/voice'
 import { createDash, resultOf, segmentAt, stepDash, ROUTES, type DashEvent, type DashResult, type DashState } from '../../minigames/go-slow-dash/sim'
 import { DashRenderer } from '../../minigames/go-slow-dash/renderer'
 import { audio } from '@platform/audio'
@@ -12,10 +16,13 @@ type Phase = 'ready' | 'run' | 'paused' | 'over'
 export default function Dash() {
   const { life, dashMode, meta, finishDash } = useGame()
   const host = useRef<HTMLDivElement>(null)
+  const how = HOWTO[dashMode === 'foot' ? 'dash' : 'dashDanfo']
+  const dashLine = [plain(meta.settings.lang, how.title), ...how.steps.map((x) => plain(meta.settings.lang, x.say)), plain(meta.settings.lang, how.goal)].join('. ')
   const simRef = useRef<DashState | null>(null)
   const rendRef = useRef<DashRenderer | null>(null)
   const phaseRef = useRef<Phase>('ready')
   const [phase, setPhaseState] = useState<Phase>('ready')
+  useEffect(() => { if (phase === 'ready' && meta.settings.guide !== false && meta.settings.sound && meta.settings.voice !== false) speak(dashLine, 'howto:dash', 20000) }, [phase]) // eslint-disable-line react-hooks/exhaustive-deps
   const [hud, setHud] = useState<Hud | null>(null)
   const [pops, setPops] = useState<{ id: number; text: string }[]>([])
   const [result, setResult] = useState<DashResult | null>(null)
@@ -182,8 +189,8 @@ export default function Dash() {
         <div className="absolute inset-0 grid place-items-center p-5" style={{ background: '#0008' }}>
           <div className="card p-5 text-center max-w-sm pop" style={{ background: '#1e1a30' }}>
             <h2 className="font-display text-4xl text-danfo">Go-Slow Dash</h2>
-            <p className="text-sm opacity-80 mt-1">{dashMode === 'foot' ? 'Run through Lagos. Swipe left/right to change lane, up to jump, down to slide. Grab coins, dodge goats and potholes.' : 'You are driving the danfo! Swipe to change lane, hold BRAKE at a kerb-side stop to load passengers, then drop them at the next stop for fares.'}</p>
-            <Btn variant="green" className="w-full mt-4 !text-xl" onClick={start}>▶ Tap to start</Btn>
+            <div className="text-left"><HowToBody h={how} lang={meta.settings.lang} /></div>
+            <div className="flex gap-2 mt-4"><button className="btn btn-ghost !min-h-[52px] !px-4" aria-label="Hear it again" onClick={() => speak(dashLine)}>🔊</button><Btn variant="green" className="flex-1 !text-xl" onClick={() => { stopSpeaking(); start() }}>▶ Tap to start</Btn></div>
             <p className="text-[11px] opacity-60 mt-2">Keyboard: ← → lanes · ↑/Space jump · ↓ slide/brake · P pause</p>
           </div>
         </div>

@@ -115,3 +115,10 @@ Players said they were not sure where to begin, so the game now tells them, GTA 
 - Code: `src/content/lang.ts`, `src/world/guide.ts` (`guideStep`, `QUEST_HINTS`, `bearing`), `src/ui/Guide.tsx`. Tests: `tests/guide.test.ts`, `tests/e2e/guide.mjs`.
 - 🚩 The Pidgin lines are first drafts and need a native-speaker review (all in `guide.ts`, `Guide.tsx`, the coach text in `World.tsx`).
 - Not yet guided: the Dash, the tasks themselves (they have their own instructions) and the sheets other than the place sheet.
+
+## Guide voice and how-to cards
+- **Voice:** the guide, the first-run coach and the how-to cards are spoken with the phone's built-in speech (`src/platform/voice.ts`). It prefers a Nigerian English voice, then other English ones, and reads the Pidgin text with the same voice, so Pidgin will sound like an English voice reading it. Settings > Guide has a voice switch; the card has a speaker button to hear a line again. Same line is not repeated within 90 s. It follows the Sound switch and volume.
+- **Better voice later:** record or generate the lines (for example with ElevenLabs) and play them from `voice.ts` instead; the text lives in `guide.ts`, `taskGuide.ts` and `World.tsx`. Not done because it needs a voice choice and a credit budget.
+- **How-to cards:** every task (study, talk, penalty, market, chores, overtime, service, shop, jog, match, cook, dine) and the Dash (on foot and danfo) show a card first: steps with icons, the goal, a speaker button and Start. The task only begins after Start. Shown the first two times per task; Settings > "Show the how-to tips again" resets them. Test links skip them (add `&asklang=1` to see them).
+- Content: `src/content/taskGuide.ts`. 🚩 Pidgin lines need a native-speaker review.
+- `tests/e2e/dash.mjs` is out of date (it clicks "Skip creation", removed in the redesign) and needs updating.

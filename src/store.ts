@@ -6,6 +6,8 @@ import { defaultMeta, mergeEnding, UNLOCKABLES, type MetaProfile, type Settings 
 import { loadLife, loadMeta, saveLife, saveMeta, importSave, exportSave } from '@platform/storage'
 import { addPaid, consume, refreshTokens, remainingSec } from '@platform/tokens'
 import { audio } from '@platform/audio'
+import { configureVoice } from '@platform/voice'
+import { HOWTO } from '@content/taskGuide'
 import { track, setLifeId, restoreLifeId, newLifeId, setAnalyticsConsent, setAnalyticsContext } from '@platform/analytics'
 import { ACTIVITY_HOURS } from './world/time'
 
@@ -85,6 +87,8 @@ interface Store {
   setLife: (s: GameState) => void
   finishTutorial: () => void
   guideTrack: { place: PlaceId; say: Say; act?: string } | null
+  seeTip: (k: string) => void
+  resetTips: () => void
   setLang: (l: 'en' | 'pcm' | 'both') => void
   setGuideTrack: (t: { place: PlaceId; say: Say; act?: string } | null) => void
   setConsent: (granted: boolean) => void
@@ -116,7 +120,7 @@ export const useGame = create<Store>((set, get) => {
       set({ meta, endingRecorded: true, screen: 'ending' })
     }
   }
-  const setMeta = (meta: MetaProfile) => { saveMeta(meta); set({ meta }); audio.configure(meta.settings) }
+  const setMeta = (meta: MetaProfile) => { saveMeta(meta); set({ meta }); audio.configure(meta.settings); configureVoice({ on: meta.settings.sound && meta.settings.voice !== false, volume: meta.settings.volume }) }
   return {
     screen: 'title', life: null, meta: defaultMeta(), sheet: null, toasts: [], quizFeedback: null, dashMode: 'foot', lastDash: null, endingRecorded: false, placeId: null, npcId: null, walkReq: null, hour: 8, day: 0, enterReq: null, taskActive: false, deliveredNow: null, talkReq: null, penaltyReq: null, marketReq: null, startChoresReq: null, startShopReq: null, jogReq: null, matchReq: null,
     startMatch: () => set((st) => ({ matchReq: { n: (st.matchReq?.n ?? 0) + 1 }, sheet: null })),
@@ -159,9 +163,10 @@ export const useGame = create<Store>((set, get) => {
     init: () => {
       const meta = refreshTokens(loadMeta())
       const qs = new URLSearchParams(location.search)
-      if (qs.get('unlimited') === '1') { meta.tokens.unlimited = true; if (!qs.get('asklang')) meta.langAsked = true } // playtest/test mode skips the language question
+      if (qs.get('unlimited') === '1') { meta.tokens.unlimited = true; if (!qs.get('asklang')) { meta.langAsked = true; meta.tips = Object.fromEntries(Object.keys(HOWTO).map((k) => [k, 9])) } } // playtest/test mode skips the language question
       saveMeta(meta)
       audio.configure(meta.settings)
+      configureVoice({ on: meta.settings.sound && meta.settings.voice !== false, volume: meta.settings.volume })
       document.documentElement.classList.toggle('big-text', meta.settings.bigText)
       setAnalyticsConsent(meta.consentAnalytics); restoreLifeId()
       const life = loadLife(); set({ meta, life, hour: life?.clock?.hour ?? 8, day: life?.clock?.day ?? 0 })
@@ -226,6 +231,8 @@ export const useGame = create<Store>((set, get) => {
     importJson: (t) => { const r = importSave(t); if (!r) return false; setMeta(r.meta); saveLife(r.life); set({ life: r.life }); return true },
     setLife: (life) => { saveLife(life); set({ life }) },
     guideTrack: null,
+    resetTips: () => { const m = get().meta; setMeta({ ...m, tips: {}, seenTutorial: false }) },
+    seeTip: (k) => { const m = get().meta; setMeta({ ...m, tips: { ...(m.tips ?? {}), [k]: (m.tips?.[k] ?? 0) + 1 } }) },
     setLang: (l) => { const m = get().meta; setMeta({ ...m, langAsked: true, settings: { ...m.settings, lang: l } }) },
     setGuideTrack: (t) => set({ guideTrack: t, sheet: t ? null : get().sheet }),
     finishTutorial: () => { if (!get().meta.seenTutorial) track('tutorial_completed'); setMeta({ ...get().meta, seenTutorial: true }) },

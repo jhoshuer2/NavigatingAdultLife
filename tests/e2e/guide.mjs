@@ -28,5 +28,13 @@ await page.getByRole('button', { name: 'Guide' }).click(); await page.waitForTim
 await page.getByText('Show me').first().click(); await page.waitForTimeout(800); await shot('06-tracked')
 await page.getByLabel('Go outside').first().click(); await page.waitForTimeout(2500)
 await page.getByLabel('Open the full map').click(); await page.waitForTimeout(800); await shot('07-map')
+// task how-to card and Dash
+await page.keyboard.press('Escape'); await page.waitForTimeout(500)
+await page.evaluate(() => window.__nal.useGame.getState().startJog()); await page.waitForTimeout(1500)
+await page.waitForTimeout(1500); await shot('08-task-howto'); await page.getByRole('dialog', { name: 'How to play' }).waitFor()
+console.log('howto:', JSON.stringify((await page.getByRole('dialog', { name: 'How to play' }).innerText()).slice(0, 120)))
+await page.getByRole('button', { name: /Start/ }).click(); await page.waitForTimeout(800); await shot('09-task-started')
+if (await page.getByRole('dialog', { name: 'How to play' }).count()) throw new Error('coach should be gone after Start')
+await page.evaluate(() => window.__nal.useGame.getState().startDash()); await page.waitForTimeout(1500); await shot('10-dash-ready')
 console.log('errors', errors)
 await browser.close()
