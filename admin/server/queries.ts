@@ -85,11 +85,11 @@ export async function overview(db: Db, f: Filters) {
 }
 
 // ---------- players ----------
-export interface PlayerQuery extends Filters { search?: string; sort?: string; dir?: 'asc' | 'desc'; page?: number; size?: number }
+export interface PlayerQuery extends Filters { includeTest?: boolean; search?: string; sort?: string; dir?: 'asc' | 'desc'; page?: number; size?: number }
 const SORTS: Record<string, string> = { first_seen: 'd.first_seen', last_seen: 'd.last_seen', sessions: 'd.sessions_count', active: 'd.active_seconds', lives: 'd.lives_count', country: 'd.country' }
 
 function playerWhere(f: PlayerQuery) {
-  const p: unknown[] = []; const c = ['NOT d.is_test']
+  const p: unknown[] = []; const c = [f.includeTest ? 'true' : 'NOT d.is_test']
   const add = (v: unknown) => { p.push(v); return `$${p.length}` }
   if (f.country) c.push(`d.country = ${add(f.country)}`)
   if (f.device_type) c.push(`d.device_type = ${add(f.device_type)}`)
@@ -105,7 +105,7 @@ export async function players(db: Db, f: PlayerQuery, now = new Date()) {
   const size = Math.min(Math.max(f.size ?? 25, 1), 100), page = Math.max(f.page ?? 1, 1)
   const sort = SORTS[f.sort ?? 'last_seen'] ?? SORTS.last_seen, dir = f.dir === 'asc' ? 'ASC' : 'DESC'
   const total = n((await db.query<any>(`SELECT count(*)::int c FROM devices d WHERE ${w.where}`, w.p)).rows[0].c)
-  const rows = (await db.query<any>(`SELECT d.device_id, d.first_seen, d.last_seen, d.country, d.region, d.city, d.os, d.browser, d.device_type, d.sessions_count, d.active_seconds, d.lives_count, d.last_feature
+  const rows = (await db.query<any>(`SELECT d.device_id, d.first_seen, d.last_seen, d.country, d.region, d.city, d.os, d.browser, d.device_type, d.sessions_count, d.active_seconds, d.lives_count, d.last_feature, d.is_test
     FROM devices d WHERE ${w.where} ORDER BY ${sort} ${dir}, d.device_id LIMIT ${size} OFFSET ${(page - 1) * size}`, w.p)).rows
   const status = (last: string) => { const age = now.getTime() - new Date(last).getTime(); return age < 2 * DAY ? 'active' : age < 14 * DAY ? 'recent' : 'lapsed' }
   return { total, page, size, rows: rows.map((r: any) => ({ ...r, status: status(r.last_seen), tokens_left: null as number | null })) }
