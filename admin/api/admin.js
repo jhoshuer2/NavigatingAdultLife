@@ -9399,7 +9399,7 @@ async function overview(db, f) {
 var SORTS = { first_seen: "d.first_seen", last_seen: "d.last_seen", sessions: "d.sessions_count", active: "d.active_seconds", lives: "d.lives_count", country: "d.country" };
 function playerWhere(f) {
   const p = [];
-  const c = ["NOT d.is_test"];
+  const c = [f.includeTest ? "true" : "NOT d.is_test"];
   const add = (v) => {
     p.push(v);
     return `$${p.length}`;
@@ -9417,7 +9417,7 @@ async function players(db, f, now = /* @__PURE__ */ new Date()) {
   const size = Math.min(Math.max(f.size ?? 25, 1), 100), page = Math.max(f.page ?? 1, 1);
   const sort = SORTS[f.sort ?? "last_seen"] ?? SORTS.last_seen, dir = f.dir === "asc" ? "ASC" : "DESC";
   const total = n((await db.query(`SELECT count(*)::int c FROM devices d WHERE ${w.where}`, w.p)).rows[0].c);
-  const rows = (await db.query(`SELECT d.device_id, d.first_seen, d.last_seen, d.country, d.region, d.city, d.os, d.browser, d.device_type, d.sessions_count, d.active_seconds, d.lives_count, d.last_feature
+  const rows = (await db.query(`SELECT d.device_id, d.first_seen, d.last_seen, d.country, d.region, d.city, d.os, d.browser, d.device_type, d.sessions_count, d.active_seconds, d.lives_count, d.last_feature, d.is_test
     FROM devices d WHERE ${w.where} ORDER BY ${sort} ${dir}, d.device_id LIMIT ${size} OFFSET ${(page - 1) * size}`, w.p)).rows;
   const status = (last) => {
     const age = now.getTime() - new Date(last).getTime();
@@ -9869,7 +9869,7 @@ async function get(db, me, parts, url, req, now) {
     case "players.csv": {
       const csvOut = parts[0] === "players.csv";
       if (!can(me, csvOut ? "export" : "playersList")) return forbidden();
-      const pq = { ...f, from: url.searchParams.get("from") ? f.from : void 0, to: url.searchParams.get("to") ? f.to : void 0, search: url.searchParams.get("q") ?? void 0, sort: url.searchParams.get("sort") ?? void 0, dir: url.searchParams.get("dir") === "asc" ? "asc" : "desc", page: Number(url.searchParams.get("page") ?? 1), size: Number(url.searchParams.get("size") ?? 25) };
+      const pq = { ...f, from: url.searchParams.get("from") ? f.from : void 0, to: url.searchParams.get("to") ? f.to : void 0, search: url.searchParams.get("q") ?? void 0, includeTest: me.role === "owner" && url.searchParams.get("include_test") === "1", sort: url.searchParams.get("sort") ?? void 0, dir: url.searchParams.get("dir") === "asc" ? "asc" : "desc", page: Number(url.searchParams.get("page") ?? 1), size: Number(url.searchParams.get("size") ?? 25) };
       const label = (r2) => idFor(me, r2.device_id);
       if (csvOut) {
         const rows = (await playersForExport(db, pq)).map((r2) => ({ player: label(r2), first_seen: r2.first_seen, last_seen: r2.last_seen, country: r2.country, region: r2.region, city: r2.city, device: r2.device_type, os: r2.os, browser: r2.browser, sessions: r2.sessions_count, active_seconds: r2.active_seconds, lives: r2.lives_count, last_feature: r2.last_feature, status: r2.status }));
@@ -9895,7 +9895,7 @@ async function get(db, me, parts, url, req, now) {
       if (parts[1] === "users") return json({ users: (await db.query("SELECT admin_id, email, role, disabled, created_at FROM admin_users ORDER BY created_at")).rows });
       if (parts[1] === "audit") return json({ rows: (await db.query("SELECT id, admin_email, action, target, detail, at, ip_hash FROM audit_log ORDER BY id DESC LIMIT 200")).rows });
       if (parts[1] === "summary") return json(await weeklySummary(db, now));
-      if (parts[1] === "schema") return json({ events: EVENT_PROPS, retention: RETENTION, definitions: DEFINITIONS, ingest: (await db.query("SELECT day::text, accepted, duplicate, invalid, rate_limited FROM ingest_stats ORDER BY day DESC LIMIT 14")).rows, blocked_origins: (await db.query("SELECT day::text, origin, n FROM blocked_origins WHERE day >= current_date - 13 ORDER BY day DESC, n DESC LIMIT 60")).rows, allowed_origins: allowedOrigins() });
+      if (parts[1] === "schema") return json({ events: EVENT_PROPS, retention: RETENTION, definitions: DEFINITIONS, ingest: await collectorHealth(db), blocked_origins: (await db.query("SELECT day::text, origin, n FROM blocked_origins WHERE day >= current_date - 13 ORDER BY day DESC, n DESC LIMIT 60")).rows, allowed_origins: allowedOrigins() });
       return json({ error: "Not found" }, 404);
     }
     default:
@@ -9931,6 +9931,12 @@ async function write(db, me, parts, method, req) {
     }
   }
   return json({ error: "Not found" }, 404);
+}
+async function collectorHealth(db) {
+  const stats = (await db.query("SELECT day::text, accepted, duplicate, invalid, rate_limited FROM ingest_stats ORDER BY day DESC LIMIT 14")).rows;
+  const dev = (await db.query(`SELECT received_at::date::text AS day, count(DISTINCT device_id)::int AS devices, count(DISTINCT device_id) FILTER (WHERE is_test)::int AS test_devices
+    FROM raw_events WHERE received_at >= current_date - 13 GROUP BY 1`)).rows;
+  return stats.map((s) => ({ ...s, devices: dev.find((d) => d.day === s.day)?.devices ?? 0, test_devices: dev.find((d) => d.day === s.day)?.test_devices ?? 0 }));
 }
 
 // api-src/admin.ts
