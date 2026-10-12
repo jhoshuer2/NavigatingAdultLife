@@ -65,8 +65,10 @@ class AudioEngine {
   private keepAlive() {
     if (this.silent) return
     try {
-      const wav = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA='
-      this.silent = new Audio(wav); this.silent.loop = true; this.silent.volume = 0.01
+      const n = 4000, buf = new ArrayBuffer(44 + n * 2), v = new DataView(buf) // 0.5 s of 8 kHz silence
+      const tag = (o: number, t: string) => { for (let i = 0; i < 4; i++) v.setUint8(o + i, t.charCodeAt(i)) }
+      tag(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); tag(8, 'WAVE'); tag(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, 8000, true); v.setUint32(28, 16000, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); tag(36, 'data'); v.setUint32(40, n * 2, true)
+      this.silent = new Audio(URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }))); this.silent.loop = true; this.silent.volume = 0.01
       void this.silent.play().catch(() => { this.silent = undefined })
     } catch { this.silent = undefined }
   }

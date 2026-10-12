@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useGame } from './store'
 import { Toasts } from './ui/components'
 import { Title } from './ui/screens/Title'
@@ -11,6 +11,14 @@ const Dash = lazy(() => import('./ui/screens/Dash'))
 import { audio } from '@platform/audio'
 import { analyticsAvailable, setAnalyticsContext, startAnalytics } from '@platform/analytics'
 import { ConsentScreen } from './ui/screens/Consent'
+
+/** Shown whenever sound is switched on but the browser is still blocking it, so silence is never a mystery. One tap turns it on. */
+function SoundPill({ enabled }: { enabled: boolean }) {
+  const [st, setSt] = useState(audio.status())
+  useEffect(() => { const iv = setInterval(() => setSt(audio.status()), 700); return () => clearInterval(iv) }, [])
+  if (!enabled || st === 'running' || st === 'off') return null
+  return <button className="fixed left-1/2 -translate-x-1/2 z-[60] chip chip-gold !text-[13px] !py-1.5 !px-3 pop" style={{ top: 'calc(.5rem + var(--safe-t))' }} onClick={async () => { setSt(await audio.check()); audio.playMusic('menu') }}>🔇 Sound is off. Tap to turn it on</button>
+}
 
 export default function App() {
   const { screen, toasts, init, tick, meta, openSheet } = useGame()
@@ -38,6 +46,7 @@ export default function App() {
   return (
     <div className="shell">
       <Toasts items={toasts} />
+      <SoundPill enabled={meta.settings.sound} />
       {consentOpen && <ConsentScreen />}
       {screen === 'title' && <Title hold={consentOpen} />}
       {screen === 'create' && <Create />}

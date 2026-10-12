@@ -10,7 +10,7 @@ import { NAME_POOLS, HERITAGE_LABEL, HERITAGE_HINT } from '@content/names'
 import { FREE_FABRICS, FREE_HAIR, FREE_OUTFITS, UNLOCKABLES } from '@platform/meta'
 import type { Appearance, DreamId, Gender, Heritage, NewLifeConfig, TraitId } from '@engine/core/types'
 import { audio } from '@platform/audio'
-import { CITY_LIST, type CityId } from '@content/cities'
+import { CITIES, CITY_LIST, type CityId } from '@content/cities'
 import { ITEM_BY_ID } from '@content/items'
 import { CityArt } from '../CityArt'
 
@@ -245,9 +245,15 @@ export function Create() {
           </div>
         )}
 
+        {step === 5 && arch && city && (
+          <div className="flex items-center justify-between mb-2">
+            <span className="chip chip-gold">{CITIES[city].icon} Homes in {CITIES[city].name}</span>
+            <button className="text-[12px] font-extrabold underline opacity-80" onClick={() => { audio.sfx('tap'); setStep(0) }}>Change city</button>
+          </div>
+        )}
         {step === 5 && arch && (
           <div className="grid grid-cols-2 gap-2.5 stagger">
-            {HOMES.filter((h) => h.city === city).map((h, i) => {
+            {HOMES.filter((h) => h.city === (city ?? 'lagos')).map((h, i) => {
               const locked = tierRank(arch.tier) < tierRank(h.minTier)
               const hue = [24, 150, 215, 290][i % 4]
               return (
