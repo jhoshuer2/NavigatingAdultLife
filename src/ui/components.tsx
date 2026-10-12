@@ -142,6 +142,9 @@ export function Toasts({ items }: { items: { id: number; text: string; kind: 'ac
   const last = items[items.length - 1]
   useEffect(() => { if (last) audio.sfx(last.kind === 'ach' ? 'reward' : 'pop') }, [last?.id]) // eslint-disable-line react-hooks/exhaustive-deps
   return (
+    <>
+    {/* While a message is showing, everything behind it fades back so the message can be read; it returns to full strength when the message leaves. */}
+    <div className="fixed inset-0 z-[59] pointer-events-none" style={{ background: 'rgba(8,5,30,.62)', opacity: items.length ? 1 : 0, transition: 'opacity .3s ease' }} aria-hidden="true" />
     <div className="fixed top-3 left-0 right-0 z-[60] flex flex-col items-center gap-2 pointer-events-none px-3" style={{ paddingTop: 'var(--safe-t)' }} aria-live="polite">
       {items.map((t) => {
         const ach = t.kind === 'ach'
@@ -153,6 +156,7 @@ export function Toasts({ items }: { items: { id: number; text: string; kind: 'ac
         )
       })}
     </div>
+    </>
   )
 }
 

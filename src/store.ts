@@ -168,7 +168,7 @@ export const useGame = create<Store>((set, get) => {
     toast: (text, kind = 'info') => {
       const id = toastId++
       set((s) => ({ toasts: [...s.toasts, { id, text, kind }] }))
-      setTimeout(() => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })), 3200)
+      setTimeout(() => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })), 3600)
     },
     init: () => {
       const meta = refreshTokens(loadMeta())
