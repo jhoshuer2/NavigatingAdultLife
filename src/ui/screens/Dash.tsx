@@ -22,7 +22,7 @@ export default function Dash() {
   const how0 = HOWTO[dashMode === 'foot' ? 'dash' : 'dashDanfo']
   const lz = (x: { en: string; pcm: string }) => ({ en: localise(city, x.en), pcm: localise(city, x.pcm) })
   const how = city === 'lagos' ? how0 : { ...how0, title: lz(how0.title), steps: how0.steps.map((x) => ({ ...x, say: lz(x.say) })), goal: lz(how0.goal) }
-  const howVoice = city === 'lagos' || dashMode === 'foot' ? `how_${dashMode === 'foot' ? 'dash' : 'dashDanfo'}` : undefined // the recorded clips say "danfo"
+  const howVoice = dashMode === 'foot' ? 'how_dash' : city === 'abuja' ? 'how_dashCab' : 'how_dashDanfo' // the cab version is recorded separately
 
   const dashLine = [plain(meta.settings.lang, how.title), ...how.steps.map((x) => plain(meta.settings.lang, x.say)), plain(meta.settings.lang, how.goal)].join('. ')
   const simRef = useRef<DashState | null>(null)
