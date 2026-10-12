@@ -103,3 +103,15 @@ Every screen was redesigned to be visual first: custom icon set, glass panels, c
 
 ## Online profile (client)
 Settings > Online profile (shown only when the account API is configured) creates an anonymous profile, shows the recovery code once, restores with a code, sets or checks the guardian PIN, toggles "play with others" (no multiplayer yet), rotates the code, signs out and deletes. Code: `src/platform/account.ts`, `src/ui/screens/OnlineProfile.tsx`. Verified against the local admin API with `tests/e2e/profile.mjs`.
+
+## Guide: "what do I do now?" (English, Pidgin or both)
+Players said they were not sure where to begin, so the game now tells them, GTA style.
+- **Language:** asked once at first run (English / Pidgin / Both), changeable in Settings > Guide. In "Both", Pidgin leads and English is the small second line. The "Show me what to do next" switch turns the guide off. Test and playtest links (`?unlimited=1`) skip the question; add `&asklang=1` to see it.
+- **Guide card** (Oga Conductor + one line + icon) under the HUD, in the world and inside buildings. It decides the next step from the same logic as before (`suggest`) but now knows where you are: outdoors it says which way and how many steps; at the door, "tap the big green button"; inside the wrong building, "go outside first"; inside the right one, which spot to walk to.
+- **Highlights:** the place ring and arrow outdoors, the hotspot marker or the exit door indoors, a gold pulse on the dock button, minimap or Home/Outside button the guide mentions, a pulsing tile in the place sheet, and an edge-of-screen compass arrow with the distance when the target is off screen.
+- **Stuck:** after about 35 s of doing nothing the guide points at Quests, then at the Map, then repeats. Walking towards the target does not count as stuck.
+- **Quests** now say where to go (in your language) and have a "Show me" button that makes the guide follow that quest.
+- **Map:** your position is a ringed "YOU" marker, a dotted trail shows where you have been, a gold line shows the way to the guided or selected place, and the tooltip card gives compass direction, step count and what you can do there.
+- Code: `src/content/lang.ts`, `src/world/guide.ts` (`guideStep`, `QUEST_HINTS`, `bearing`), `src/ui/Guide.tsx`. Tests: `tests/guide.test.ts`, `tests/e2e/guide.mjs`.
+- 🚩 The Pidgin lines are first drafts and need a native-speaker review (all in `guide.ts`, `Guide.tsx`, the coach text in `World.tsx`).
+- Not yet guided: the Dash, the tasks themselves (they have their own instructions) and the sheets other than the place sheet.

@@ -467,6 +467,12 @@ export class WorldRenderer {
 
   // ---------- control ----------
   get position() { return { x: this.px, z: this.pz } }
+  /** Where a world point is on screen, in CSS pixels of the canvas (used for the guide compass). */
+  screenOf(x: number, z: number): { x: number; y: number } {
+    const v = new THREE.Vector3(x, 0.5, z).project(this.camera)
+    const w = this.container.clientWidth || 360, h = this.container.clientHeight || 640
+    return { x: (v.x * 0.5 + 0.5) * w, y: (-v.y * 0.5 + 0.5) * h }
+  }
   setInput(x: number, z: number) { if (this.sleeping || this.frozen) return; this.input.x = x; this.input.z = z; if (x || z) { this.path = null } }
   walkTo(x: number, z: number) { if (this.sleeping || this.frozen) return false; const nav = this.interior ? this.interior.nav : this.nav; const p = findPath(nav, { x: this.px, z: this.pz }, { x, z }); this.path = p; return !!p }
   cancelWalk() { this.path = null }

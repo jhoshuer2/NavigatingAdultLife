@@ -136,3 +136,10 @@ html.big-text { font-size: 18px; }
 
 /* Brand rule: titles are white with a soft shadow; gold is reserved for rewards. */
 .text-danfo { color: #fff; text-shadow: 0 2px 0 rgba(0, 0, 0, .4); }
+
+/* Guide highlights: a gold pulse on whatever the guide is pointing at. */
+@keyframes guideRing { 0% { box-shadow: 0 0 0 0 rgba(255, 199, 44, .75), inset 0 1px 0 rgba(255,255,255,.2); } 70% { box-shadow: 0 0 0 14px rgba(255, 199, 44, 0), inset 0 1px 0 rgba(255,255,255,.2); } 100% { box-shadow: 0 0 0 0 rgba(255, 199, 44, 0), inset 0 1px 0 rgba(255,255,255,.2); } }
+.guide-glow { border-color: var(--gold) !important; animation: guideRing 1.4s ease-out infinite; }
+.reduce-motion .guide-glow { animation: none; box-shadow: 0 0 0 3px var(--gold); }
+@keyframes guideNudge { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+.guide-nudge { animation: guideNudge 1s ease-in-out infinite; }

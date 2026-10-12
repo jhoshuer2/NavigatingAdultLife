@@ -4,7 +4,7 @@ import { Btn, DeltaChips, Modal, nairaShort } from './components'
 import { Icon } from './icons'
 import { getActivities } from '@engine/api'
 import { DISTRICTS, buildDistrict, type PlaceId } from '../world/layout'
-import { placeActive, placeNote } from '../world/guide'
+import { placeActive, placeNote, suggest } from '../world/guide'
 import { INTERIORS } from '../world/interiors'
 import { isOpen, opensAt, fmtClock } from '../world/time'
 import { useActivityRouter } from './useActivities'
@@ -20,9 +20,10 @@ const BENEFIT: Record<string, string> = {
 const emojis = (t: string) => Array.from(t.matchAll(/\p{Extended_Pictographic}/gu)).map((m) => m[0]).slice(0, 3).join(' ')
 
 /** Big square activity tile: icon, short name, then only symbols (cost and reward). */
-function ActTile({ icon, label, energy, cash, reward, reason, left, disabled, hot, onClick }: { icon: string; label: string; energy?: number; cash?: number; reward?: string; reason?: string; left?: number; disabled?: boolean; hot?: boolean; onClick: () => void }) {
+function ActTile({ icon, label, energy, cash, reward, reason, left, disabled, hot, guide, onClick }: { guide?: boolean; icon: string; label: string; energy?: number; cash?: number; reward?: string; reason?: string; left?: number; disabled?: boolean; hot?: boolean; onClick: () => void }) {
   return (
-    <button className={`tile !justify-start !gap-1 !pt-3 ${hot ? 'is-on' : ''}`} disabled={disabled} onClick={onClick}>
+    <button className={`tile !justify-start !gap-1 !pt-3 ${hot ? 'is-on' : ''} ${guide ? 'guide-glow' : ''}`} disabled={disabled} onClick={onClick}>
+      {guide && <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 chip chip-gold !py-0 !text-[10px] guide-nudge">👉</span>}
       <span className="text-[34px] leading-none">{disabled && reason ? '🔒' : icon}</span>
       <span className="font-display text-[15px] leading-tight text-center uppercase tracking-wide">{label}</span>
       {disabled && reason ? <span className="text-[11px] font-bold text-yellow-300 leading-tight text-center">{reason}</span> : (
@@ -38,9 +39,10 @@ function ActTile({ icon, label, energy, cash, reward, reason, left, disabled, ho
 }
 
 export function PlaceModal() {
-  const { life, placeId, openSheet, endActions, enterPlace, hour, startPenalty, startMarket, startChores, startShop, startJog, startMatch } = useGame()
+  const { life, placeId, meta, openSheet, endActions, enterPlace, hour, startPenalty, startMarket, startChores, startShop, startJog, startMatch } = useGame()
   const route = useActivityRouter()
   const acts = useMemo(() => (life ? getActivities(life) : []), [life])
+  const guideOn = meta.settings.guide !== false
   if (!life || !placeId) return null
   const district = buildDistrict(life.character.housing.districtId)
   const place = district.places.find((p) => p.id === placeId)
@@ -51,6 +53,8 @@ export function PlaceModal() {
   const closed = !isOpen(placeId, hour)
   const lastDelta = life.lastAction?.deltas ?? []
   const idle = life.phase !== 'action'
+  const sug = guideOn ? suggest(life) : null
+  const mine = sug?.place === placeId ? sug : null
   const run = (def: (typeof rows)[number]['def']) => {
     audio.sfx('click')
     if (def.id === 'rest' && placeId === 'home') { enterPlace('home', 'sleep'); return }
@@ -76,11 +80,11 @@ export function PlaceModal() {
       {note && <div className="hud-glass rounded-2xl px-3 py-2 mt-3 text-sm flex gap-2 items-start"><Icon name="info" size={18} color="#5cc8ff" /><span>{note}</span></div>}
       {INTERIORS[placeId] && (closed
         ? <div className="chip chip-gold !text-sm mt-3"><Icon name="clock" size={14} color="#3b2300" /> Opens {fmtClock(opensAt(placeId))}</div>
-        : <Btn variant="green" className="w-full mt-3" onClick={() => { audio.sfx('click'); enterPlace(placeId) }}><Icon name="door" size={20} /> Go inside</Btn>)}
+        : <Btn variant="green" className={`w-full mt-3 ${mine && !rows.some((r) => r.def.id === mine.act) ? 'guide-glow' : ''}`} onClick={() => { audio.sfx('click'); enterPlace(placeId) }}><Icon name="door" size={20} /> Go inside</Btn>)}
       <div className="grid grid-cols-2 gap-2.5 mt-3">
         {placeId === 'pitch' && <ActTile hot icon="⚽" label="Play a match" energy={12} reward="🏆" disabled={idle || closed} onClick={() => { audio.sfx('click'); startMatch() }} />}
         {rows.map(({ def, enabled, reason, remaining }) => (
-          <ActTile key={def.id} icon={def.icon} label={def.label} energy={def.cost.energy} cash={def.cost.cash} reward={emojis(BENEFIT[def.id] ?? '')} reason={closed ? `Opens ${fmtClock(opensAt(placeId))}` : reason} left={remaining} disabled={!enabled || idle || closed} onClick={() => run(def)} />
+          <ActTile key={def.id} guide={!!mine && mine.act === def.id && enabled} icon={def.icon} label={def.label} energy={def.cost.energy} cash={def.cost.cash} reward={emojis(BENEFIT[def.id] ?? '')} reason={closed ? `Opens ${fmtClock(opensAt(placeId))}` : reason} left={remaining} disabled={!enabled || idle || closed} onClick={() => run(def)} />
         ))}
         {placeId === 'home' && <ActTile hot icon="📅" label="End the year" reward={`${life.character.age} → ${life.character.age + 1}`} disabled={idle || !!life.quiz} onClick={() => { audio.sfx('good'); openSheet(null); endActions() }} />}
       </div>

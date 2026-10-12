@@ -357,7 +357,7 @@ export class InteriorView {
     this.time += dt
     if (this.fanOn && this.fanBlades) this.fanBlades.rotation.y += dt * 14
     if (this.tvScreen && this.tvMat.color.getHex() !== 0x0b0b10) this.tvMat.color.setHex(Math.floor(this.time * 3) % 2 ? 0x6fa4ff : 0x8fb6ff)
-    const h = this.markTarget ? this.def.hotspots.find((x) => x.id === this.markTarget) : null
+    const h = this.markTarget === '__exit' ? this.def.door : this.markTarget ? this.def.hotspots.find((x) => x.id === this.markTarget) : null
     this.marker.visible = this.arrow.visible = !!h
     if (h) { this.marker.position.set(h.x, 0.1, h.z); this.marker.scale.setScalar(1 + Math.sin(this.time * 4) * 0.1); this.arrow.position.set(h.x, 3.5 + Math.abs(Math.sin(this.time * 3)) * 0.5, h.z) }
     this.stepResidents(dt)

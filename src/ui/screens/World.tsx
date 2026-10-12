@@ -24,7 +24,9 @@ import { CookTask } from '../tasks/CookTask'
 import { DineTask } from '../tasks/DineTask'
 import { TalkTask, type Partner } from '../tasks/TalkTask'
 import type { Exchange, Setting } from '@content/dialogue'
-import { placeActive, suggest } from '../../world/guide'
+import { bearing, guideStep, placeActive, suggest } from '../../world/guide'
+import { GuideCard, GuideCompass, LangPicker, Lines } from '../Guide'
+import { say, type Lang } from '@content/lang'
 import { installedSet } from '@content/appliances'
 import { ITEM_BY_ID } from '@content/items'
 import { outdoorAnchor, presenceAt, type Activity } from '../../world/residents'
@@ -197,7 +199,34 @@ export default function World() {
   useEffect(() => { const r = rendRef.current; if (r?.inside) r.setResidents(residentMap(r.inside), false) /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [hour, inside, life?.npcs])
 
   const sug = useMemo(() => (life ? suggest(life) : null), [life])
-  useEffect(() => { rendRef.current?.setHighlight(sug?.place ?? null) }, [sug])
+  // --- guide: what to do next, what to highlight, and a nudge when the player seems stuck ---
+  const lang = meta.settings.lang ?? 'en'
+  const guideOn = meta.settings.guide !== false
+  const [stuck, setStuck] = useState<0 | 1 | 2>(0)
+  const prog = useRef({ t: Date.now(), x: 0, z: 0 })
+  const progKey = `${life?.log.length ?? 0}|${life?.character.stats.energy ?? 0}|${inside ?? ''}|${g.sheet ?? ''}|${task?.kind ?? ''}|${g.guideTrack?.place ?? ''}`
+  useEffect(() => { prog.current = { t: Date.now(), x: rendRef.current?.position.x ?? 0, z: rendRef.current?.position.z ?? 0 }; setStuck(0) }, [progKey])
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      const r = rendRef.current; if (!r) return
+      const p = prog.current, me = r.position
+      if (Math.hypot(me.x - p.x, me.z - p.z) > 6) { prog.current = { t: Date.now(), x: me.x, z: me.z }; setStuck(0); return } // actively travelling
+      const e = Date.now() - p.t
+      setStuck(e < 35000 ? 0 : (Math.floor(e / 35000) % 2 === 1 ? 1 : 2))
+    }, 2000)
+    return () => window.clearInterval(id)
+  }, [])
+  const step = useMemo(() => (life && guideOn ? guideStep({ life, district, inside, near: near.place, pos, stuck: modalOpen ? 0 : stuck, track: g.guideTrack }) : null), [life, guideOn, district, inside, near.place, pos, stuck, modalOpen, g.guideTrack])
+  useEffect(() => { if (g.guideTrack && inside === g.guideTrack.place) g.setGuideTrack(null) }, [inside, g.guideTrack]) // eslint-disable-line react-hooks/exhaustive-deps
+  const tgt = step?.target
+  useEffect(() => {
+    const r = rendRef.current; if (!r) return
+    r.setHighlight(tgt && (tgt.t === 'place' || tgt.t === 'enter') ? tgt.place : null)
+    if (r.inside && !intent.current) r.setInteriorMarker(tgt?.t === 'hotspot' ? tgt.id : tgt?.t === 'exit' ? '__exit' : null)
+  }, [tgt?.t, tgt && 'place' in tgt ? tgt.place : null, tgt && 'id' in tgt ? tgt.id : null, inside]) // eslint-disable-line react-hooks/exhaustive-deps
+  const trail = useRef<{ x: number; z: number }[]>([])
+  useEffect(() => { const t = trail.current, l = t[t.length - 1]; if (!l || Math.hypot(l.x - pos.x, l.z - pos.z) > 2.5) { t.push({ x: pos.x, z: pos.z }); if (t.length > 160) t.shift() } }, [pos])
+  const ping = (el: 'quests' | 'map' | 'places' | 'home') => tgt?.t === 'ui' && tgt.el === el || (el === 'home' && tgt?.t === 'exit')
 
   // walk requests (from the Places list or the guidance card)
   useEffect(() => {
@@ -537,7 +566,7 @@ export default function World() {
             </span>
           </button>
           {!inside
-            ? <Minimap district={district} x={pos.x} z={pos.z} h={pos.h} onOpen={() => { track('map_opened'); setMapOpen(true) }} />
+            ? <Minimap pulse={ping('map')} district={district} x={pos.x} z={pos.z} h={pos.h} onOpen={() => { track('map_opened'); setMapOpen(true) }} />
             : <div className="hud-glass pointer-events-none rounded-2xl px-3 py-2 flex items-center gap-1.5 max-w-[40%]"><Icon name="door" size={18} /><span className="font-display text-[14px] uppercase leading-tight truncate">{INTERIORS[inside]?.name}</span></div>}
         </div>
         <div className="flex items-center gap-2 px-2 mt-2">
@@ -561,30 +590,26 @@ export default function World() {
           </div>
         )}
         {slow && <div className="hud-glass mt-2 mx-2 px-3 py-2 rounded-2xl text-sm flex items-center gap-2 pointer-events-auto"><span className="flex-1">Running slowly?</span><Btn size="sm" onClick={() => g.updateSettings({ lite: true })}>Menu mode</Btn></div>}
-        {sug && !coachOn && !modalOpen && !inside && (
-          <button className="pointer-events-auto mt-2 mx-2 flex items-center gap-2 rounded-full pl-1.5 pr-2 py-1 hud-glass active:scale-[.98] transition-transform" onClick={() => { audio.sfx('click'); g.goToPlace(sug.place) }} aria-label={`Next: ${sug.text}`}>
-            <span className="grid place-items-center w-8 h-8 rounded-full text-[18px]" style={{ background: 'linear-gradient(180deg,#ffe27a,#f59e0b)' }}>{sug.icon}</span>
-            <span className="font-display text-[15px] uppercase tracking-wide pr-1">{sug.text}</span>
-            <span className="grid place-items-center w-7 h-7 rounded-full glow-pulse" style={{ background: 'var(--green)' }}><Icon name="chevron" size={16} color="#052e16" /></span>
-          </button>
-        )}
+        {step && !coachOn && !modalOpen && <GuideCard step={step} lang={lang} onTap={() => { audio.sfx('click'); if (tgt?.t === 'ui' && tgt.el === 'quests') g.openSheet('quests'); else setMapOpen(true) }} />}
         {flash && life.lastAction && !modalOpen && !coachOn && (
           <div className="mx-2 mt-2 flex justify-center" key={flash} aria-label={life.lastAction.text}><DeltaChips deltas={life.lastAction.deltas} limit={5} /></div>
         )}
       </div>
 
-      {coachOn && !modalOpen && (
+      {!meta.langAsked && life?.phase === 'action' && !task && !g.sheet && <LangPicker />}
+      {guideOn && step?.aim && !modalOpen && !coachOn && <GuideCompass r={rendRef.current} pos={pos} aim={step.aim} />}
+      {coachOn && meta.langAsked && !modalOpen && (
         <div className="absolute inset-x-3 bottom-[8.4rem] z-20 pointer-events-auto">
           <Mentor mood={coach === 2 ? 'wow' : 'hype'} nextLabel={coach < 2 ? 'Next' : 'Got it!'} onNext={() => { if (coach < 2) setCoach(coach + 1); else { setReplay(false); g.finishTutorial() } }}>
-            {coach === 0 && 'Drag the stick to walk. Tap the ground works too!'}
-            {coach === 1 && `Walk to the glowing ring${sug ? ` at the ${district.places.find((p) => p.id === sug.place)?.name ?? 'place'}` : ''}, then tap the green button.`}
-            {coach === 2 && 'Actions cost energy. Done for the year? Go home and end it.'}
+            {coach === 0 && <Lines lang={lang} s={say('Drag the stick to walk. Tap the ground works too!', 'Drag the stick to waka. You fit tap the ground too!')} />}
+            {coach === 1 && <Lines lang={lang} s={say(`Walk to the glowing ring${sug ? ` at the ${district.places.find((p) => p.id === sug.place)?.name ?? 'place'}` : ''}, then tap the green button.`, `Waka go the shining ring${sug ? ` for ${district.places.find((p) => p.id === sug.place)?.name ?? 'place'}` : ''}, then press the green button.`)} />}
+            {coach === 2 && <Lines lang={lang} s={say('Actions cost energy. Done for the year? Go home and end it. I will point the way if you get stuck.', 'Everything dey cost energy. You don finish the year? Go house end am. If you hala say you lost, I go show you road.')} />}
           </Mentor>
           {coach < 2 && <button className="block mx-auto mt-1 text-[12px] font-extrabold uppercase tracking-wider opacity-70" onClick={() => { setReplay(false); g.finishTutorial() }}>Skip</button>}
         </div>
       )}
 
-      {mapOpen && <MapModal district={district} x={pos.x} z={pos.z} h={pos.h} hour={hour} life={life} sugPlace={sug?.place ?? null} onClose={() => setMapOpen(false)} onGo={(id) => { track('map_travel', { place: id }); setMapOpen(false); g.goToPlace(id) }} />}
+      {mapOpen && <MapModal trail={trail.current} aim={step?.target.t === 'place' || step?.target.t === 'enter' ? step.target.place : sug?.place ?? null} lang={lang} district={district} x={pos.x} z={pos.z} h={pos.h} hour={hour} life={life} sugPlace={sug?.place ?? null} onClose={() => setMapOpen(false)} onGo={(id) => { track('map_travel', { place: id }); setMapOpen(false); g.goToPlace(id) }} />}
 
       {/* proximity prompts: one big round action button, like a controller prompt */}
       {!modalOpen && !inside && !task && (nearNpc || nearPlace) && (
@@ -690,10 +715,10 @@ export default function World() {
       {!task && (
         <nav className="absolute bottom-0 inset-x-0 z-10 px-3 pt-8 safe-pad dock-fade pointer-events-none" aria-label="Main">
           <div className="hud-glass pointer-events-auto mx-auto max-w-sm flex items-end justify-between rounded-[28px] px-2 pt-1.5 pb-1.5">
-            <DockBtn icon="pin" label="Places" onClick={() => g.openSheet('places')} />
-            <DockBtn icon="scroll" label="Quests" onClick={() => g.openSheet('quests')} />
+            <DockBtn icon="pin" label="Places" pulse={ping('places')} onClick={() => g.openSheet('places')} />
+            <DockBtn icon="scroll" label="Quests" pulse={ping('quests')} onClick={() => g.openSheet('quests')} />
             <button className="relative -mt-7 flex flex-col items-center gap-0.5" onClick={() => { audio.sfx('good'); if (inside) leave(); else g.goToPlace('home') }} aria-label={inside ? 'Go outside' : 'Go home'}>
-              <span className={`btn btn-gold btn-round !w-[66px] !h-[66px] ${sug?.place === 'home' && !inside ? 'glow-pulse' : ''}`}><Icon name={inside ? 'door' : 'home'} size={32} color="#7a4700" /></span>
+              <span className={`btn btn-gold btn-round !w-[66px] !h-[66px] ${(sug?.place === 'home' && !inside && !tgt) || ping('home') || (tgt?.t === 'place' && tgt.place === 'home') ? 'glow-pulse guide-glow' : ''}`}><Icon name={inside ? 'door' : 'home'} size={32} color="#7a4700" /></span>
               <span className="text-[10px] font-extrabold uppercase tracking-wider">{inside ? 'Outside' : 'Home'}</span>
             </button>
             <DockBtn icon="user" label="Profile" onClick={() => g.openSheet('profile')} />
@@ -705,10 +730,10 @@ export default function World() {
   )
 }
 
-function DockBtn({ icon, label, onClick }: { icon: IconName; label: string; onClick: () => void }) {
+function DockBtn({ icon, label, pulse, onClick }: { icon: IconName; label: string; pulse?: boolean; onClick: () => void }) {
   return (
     <button className="flex flex-col items-center gap-0.5 w-[58px] py-1 active:scale-95 transition-transform" onClick={() => { audio.sfx('tap'); onClick() }} aria-label={label}>
-      <Icon name={icon} size={28} /><span className="text-[10px] font-extrabold uppercase tracking-wider opacity-85">{label}</span>
+      <span className={`grid place-items-center w-10 h-8 rounded-xl ${pulse ? 'guide-glow' : ''}`}><Icon name={icon} size={28} /></span><span className="text-[10px] font-extrabold uppercase tracking-wider opacity-85">{label}</span>
     </button>
   )
 }
@@ -744,7 +769,7 @@ function drawPlayer(g: CanvasRenderingContext2D, S: number, x: number, z: number
   g.fillStyle = '#ffd23f'; g.strokeStyle = '#1c1b22'; g.lineWidth = Math.max(2, size / 3); g.beginPath(); g.moveTo(0, -size); g.lineTo(size * 0.78, size * 0.9); g.lineTo(-size * 0.78, size * 0.9); g.closePath(); g.fill(); g.stroke(); g.restore()
 }
 
-function Minimap({ district, x, z, h, onOpen }: { district: District; x: number; z: number; h: number; onOpen: () => void }) {
+function Minimap({ district, x, z, h, onOpen, pulse }: { pulse?: boolean; district: District; x: number; z: number; h: number; onOpen: () => void }) {
   const ref = useRef<HTMLCanvasElement>(null)
   const S = 92, R = S * 2
   const base = useMemo(() => {
@@ -759,14 +784,14 @@ function Minimap({ district, x, z, h, onOpen }: { district: District; x: number;
     g.clearRect(0, 0, R, R); g.drawImage(base, 0, 0); drawPlayer(g, R, x, z, h, 9)
   }, [base, x, z, h])
   return (
-    <button className="relative rounded-full pointer-events-auto shrink-0 p-0" style={{ width: S, height: S }} onClick={onOpen} aria-label="Open the full map">
+    <button className={`relative rounded-full pointer-events-auto shrink-0 p-0 ${pulse ? 'guide-glow' : ''}`} style={{ width: S, height: S }} onClick={onOpen} aria-label="Open the full map">
       <canvas ref={ref} width={R} height={R} className="rounded-full" style={{ width: S, height: S, border: '3px solid rgba(255,255,255,.85)', boxShadow: '0 0 0 3px #3b22a8, 0 6px 16px rgba(0,0,0,.5)' }} />
       <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 chip chip-gold !py-0 !px-1.5 !text-[10px]"><Icon name="map" size={11} color="#3b2300" />MAP</span>
     </button>
   )
 }
 
-function MapModal({ district, x, z, h, hour, life, sugPlace, onClose, onGo }: { district: District; x: number; z: number; h: number; hour: number; life: NonNullable<ReturnType<typeof useGame.getState>['life']>; sugPlace: PlaceId | null; onClose: () => void; onGo: (id: PlaceId) => void }) {
+function MapModal({ district, x, z, h, hour, life, sugPlace, onClose, onGo, trail, aim, lang }: { trail: { x: number; z: number }[]; aim: PlaceId | null; lang: Lang; district: District; x: number; z: number; h: number; hour: number; life: NonNullable<ReturnType<typeof useGame.getState>['life']>; sugPlace: PlaceId | null; onClose: () => void; onGo: (id: PlaceId) => void }) {
   const ref = useRef<HTMLCanvasElement>(null)
   const [sel, setSel] = useState<PlaceId | null>(sugPlace)
   const S = 640
@@ -776,6 +801,10 @@ function MapModal({ district, x, z, h, hour, life, sugPlace, onClose, onGo }: { 
     const cv = ref.current; if (!cv) return
     const g = cv.getContext('2d')!; const k = S / (WORLD.half * 2)
     g.clearRect(0, 0, S, S); g.drawImage(base, 0, 0)
+    // where you have been (dotted) and the way to the guided place (gold)
+    if (trail.length > 1) { g.save(); g.setLineDash([3, 8]); g.lineCap = 'round'; g.lineWidth = 5; g.strokeStyle = 'rgba(255,255,255,.75)'; g.beginPath(); trail.forEach((t, i) => { const X = (t.x + WORLD.half) * k, Y = (t.z + WORLD.half) * k; if (i) g.lineTo(X, Y); else g.moveTo(X, Y) }); g.lineTo((x + WORLD.half) * k, (z + WORLD.half) * k); g.stroke(); g.restore() }
+    const goal = district.places.find((p) => p.id === (sel ?? aim))
+    if (goal) { g.save(); g.setLineDash([14, 10]); g.lineCap = 'round'; g.lineWidth = 7; g.strokeStyle = '#ffc72c'; g.beginPath(); g.moveTo((x + WORLD.half) * k, (z + WORLD.half) * k); g.lineTo((goal.door.x + WORLD.half) * k, (goal.door.z + WORLD.half) * k); g.stroke(); g.restore() }
     g.font = '28px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'
     for (const p of district.places) {
       const X = (p.door.x + WORLD.half) * k, Y = (p.door.z + WORLD.half) * k, st = stateOf(p.id)
@@ -783,8 +812,11 @@ function MapModal({ district, x, z, h, hour, life, sugPlace, onClose, onGo }: { 
       g.lineWidth = p.id === sel ? 6 : p.id === sugPlace ? 5 : 2; g.strokeStyle = p.id === sel ? '#2bd978' : p.id === sugPlace ? '#ffc72c' : '#ffffffaa'; g.stroke()
       g.fillText(st === 'closed' ? '🔒' : p.icon, X, Y + 2)
     }
+    const PX = (x + WORLD.half) * k, PY = (z + WORLD.half) * k
+    g.beginPath(); g.arc(PX, PY, 30, 0, Math.PI * 2); g.fillStyle = 'rgba(255,255,255,.28)'; g.fill(); g.lineWidth = 3; g.strokeStyle = '#fff'; g.stroke()
     drawPlayer(g, S, x, z, h, 16)
-  }, [base, x, z, h, sel, sugPlace, hour])
+    g.font = '800 20px system-ui'; g.textAlign = 'center'; g.lineWidth = 5; g.strokeStyle = '#2a1a7a'; g.strokeText('YOU', PX, PY + 52); g.fillStyle = '#fff'; g.fillText('YOU', PX, PY + 52)
+  }, [base, x, z, h, sel, sugPlace, hour, trail, aim])
   const tap = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const r = e.currentTarget.getBoundingClientRect()
     const wx = ((e.clientX - r.left) / r.width) * WORLD.half * 2 - WORLD.half, wz = ((e.clientY - r.top) / r.height) * WORLD.half * 2 - WORLD.half
@@ -798,13 +830,23 @@ function MapModal({ district, x, z, h, hour, life, sugPlace, onClose, onGo }: { 
     <Modal title={DISTRICTS[life.character.housing.districtId]?.name ?? 'Your area'} onClose={onClose}>
       <canvas ref={ref} width={S} height={S} className="w-full rounded-3xl touch-none" style={{ border: '3px solid rgba(255,255,255,.7)', boxShadow: '0 8px 24px rgba(0,0,0,.5)', aspectRatio: '1 / 1' }} onPointerUp={tap} aria-label="Map. Tap a place to select it." />
       <div className="flex gap-1.5 mt-2 text-[11px] font-bold opacity-80"><span className="chip !py-0.5">▲ You</span><span className="chip chip-gold !py-0.5">Next stop</span><span className="chip !py-0.5">🔒 Closed</span></div>
-      {place ? (
-        <div className="hud-glass rounded-2xl p-3 mt-3 flex items-center gap-3 pop" key={place.id}>
-          <div className="w-12 h-12 rounded-2xl grid place-items-center text-3xl shrink-0" style={{ background: 'radial-gradient(circle at 30% 20%, #8a5cff, #3b22a8)' }}>{st === 'closed' ? '🔒' : place.icon}</div>
-          <div className="flex-1 min-w-0"><div className="font-display uppercase leading-tight">{place.name}</div>{st !== 'open' && <div className="text-xs text-yellow-300 font-bold">{st === 'closed' ? `Opens ${fmtClock(opensAt(place.id))}` : 'Nothing here now'}</div>}</div>
-          {st !== 'inactive' && <Btn variant="green" size="sm" onClick={() => onGo(place.id)}><Icon name="pin" size={16} /> Go</Btn>}
-        </div>
-      ) : <div className="text-sm opacity-70 text-center mt-3">Tap a place</div>}
+      {place ? (() => {
+        const b = bearing({ x, z }, place.door)
+        const acts = getActivities(life)
+        const things = place.activities.map((id) => acts.find((a) => a.def.id === id)?.def).filter(Boolean).slice(0, 4) as { id: string; icon: string; label: string }[]
+        const way = say(`${b.dir}, about ${b.steps} steps from you`, `${b.dir}, about ${b.steps} steps from where you dey`)
+        return (
+          <div className="hud-glass rounded-2xl p-3 mt-3 pop" key={place.id}>
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl grid place-items-center text-3xl shrink-0" style={{ background: 'radial-gradient(circle at 30% 20%, #8a5cff, #3b22a8)' }}>{st === 'closed' ? '🔒' : place.icon}</div>
+              <div className="flex-1 min-w-0"><div className="font-display uppercase leading-tight">{place.name}</div><div className="text-[12px] font-bold opacity-80 leading-snug"><Icon name="pin" size={11} /> <Lines lang={lang} s={way} /></div>{st !== 'open' && <div className="text-xs text-yellow-300 font-bold">{st === 'closed' ? `Opens ${fmtClock(opensAt(place.id))}` : 'Nothing here now'}</div>}</div>
+              {st !== 'inactive' && <Btn variant="green" size="sm" onClick={() => onGo(place.id)}><Icon name="pin" size={16} /> Go</Btn>}
+            </div>
+            {things.length > 0 && <div className="flex flex-wrap gap-1.5 mt-2">{things.map((d) => <span key={d.id} className="chip !py-0.5">{d.icon} {d.label}</span>)}</div>}
+          </div>
+        )
+      })()
+      : <div className="text-sm opacity-70 text-center mt-3">Tap a place</div>}
       <div className="grid grid-cols-4 gap-2 mt-3">
         {district.places.map((p) => <button key={p.id} className={`tile !min-h-[64px] !p-1 ${p.id === sel ? 'is-on' : ''}`} style={{ opacity: stateOf(p.id) === 'open' ? 1 : 0.55 }} onClick={() => setSel(p.id)} aria-label={p.name}><span className="text-2xl leading-none">{stateOf(p.id) === 'closed' ? '🔒' : p.icon}</span></button>)}
       </div>

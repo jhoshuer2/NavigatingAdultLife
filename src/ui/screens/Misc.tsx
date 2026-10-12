@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { useGame } from '../../store'
-import { Btn, CountUp, Ribbon, RoundBtn } from '../components'
+import { Btn, CountUp, Ribbon, RoundBtn, Tile } from '../components'
+import { LANGS } from '@content/lang'
 import { Icon, type IconName } from '../icons'
 import { ACHIEVEMENTS } from '@content/achievements'
 import { UNLOCKABLES } from '@platform/meta'
@@ -125,6 +126,12 @@ export function Settings() {
   }
   return (
     <Page title="Settings" back={life ? 'play' : 'title'}>
+      <h2 className="font-display text-xl text-white/90 uppercase tracking-wide mb-1">Guide</h2>
+      <div className="grid grid-cols-3 gap-2.5">
+        {LANGS.map((l) => <Tile key={l.id} emoji={l.emoji} label={l.label} sub={l.sub} on={(s.lang ?? 'en') === l.id} onClick={() => updateSettings({ lang: l.id })} />)}
+      </div>
+      <div className="grid gap-2 mt-2.5"><Toggle label="Show me what to do next" on={s.guide !== false} onChange={(v) => updateSettings({ guide: v })} /></div>
+      <h2 className="font-display text-xl text-white/90 uppercase tracking-wide mt-6 mb-1">Sound and display</h2>
       <div className="grid gap-2">
         <Toggle label="Sound effects" on={s.sound} onChange={(v) => { updateSettings({ sound: v }); audio.configure({ ...s, sound: v }) }} />
         <Toggle label="Music" on={s.music} onChange={(v) => { updateSettings({ music: v }); audio.configure({ ...s, music: v }) }} />

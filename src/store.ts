@@ -13,6 +13,7 @@ export type Screen = 'title' | 'create' | 'play' | 'ending' | 'achievements' | '
 export type Sheet = null | 'shop' | 'jobs' | 'quests' | 'profile' | 'pick-social' | 'pick-family' | 'lifestyle' | 'paywall' | 'place' | 'npc' | 'places'
 
 import type { PlaceId } from './world/layout'
+import type { Say } from '@content/lang'
 
 interface Toast { id: number; text: string; kind: 'ach' | 'info' }
 
@@ -83,6 +84,9 @@ interface Store {
   importJson: (t: string) => boolean
   setLife: (s: GameState) => void
   finishTutorial: () => void
+  guideTrack: { place: PlaceId; say: Say; act?: string } | null
+  setLang: (l: 'en' | 'pcm' | 'both') => void
+  setGuideTrack: (t: { place: PlaceId; say: Say; act?: string } | null) => void
   setConsent: (granted: boolean) => void
 }
 
@@ -154,7 +158,8 @@ export const useGame = create<Store>((set, get) => {
     },
     init: () => {
       const meta = refreshTokens(loadMeta())
-      if (new URLSearchParams(location.search).get('unlimited') === '1') meta.tokens.unlimited = true
+      const qs = new URLSearchParams(location.search)
+      if (qs.get('unlimited') === '1') { meta.tokens.unlimited = true; if (!qs.get('asklang')) meta.langAsked = true } // playtest/test mode skips the language question
       saveMeta(meta)
       audio.configure(meta.settings)
       document.documentElement.classList.toggle('big-text', meta.settings.bigText)
@@ -220,6 +225,9 @@ export const useGame = create<Store>((set, get) => {
     exportJson: () => exportSave(get().life, get().meta),
     importJson: (t) => { const r = importSave(t); if (!r) return false; setMeta(r.meta); saveLife(r.life); set({ life: r.life }); return true },
     setLife: (life) => { saveLife(life); set({ life }) },
+    guideTrack: null,
+    setLang: (l) => { const m = get().meta; setMeta({ ...m, langAsked: true, settings: { ...m.settings, lang: l } }) },
+    setGuideTrack: (t) => set({ guideTrack: t, sheet: t ? null : get().sheet }),
     finishTutorial: () => { if (!get().meta.seenTutorial) track('tutorial_completed'); setMeta({ ...get().meta, seenTutorial: true }) },
     setConsent: (granted) => { setMeta({ ...get().meta, consentAnalytics: granted, consentAsked: true }); setAnalyticsConsent(granted) },
   }

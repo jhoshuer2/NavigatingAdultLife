@@ -2,6 +2,8 @@ import { useMemo } from 'react'
 import { useGame } from '../store'
 import { Btn, Confetti, CountUp, DeltaChips, Modal, Tile, naira, nairaShort } from './components'
 import { Icon } from './icons'
+import { Lines } from './Guide'
+import { QUEST_HINTS } from '../world/guide'
 import { Avatar } from './Avatar'
 import { currentEvent, getDreamProgress, getJobOptions, getShopItems } from '@engine/api'
 import { QUESTS } from '@content/quests'
@@ -206,8 +208,9 @@ export function PickModal({ kind }: { kind: 'social' | 'family' }) {
 }
 
 export function QuestsModal() {
-  const { life, openSheet } = useGame()
+  const { life, meta, openSheet, setGuideTrack } = useGame()
   if (!life) return null
+  const lang = meta.settings.lang ?? 'en'
   const dp = getDreamProgress(life)
   const dream = DREAM_BY_ID[life.character.dreamId]
   return (
@@ -225,12 +228,15 @@ export function QuestsModal() {
         {QUESTS.map((q) => {
           const st = life.quests[q.id] ?? { stage: 0, done: false }
           const stage = Math.min(st.stage, q.stages.length - 1)
+          const hint = QUEST_HINTS[q.id]?.[stage]
           return (
             <div key={q.id} className="card p-3 flex gap-3 items-center" style={st.done ? { opacity: 0.65 } : undefined}>
               <span className="grid place-items-center w-11 h-11 rounded-full shrink-0" style={{ background: st.done ? 'var(--green)' : 'rgba(255,255,255,.14)' }}><Icon name={st.done ? 'check' : 'flag'} size={20} color={st.done ? '#04361c' : '#fff'} /></span>
               <div className="flex-1 min-w-0">
                 <div className="font-display uppercase text-[15px] leading-tight">{q.title}</div>
                 <div className="text-xs opacity-75 mt-0.5 leading-snug">{st.done ? q.rewardText : q.stages[stage].text}</div>
+                {!st.done && hint && <div className="text-[12px] font-bold mt-1 leading-snug text-gold">📍 <Lines lang={lang} s={hint.say} /></div>}
+                {!st.done && hint?.place && <button className="chip chip-green mt-1.5" onClick={() => { audio.sfx('click'); setGuideTrack({ place: hint.place!, say: hint.say, act: hint.act }) }}><Icon name="pin" size={12} />Show me</button>}
                 {!st.done && <div className="flex gap-1 mt-1.5">{q.stages.map((_, i) => <span key={i} className="h-1.5 flex-1 rounded-full" style={{ background: i < st.stage ? 'var(--green)' : 'rgba(255,255,255,.18)' }} />)}</div>}
               </div>
               <span className="chip chip-gold shrink-0"><Icon name="shell" size={13} color="#3b2300" />{q.cowries}</span>
