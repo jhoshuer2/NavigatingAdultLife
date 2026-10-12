@@ -25,10 +25,11 @@ export function TalkTask({ r, partner, role, setting, rounds, title, greet, scri
     const a = r.npcPos(partner.id) ?? r.actorPos(partner.id) ?? { x: r.position.x + 1.6, z: r.position.z }
     const me = r.position
     let dx = me.x - a.x, dz = me.z - a.z; const d = Math.hypot(dx, dz) || 1; dx /= d; dz /= d
-    r.placePlayer(a.x + dx * 1.7, a.z + dz * 1.7, Math.atan2(-dx, -dz))
+    const spot = r.freeNear(a.x + dx * 1.7, a.z + dz * 1.7) // never put the player inside a counter or wall
+    r.placePlayer(spot.x, spot.z, Math.atan2(-dx, -dz))
     const mx = a.x + dx * 0.85, mz = a.z + dz * 0.85
     r.setCameraOverride({ pos: [mx, 8, mz + 11], look: [mx, 1.9, mz], shift: 0.2 })
-    return () => { alive.current = false; r.setCameraOverride(null); r.setFrozen(false) }
+    return () => { alive.current = false; r.setCameraOverride(null); r.setFrozen(false); r.snapToFree() }
   }, [r, partner.id])
 
   // both of you speak first: a greeting each way, then the conversation starts

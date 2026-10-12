@@ -11,6 +11,7 @@ import { INTERIORS, type HotAction } from '../../world/interiors'
 import { fmtClock, isNight, isOpen, opensAt } from '../../world/time'
 import type { NpcRole } from '@engine/core/types'
 import { StudyTask, type StudyMode } from '../tasks/StudyTask'
+import { EatTask } from '../tasks/EatTask'
 import { PenaltyTask } from '../tasks/PenaltyTask'
 import { MarketTask } from '../tasks/MarketTask'
 import { ChoresTask, type Helper } from '../tasks/ChoresTask'
@@ -63,6 +64,7 @@ export default function World() {
     | { kind: 'jog' }
     | { kind: 'match'; actAs: string }
     | { kind: 'pose'; mode: 'sofa' | 'bed' | 'chair' }
+    | { kind: 'eat'; who: string; role: NpcRole; perf: number }
     | { kind: 'cook' }
     | { kind: 'dine' }
     | { kind: 'talk'; partner: Partner; role: NpcRole; setting: Setting; rounds: number; title: string; actId: string; hidden?: string; greet?: string; script?: Exchange[] }
@@ -467,7 +469,7 @@ export default function World() {
     if (taskLog.current) { taskLog.current.perf = perf; taskLog.current.abandoned = perf === undefined && t?.kind !== 'shop' }
     setTask(null)
     if (!t) return
-    if (perf !== undefined && perf >= 0 && t.kind !== 'shop' && t.kind !== 'pose') { setCheer((n) => n + 1); setTimeout(() => setCheer(0), 3200) } // task completed: confetti
+    if (perf !== undefined && perf >= 0 && t.kind !== 'shop' && t.kind !== 'pose' && !(t.kind === 'talk' && t.actId === 'meal')) { setCheer((n) => n + 1); setTimeout(() => setCheer(0), 3200) } // task completed: confetti
     if (t.kind === 'penalty') { if (perf !== undefined) g.act(t.act, { perf }) }
     else if (t.kind === 'chores') { if (perf !== undefined) g.act('chores', { perf, target: helperRole as NpcRole | undefined }) }
     else if (t.kind === 'cook' || t.kind === 'dine') { if (perf !== undefined) g.act('meal', { perf, spend: spendAmt }) }
@@ -479,6 +481,7 @@ export default function World() {
     else if (t.kind === 'talk') {
       if (r) { r.removeActor('buddy'); if (t.hidden) r.hidePerson(t.hidden, false); if (hang) r.hideNpc(hang.npcId, false) }
       setHang(null)
+      if (perf !== undefined && t.actId === 'meal') { r?.clearDirected(); setTask({ kind: 'eat', who: t.partner.name, role: t.role, perf }); return } // the food arrives: show the eating, then the meal counts
       if (perf !== undefined && t.actId) g.act(t.actId, { target: t.role, perf })
     }
     r?.clearDirected()
@@ -660,6 +663,7 @@ export default function World() {
       {task?.kind === 'penalty' && !holdTask && rendRef.current && <PenaltyTask r={rendRef.current} pitch={district.places.find((p) => p.id === 'pitch')!.rect} onDone={(perf) => endTask(perf)} />}
       {task?.kind === 'chores' && !holdTask && rendRef.current && <ChoresTask r={rendRef.current} motherId={INTERIORS.home?.people.find((p) => p.persistent === 'mother')?.id ?? null} helper={task.helper} onDone={(perf, hr) => endTask(perf, 0, 0, hr)} />}
       {task?.kind === 'pose' && !holdTask && rendRef.current && <PoseTask r={rendRef.current} mode={task.mode} tvOn={appl.tv} onToggleTv={() => toggle('tv')} onWatch={() => { const why = enabledAct('tv'); if (why) g.toast(why); else g.act('tv') }} onSleep={() => startSleep()} onStudy={() => startStudy('desk')} onDone={() => setTask(null)} />}
+      {task?.kind === 'eat' && rendRef.current && <EatTask r={rendRef.current} who={task.who} onDone={() => { const t = task; setTask(null); g.act('meal', { target: t.role, perf: t.perf }); setCheer((n) => n + 1); setTimeout(() => setCheer(0), 3200) }} />}
       {task?.kind === 'cook' && !holdTask && rendRef.current && <CookTask r={rendRef.current} free={life.character.housing.type === 'family'} onDone={(perf, sp) => endTask(perf, 0, sp)} />}
       {task?.kind === 'dine' && !holdTask && rendRef.current && <DineTask r={rendRef.current} cash={life.character.stats.cash} onDone={(perf, sp) => endTask(sp ? perf : undefined, 0, sp)} />}
       {task?.kind === 'match' && !holdTask && rendRef.current && <MatchTask r={rendRef.current} pitch={district.places.find((p) => p.id === 'pitch')!.rect} actAs={task.actAs} onDone={(perf) => endTask(perf)} />}

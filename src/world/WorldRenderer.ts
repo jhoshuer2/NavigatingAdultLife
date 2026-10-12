@@ -5,7 +5,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import type { Appearance, Gender } from '@engine/core/types'
 import type { Wear } from '@content/items'
 import { WORLD, type District, type PlaceId, type Rect } from './layout'
-import { buildNav, findPath, moveWithCollision, type Nav } from './nav'
+import { buildNav, findPath, moveWithCollision, walkable, type Nav } from './nav'
 import { animateHuman, buildHuman, hashLook, type HumanParts } from './characters'
 import { InteriorView, type InteriorState } from './InteriorView'
 import { lightingAt } from './time'
@@ -338,6 +338,18 @@ export class WorldRenderer {
   setFrozen(v: boolean) { this.frozen = v; if (v) { this.input = { x: 0, z: 0 }; this.path = null } }
   setSitting(v: boolean) { this.sitting = v }
   setCameraOverride(o: { pos: [number, number, number]; look: [number, number, number]; shift?: number } | null) { this.camOverride = o; this.interior?.showIcons(!o); for (const l of this.labelSprites.values()) l.visible = !o; for (const n of this.npcs.values()) n.label.visible = !o; if (o) { this.camLook.set(this.px, 1, this.pz) } }
+  /** The nearest open floor to a point (not inside furniture or a wall), searching outward in rings. */
+  freeNear(x: number, z: number): { x: number; z: number } {
+    const nav = this.interior ? this.interior.nav : this.nav
+    if (walkable(nav, x, z)) return { x, z }
+    for (let rad = 0.5; rad <= 8; rad += 0.5) for (let k = 0; k < 16; k++) {
+      const a = (k / 16) * Math.PI * 2, px = x + Math.cos(a) * rad, pz = z + Math.sin(a) * rad
+      if (walkable(nav, px, pz)) return { x: px, z: pz }
+    }
+    return { x, z }
+  }
+  /** After a scene moved the player: if they ended up inside something solid, step them out so they can always walk away. */
+  snapToFree() { const p = this.freeNear(this.px, this.pz); if (p.x !== this.px || p.z !== this.pz) this.placePlayer(p.x, p.z) }
   placePlayer(x: number, z: number, heading?: number) {
     const h = heading ?? this.heading
     this.px = this.followX = x; this.pz = this.followZ = z; this.heading = h
