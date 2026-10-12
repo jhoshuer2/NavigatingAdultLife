@@ -28,23 +28,31 @@ export async function getDb(): Promise<Db> {
     exec: async (sql) => { await c.query(sql) },
     tx: async () => { throw new Error('nested tx') },
   })
-  current = {
+  const db: Db = {
     ...wrap(pool),
     tx: async (fn) => {
       const c = await pool.connect()
       try { await c.query('BEGIN'); const r = await fn(wrap(c)); await c.query('COMMIT'); return r } catch (e) { await c.query('ROLLBACK'); throw e } finally { c.release() }
     },
   }
+  // Apply any pending migrations once per server instance, so a deploy that adds a table never needs a manual step.
+  await migrate(db)
+  current = db
   return current
 }
 
 export async function migrate(db: Db) {
-  await db.query('CREATE TABLE IF NOT EXISTS schema_migrations (id int PRIMARY KEY, at timestamptz NOT NULL DEFAULT now())')
-  const done = new Set((await db.query<{ id: number }>('SELECT id FROM schema_migrations')).rows.map((r) => r.id))
-  for (const m of MIGRATIONS) {
-    if (done.has(m.id)) continue
-    await db.tx(async (t) => { await t.exec(m.sql); await t.query('INSERT INTO schema_migrations (id) VALUES ($1)', [m.id]) })
-  }
+  // One transaction under an advisory lock: several server instances may start at once (cold starts, deploys);
+  // the later ones wait here, then find everything already applied.
+  await db.tx(async (t) => {
+    await t.query('SELECT pg_advisory_xact_lock(727001)')
+    await t.query('CREATE TABLE IF NOT EXISTS schema_migrations (id int PRIMARY KEY, at timestamptz NOT NULL DEFAULT now())')
+    const done = new Set((await t.query<{ id: number }>('SELECT id FROM schema_migrations')).rows.map((r) => r.id))
+    for (const m of MIGRATIONS) {
+      if (done.has(m.id)) continue
+      await t.exec(m.sql); await t.query('INSERT INTO schema_migrations (id) VALUES ($1)', [m.id])
+    }
+  })
 }
 
 /** In-process Postgres (PGlite): no server, no account. Used by tests and the local dev server. */

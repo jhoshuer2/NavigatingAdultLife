@@ -120,4 +120,11 @@ CREATE TABLE account_attempts (key text NOT NULL, kind text NOT NULL, at timesta
 CREATE INDEX account_attempts_key ON account_attempts (key, kind, at);
 `,
   },
+  {
+    id: 4,
+    sql: `
+-- Web addresses that tried to call the collector but are not in GAME_ORIGINS (so the owner can see what to add)
+CREATE TABLE blocked_origins (day date NOT NULL, origin text NOT NULL, n int NOT NULL DEFAULT 0, PRIMARY KEY (day, origin));
+`,
+  },
 ]

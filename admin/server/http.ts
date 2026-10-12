@@ -2,8 +2,12 @@
 export const MAX_BODY = 128 * 1024
 
 export function allowedOrigins(): string[] {
-  return (process.env.GAME_ORIGINS ?? '').split(',').map((s) => s.trim()).filter(Boolean)
+  // tolerate a trailing slash or stray spaces when the variable was typed by hand
+  return (process.env.GAME_ORIGINS ?? '').split(',').map((s) => s.trim().replace(/\/+$/, '')).filter(Boolean)
 }
+
+/** A request with no Origin header (not a browser) passes; a browser request must come from a listed game origin. */
+export const originAllowed = (req: Request) => { const o = req.headers.get('origin'); return !o || allowedOrigins().includes(o) }
 
 /** CORS for the game origin only (PRD section 6). Unknown origins get no CORS headers, so browsers block them. */
 export function corsHeaders(req: Request): Record<string, string> {
