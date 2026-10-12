@@ -30,7 +30,7 @@ class AudioEngine {
 
   /** Must be called from a user gesture. */
   unlock() {
-    if (this.ctx) { void this.ctx.resume(); return }
+    if (this.ctx) { if (this.ctx.state !== 'running') void this.ctx.resume(); this.keepAlive(); return }
     try {
       const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
       this.ctx = new AC()
@@ -42,8 +42,22 @@ class AudioEngine {
       for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1
       this.configure(this.cfg)
       if (this.track) this.playMusic(this.track)
+      this.keepAlive()
     } catch { /* audio unavailable */ }
   }
+
+  /** iPhones mute Web Audio when the ringer switch is off; playing a (silent) media element moves the page to the "playback" audio session. */
+  private silent?: HTMLAudioElement
+  private keepAlive() {
+    if (this.silent) return
+    try {
+      const wav = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA='
+      this.silent = new Audio(wav); this.silent.loop = true; this.silent.volume = 0.01
+      void this.silent.play().catch(() => { this.silent = undefined })
+    } catch { this.silent = undefined }
+  }
+
+  running() { return this.ctx?.state === 'running' }
 
   private tone(freq: number, t: number, dur: number, type: OscillatorType, vol: number, dest?: AudioNode, slideTo?: number) {
     const c = this.ctx; if (!c || !this.master) return
@@ -134,6 +148,7 @@ class AudioEngine {
     const file = ASSET_MANIFEST.sfx[name]
     if (file) { const a = new Audio(file); a.volume = this.cfg.volume; void a.play().catch(() => undefined); return }
     const c = this.ctx; if (!c) return
+    if (c.state !== 'running') void c.resume()
     const t = c.currentTime
     switch (name) {
       case 'click': this.tone(520, t, 0.06, 'triangle', 0.25); break
@@ -157,3 +172,11 @@ class AudioEngine {
 }
 
 export const audio = new AudioEngine()
+
+// On phones the browser only counts a finished tap (pointerup/touchend/click) as a user gesture, not the first touch-down, so
+// unlock on every kind of gesture until the audio is really running, wherever in the game the player first taps.
+if (typeof window !== 'undefined') {
+  const kinds = ['pointerup', 'touchend', 'click', 'keydown']
+  const go = () => { audio.unlock(); if (audio.running()) for (const k of kinds) window.removeEventListener(k, go, true) }
+  for (const k of kinds) window.addEventListener(k, go, { capture: true, passive: true })
+}

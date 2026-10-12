@@ -48,18 +48,18 @@ export function Create() {
   const suggestions = useMemo(() => [...pool].sort(() => Math.random() - 0.5).slice(0, 6), [pool])
   const nameOk = name.trim().length >= 2 && !BAD.some((b) => name.toLowerCase().includes(b))
 
-  const set = (p: Partial<Appearance>) => setLook((l) => ({ ...l, ...p }))
+  const set = (p: Partial<Appearance>) => { audio.sfx('tap'); setLook((l) => ({ ...l, ...p })) }
   const appearance: Appearance = { ...look, facialHair: gender === 'male' && facial !== 'none' ? facial : undefined }
 
   const spin = (first: boolean) => {
     if (spinning || (!first && rerolled)) return
     setSpinning(true); if (!first) setRerolled(true)
     let i = 0
-    const t = setInterval(() => { setSpinName(ARCHETYPES[i++ % ARCHETYPES.length].title); audio.sfx('click') }, 90)
+    const t = setInterval(() => { setSpinName(ARCHETYPES[i++ % ARCHETYPES.length].title); audio.sfx('tap') }, 90)
     setTimeout(() => {
       clearInterval(t)
       const pick = ARCHETYPES[Math.floor(Math.random() * ARCHETYPES.length)]
-      setArchetype(pick.id); setHome(null); setSpinning(false); audio.sfx('good')
+      setArchetype(pick.id); setHome(null); setSpinning(false); audio.sfx('level')
     }, 1300)
   }
 
@@ -160,7 +160,7 @@ export function Create() {
               {TRAITS.map((t) => {
                 const on = traits.includes(t.id)
                 return (
-                  <button key={t.id} className={`tile !min-h-[96px] ${on ? 'is-on' : ''}`} aria-pressed={on} onClick={() => { setPeek(t.id); setTraits((cur) => (cur.includes(t.id) ? cur.filter((x) => x !== t.id) : cur.length < 2 ? [...cur, t.id] : [cur[1], t.id])) }}>
+                  <button key={t.id} className={`tile !min-h-[96px] ${on ? 'is-on' : ''}`} aria-pressed={on} onClick={() => { audio.sfx('pop'); setPeek(t.id); setTraits((cur) => (cur.includes(t.id) ? cur.filter((x) => x !== t.id) : cur.length < 2 ? [...cur, t.id] : [cur[1], t.id])) }}>
                     <span className="text-[30px] leading-none">{t.icon}</span>
                     <span className="font-display text-[13px] uppercase leading-tight text-center">{t.name}</span>
                     <span className="flex gap-1"><Icon name="up" size={12} /><Icon name="down" size={12} /></span>
@@ -177,7 +177,7 @@ export function Create() {
         {step === 2 && (
           <div className="grid gap-2.5 stagger">
             {DREAMS.map((d) => (
-              <button key={d.id} className={`card-btn flex items-center gap-3 ${dream === d.id ? 'is-on' : ''}`} onClick={() => setDream(d.id)} aria-pressed={dream === d.id}>
+              <button key={d.id} className={`card-btn flex items-center gap-3 ${dream === d.id ? 'is-on' : ''}`} onClick={() => { audio.sfx('pop'); setDream(d.id) }} aria-pressed={dream === d.id}>
                 <span className="grid place-items-center w-14 h-14 rounded-2xl text-[32px]" style={{ background: 'radial-gradient(circle at 30% 25%, rgba(255,226,122,.5), rgba(106,61,245,.35))', boxShadow: 'inset 0 0 0 2px rgba(255,255,255,.2)' }}>{d.icon}</span>
                 <span className="flex-1 min-w-0">
                   <span className="block font-display text-[19px] uppercase leading-tight">{d.name}</span>
@@ -222,7 +222,7 @@ export function Create() {
               const locked = tierRank(arch.tier) < tierRank(h.minTier)
               const hue = [24, 150, 215, 290][i % 4]
               return (
-                <button key={h.id} className={`tile !items-stretch !justify-start !p-0 overflow-hidden !min-h-[170px] ${home === h.id ? 'is-on' : ''}`} disabled={locked} onClick={() => setHome(h.id)} aria-pressed={home === h.id}>
+                <button key={h.id} className={`tile !items-stretch !justify-start !p-0 overflow-hidden !min-h-[170px] ${home === h.id ? 'is-on' : ''}`} disabled={locked} onClick={() => { audio.sfx('pop'); setHome(h.id) }} aria-pressed={home === h.id}>
                   <div className="h-[74px] grid place-items-center text-[40px] relative" style={{ background: `linear-gradient(160deg, hsl(${hue} 80% 58%), hsl(${hue + 40} 70% 28%))` }}>{locked ? <Icon name="lock" size={34} /> : ['🏘️', '🏠', '🏢', '🏰'][i % 4]}</div>
                   <div className="px-2.5 py-2 text-left">
                     <div className="font-display uppercase text-[16px] leading-tight">{h.district}</div>
@@ -239,15 +239,15 @@ export function Create() {
         {step === 5 && (
           <>
             {avatarStage(118)}
-            <div className="grid grid-cols-4 gap-2 mb-2">{(['yoruba', 'igbo', 'hausa', 'mix'] as Heritage[]).map((h) => <button key={h} className={`tile !min-h-[52px] !py-1 ${heritage === h ? 'is-on' : ''}`} onClick={() => { setHeritage(h); setName('') }}><span className="text-[12px] font-extrabold">{HERITAGE_LABEL[h]}</span></button>)}</div>
+            <div className="grid grid-cols-4 gap-2 mb-2">{(['yoruba', 'igbo', 'hausa', 'mix'] as Heritage[]).map((h) => <button key={h} className={`tile !min-h-[52px] !py-1 ${heritage === h ? 'is-on' : ''}`} onClick={() => { audio.sfx('tap'); setHeritage(h); setName('') }}><span className="text-[12px] font-extrabold">{HERITAGE_LABEL[h]}</span></button>)}</div>
             {HERITAGE_HINT[heritage] && <div className="text-center text-[11px] font-bold opacity-70 -mt-1 mb-2">{HERITAGE_HINT[heritage]}</div>}
             <input className="w-full rounded-2xl px-4 py-3.5 text-xl font-display uppercase tracking-wide outline-none text-center" style={{ background: 'rgba(255,255,255,.95)', color: '#1a0f55', boxShadow: 'inset 0 3px 0 rgba(0,0,0,.12), 0 0 0 3px rgba(255,199,44,.0)' }} placeholder="Your name" maxLength={14} value={name} onChange={(e) => setName(e.target.value)} aria-label="First name" />
-            <div className="hscroll mt-1">{suggestions.map((n) => <button key={n} className={`chip !text-sm !py-2 !px-3.5 ${name === n ? 'chip-gold' : ''}`} onClick={() => setName(n)}>{n}</button>)}</div>
+            <div className="hscroll mt-1">{suggestions.map((n) => <button key={n} className={`chip !text-sm !py-2 !px-3.5 ${name === n ? 'chip-gold' : ''}`} onClick={() => { audio.sfx('tap'); setName(n) }}>{n}</button>)}</div>
             <input className="w-full rounded-2xl px-4 py-2.5 text-center font-bold outline-none mt-1" style={{ background: 'rgba(255,255,255,.1)', border: '1px solid rgba(255,255,255,.18)' }} placeholder="Nickname (optional)" maxLength={14} value={nick} onChange={(e) => setNick(e.target.value)} aria-label="Nickname" />
             {UNLOCKABLES.some((u) => u.kind === 'perk' && meta.unlocks.includes(u.id)) && (
               <div className="hscroll mt-1">
-                <button className={`chip !text-sm !py-2 ${!perk ? 'chip-gold' : ''}`} onClick={() => setPerk(undefined)}>No perk</button>
-                {UNLOCKABLES.filter((u) => u.kind === 'perk' && meta.unlocks.includes(u.id)).map((u) => <button key={u.id} className={`chip !text-sm !py-2 ${perk === u.id.split(':')[1] ? 'chip-gold' : ''}`} onClick={() => setPerk(u.id.split(':')[1])}><Icon name="star" size={13} />{u.name}</button>)}
+                <button className={`chip !text-sm !py-2 ${!perk ? 'chip-gold' : ''}`} onClick={() => { audio.sfx('tap'); setPerk(undefined) }}>No perk</button>
+                {UNLOCKABLES.filter((u) => u.kind === 'perk' && meta.unlocks.includes(u.id)).map((u) => <button key={u.id} className={`chip !text-sm !py-2 ${perk === u.id.split(':')[1] ? 'chip-gold' : ''}`} onClick={() => { audio.sfx('tap'); setPerk(u.id.split(':')[1]) }}><Icon name="star" size={13} />{u.name}</button>)}
               </div>
             )}
           </>
