@@ -8893,8 +8893,12 @@ async function getDb() {
 // server/http.ts
 var MAX_BODY = 128 * 1024;
 function allowedOrigins() {
-  return (process.env.GAME_ORIGINS ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  return (process.env.GAME_ORIGINS ?? "").split(",").map((s) => s.trim().replace(/\/+$/, "")).filter(Boolean);
 }
+var originAllowed = (req) => {
+  const o = req.headers.get("origin");
+  return !o || allowedOrigins().includes(o);
+};
 function corsHeaders(req) {
   const origin = req.headers.get("origin");
   const list = allowedOrigins();
@@ -9440,8 +9444,23 @@ async function ingest(db, body, headers, now = /* @__PURE__ */ new Date()) {
 }
 
 // server/collector.ts
+async function recordBlocked(req) {
+  try {
+    const origin = (req.headers.get("origin") ?? "").slice(0, 120);
+    const db = await getDb();
+    const day = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+    const n = (await db.query("SELECT count(*)::int c FROM blocked_origins WHERE day = $1", [day])).rows[0].c;
+    if (n >= 50) return;
+    await db.query("INSERT INTO blocked_origins (day, origin, n) VALUES ($1,$2,1) ON CONFLICT (day, origin) DO UPDATE SET n = blocked_origins.n + 1", [day, origin]);
+  } catch {
+  }
+}
 async function handleCollect(req) {
   const cors = corsHeaders(req);
+  if (!originAllowed(req)) {
+    await recordBlocked(req);
+    return new Response(null, { status: req.method === "OPTIONS" ? 204 : 403 });
+  }
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
   if (req.method !== "POST") return new Response(null, { status: 405, headers: cors });
   const body = await readJson(req);

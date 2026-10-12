@@ -9011,7 +9011,7 @@ async function purge(db, now = /* @__PURE__ */ new Date()) {
     await t.query("SELECT set_config('nal.purge', 'on', true)");
     await t.query("DELETE FROM raw_events WHERE received_at < $1", [ago(RETENTION.rawEventsDays)]);
     const s = months(RETENTION.summaryMonths);
-    for (const [tbl, col] of [["device_days", "day"], ["feature_days", "day"], ["playtime_split", "day"], ["activity_heat", "day"], ["ingest_stats", "day"], ["content_days", "day"], ["quality_days", "day"], ["error_days", "day"], ["device_milestones", "first_at"], ["sessions", "started_at"], ["lives", "started_at"]]) await t.query(`DELETE FROM ${tbl} WHERE ${col} < $1`, [s]);
+    for (const [tbl, col] of [["device_days", "day"], ["feature_days", "day"], ["playtime_split", "day"], ["activity_heat", "day"], ["ingest_stats", "day"], ["blocked_origins", "day"], ["content_days", "day"], ["quality_days", "day"], ["error_days", "day"], ["device_milestones", "first_at"], ["sessions", "started_at"], ["lives", "started_at"]]) await t.query(`DELETE FROM ${tbl} WHERE ${col} < $1`, [s]);
     await t.query("DELETE FROM audit_log WHERE at < $1", [months(RETENTION.auditMonths)]);
     await t.query("DELETE FROM erased_devices WHERE at < $1", [ago(RETENTION.tombstoneDays)]);
     await t.query("DELETE FROM rate_limits WHERE window_start < $1", [Math.floor(now.getTime() / 6e4) - 10]);

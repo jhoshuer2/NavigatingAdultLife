@@ -103,4 +103,11 @@ CREATE TABLE quality_days (day date NOT NULL, device_id uuid NOT NULL, device_ty
 CREATE TABLE error_days (day date NOT NULL, device_id uuid NOT NULL, message text NOT NULL, app_version text NOT NULL DEFAULT '', device_type text, n int NOT NULL DEFAULT 0, is_test boolean NOT NULL DEFAULT false, PRIMARY KEY (day, device_id, message, app_version));
 `,
   },
+  {
+    id: 3,
+    sql: `
+-- Web addresses that tried to call the collector but are not in GAME_ORIGINS (so the owner can see what to add)
+CREATE TABLE blocked_origins (day date NOT NULL, origin text NOT NULL, n int NOT NULL DEFAULT 0, PRIMARY KEY (day, origin));
+`,
+  },
 ]

@@ -48,6 +48,10 @@ function Schema() {
     <div className="grid">
       <Card title="Retention"><p>Detailed events are deleted after <b>{r.rawEventsDays} days</b>. Daily summaries, sessions and lives after <b>{r.summaryMonths} months</b>. The audit log after <b>{r.auditMonths} months</b>. A daily job applies these.</p></Card>
       <Card title="Collector health (last 14 days)"><Table cols={[{ key: 'day', label: 'Day' }, { key: 'accepted', label: 'Accepted', num: true }, { key: 'duplicate', label: 'Duplicate', num: true }, { key: 'invalid', label: 'Invalid', num: true }, { key: 'rate_limited', label: 'Rate limited', num: true }]} rows={data.ingest} /></Card>
+      <Card title="Who may send data" def="The collector only accepts data from these web addresses (set in GAME_ORIGINS). If people play from another address, such as a different Vercel link, their data is turned away and the address shows up in the second table.">
+        <p className="small">Allowed: {(data.allowed_origins ?? []).length ? (data.allowed_origins as string[]).map((o) => <code key={o} style={{ marginRight: 8 }}>{o}</code>) : <b className="err">none set, so no browser can send data</b>}</p>
+        <Table cols={[{ key: 'day', label: 'Day' }, { key: 'origin', label: 'Address that was turned away' }, { key: 'n', label: 'Requests', num: true }]} rows={data.blocked_origins ?? []} empty="Nothing has been turned away in the last 14 days." />
+      </Card>
       <Card title="Events the game can send" def="Only these fields are stored for each event. Anything else is dropped by the collector, and no free text from players is ever accepted."><Table cols={[{ key: 'name', label: 'Event' }, { key: 'props', label: 'Allowed fields' }]} rows={Object.entries(data.events).map(([name, props]) => ({ name, props: (props as string[]).join(', ') || '–' }))} /></Card>
       <Card title="Metric definitions"><Table cols={[{ key: 'k', label: 'Metric' }, { key: 'v', label: 'Definition' }]} rows={Object.entries(data.definitions).map(([k, v]) => ({ k, v }))} /></Card>
     </div>

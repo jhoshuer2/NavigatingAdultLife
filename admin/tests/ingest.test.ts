@@ -106,3 +106,17 @@ describe('collector HTTP', () => {
     expect((await handleCollect(new Request('https://admin.test/api/collect', { method: 'POST', body: 'x'.repeat(200_000) }))).status).toBe(413)
   })
 })
+
+describe('origin handling and diagnostics', () => {
+  it('turns away unlisted browser origins (403), records them, and tolerates a trailing slash in GAME_ORIGINS', async () => {
+    const db = await freshDb(); setDb(db); process.env.GAME_ORIGINS = 'https://game.test/'
+    const g = newGen()
+    const mk = (origin?: string) => new Request('https://admin.test/api/collect', { method: 'POST', headers: { ...(origin ? { origin } : {}), 'content-type': 'text/plain', ...Object.fromEntries(NG_HEADERS()) }, body: JSON.stringify(batch([ev(g, 'wait_used', {}, new Date())])) })
+    expect((await handleCollect(mk('https://game.test'))).status).toBe(204)          // listed (slash in the setting ignored)
+    expect((await handleCollect(mk('https://other-alias.vercel.app'))).status).toBe(403)
+    expect((await handleCollect(mk('https://other-alias.vercel.app'))).status).toBe(403)
+    expect((await handleCollect(mk())).status).toBe(204)                               // no Origin header: not a browser
+    const rows = (await db.query<any>('SELECT origin, n FROM blocked_origins')).rows
+    expect(rows).toEqual([{ origin: 'https://other-alias.vercel.app', n: 2 }])
+  })
+})

@@ -9600,6 +9600,9 @@ async function weeklySummary(db, now) {
 
 // server/http.ts
 var MAX_BODY = 128 * 1024;
+function allowedOrigins() {
+  return (process.env.GAME_ORIGINS ?? "").split(",").map((s) => s.trim().replace(/\/+$/, "")).filter(Boolean);
+}
 var json = (data, status = 200, headers = {}) => new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json", "cache-control": "no-store", ...headers } });
 
 // server/retention.ts
@@ -9718,7 +9721,7 @@ async function get(db, me, parts, url, req, now) {
       if (parts[1] === "users") return json({ users: (await db.query("SELECT admin_id, email, role, disabled, created_at FROM admin_users ORDER BY created_at")).rows });
       if (parts[1] === "audit") return json({ rows: (await db.query("SELECT id, admin_email, action, target, detail, at, ip_hash FROM audit_log ORDER BY id DESC LIMIT 200")).rows });
       if (parts[1] === "summary") return json(await weeklySummary(db, now));
-      if (parts[1] === "schema") return json({ events: EVENT_PROPS, retention: RETENTION, definitions: DEFINITIONS, ingest: (await db.query("SELECT day::text, accepted, duplicate, invalid, rate_limited FROM ingest_stats ORDER BY day DESC LIMIT 14")).rows });
+      if (parts[1] === "schema") return json({ events: EVENT_PROPS, retention: RETENTION, definitions: DEFINITIONS, ingest: (await db.query("SELECT day::text, accepted, duplicate, invalid, rate_limited FROM ingest_stats ORDER BY day DESC LIMIT 14")).rows, blocked_origins: (await db.query("SELECT day::text, origin, n FROM blocked_origins WHERE day >= current_date - 13 ORDER BY day DESC, n DESC LIMIT 60")).rows, allowed_origins: allowedOrigins() });
       return json({ error: "Not found" }, 404);
     }
     default:

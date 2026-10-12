@@ -38,7 +38,7 @@ Tests: `npm test` (collector, auth, roles, dashboards run on in-process Postgres
    |---|---|
    | `DATABASE_URL` | Postgres connection string (Supabase: transaction pooler) |
    | `DATABASE_SSL_CA` | Database certificate authority text (or `DATABASE_SSL=no-verify`) |
-   | `GAME_ORIGINS` | Comma-separated game origins allowed to call the collector, e.g. `https://adultlife.example` |
+   | `GAME_ORIGINS` | Comma-separated game addresses allowed to send data, e.g. `https://adultlife.vercel.app`. Every address people use to open the game must be listed (Vercel gives one project several: the main one, a custom domain, branch links). Settings > Data and retention shows any address that was turned away |
    | `ID_HASH_SECRET` | Random string; keys the hashed player IDs analysts see |
    | `IP_SALT` | Random string; salts the hashed admin IP in the audit log |
    | `CRON_SECRET` | Random string; Vercel Cron sends it so only the daily retention job can run |
