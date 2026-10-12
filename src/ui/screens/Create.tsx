@@ -6,7 +6,7 @@ import { Avatar, SKIN_TONES, HAIR_COLORS, OUTFIT_COLORS } from '../Avatar'
 import { TRAITS } from '@content/traits'
 import { DREAMS } from '@content/dreams'
 import { ARCHETYPES, HOMES, tierRank } from '@content/archetypes'
-import { NAME_POOLS, HERITAGE_LABEL } from '@content/names'
+import { NAME_POOLS, HERITAGE_LABEL, HERITAGE_HINT } from '@content/names'
 import { FREE_FABRICS, FREE_HAIR, FREE_OUTFITS, UNLOCKABLES } from '@platform/meta'
 import type { Appearance, DreamId, Gender, Heritage, NewLifeConfig, TraitId } from '@engine/core/types'
 import { audio } from '@platform/audio'
@@ -239,7 +239,8 @@ export function Create() {
         {step === 5 && (
           <>
             {avatarStage(118)}
-            <div className="grid grid-cols-4 gap-2 mb-2">{(['yoruba', 'igbo', 'hausa', 'mix'] as Heritage[]).map((h) => <button key={h} className={`tile !min-h-[52px] !py-1 ${heritage === h ? 'is-on' : ''}`} onClick={() => { setHeritage(h); setName('') }}><span className="text-[12px] font-extrabold">{HERITAGE_LABEL[h].split(' ')[0]}</span></button>)}</div>
+            <div className="grid grid-cols-4 gap-2 mb-2">{(['yoruba', 'igbo', 'hausa', 'mix'] as Heritage[]).map((h) => <button key={h} className={`tile !min-h-[52px] !py-1 ${heritage === h ? 'is-on' : ''}`} onClick={() => { setHeritage(h); setName('') }}><span className="text-[12px] font-extrabold">{HERITAGE_LABEL[h]}</span></button>)}</div>
+            {HERITAGE_HINT[heritage] && <div className="text-center text-[11px] font-bold opacity-70 -mt-1 mb-2">{HERITAGE_HINT[heritage]}</div>}
             <input className="w-full rounded-2xl px-4 py-3.5 text-xl font-display uppercase tracking-wide outline-none text-center" style={{ background: 'rgba(255,255,255,.95)', color: '#1a0f55', boxShadow: 'inset 0 3px 0 rgba(0,0,0,.12), 0 0 0 3px rgba(255,199,44,.0)' }} placeholder="Your name" maxLength={14} value={name} onChange={(e) => setName(e.target.value)} aria-label="First name" />
             <div className="hscroll mt-1">{suggestions.map((n) => <button key={n} className={`chip !text-sm !py-2 !px-3.5 ${name === n ? 'chip-gold' : ''}`} onClick={() => setName(n)}>{n}</button>)}</div>
             <input className="w-full rounded-2xl px-4 py-2.5 text-center font-bold outline-none mt-1" style={{ background: 'rgba(255,255,255,.1)', border: '1px solid rgba(255,255,255,.18)' }} placeholder="Nickname (optional)" maxLength={14} value={nick} onChange={(e) => setNick(e.target.value)} aria-label="Nickname" />
