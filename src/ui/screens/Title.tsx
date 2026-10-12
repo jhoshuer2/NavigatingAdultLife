@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { useGame } from '../../store'
 import { Btn, nairaShort } from '../components'
 import { Icon, type IconName } from '../icons'
@@ -21,9 +22,21 @@ function Round({ icon, label, onClick, badge }: { icon: IconName; label: string;
   )
 }
 
-export function Title() {
+const GREETING = 'Oya enter, make we waka this life journey!'
+const DRIVE_SEC = 2.6
+
+/** `hold` keeps the danfo parked off-screen (e.g. while the privacy prompt is up); it rolls in with engine sound once released. */
+export function Title({ hold = false }: { hold?: boolean }) {
   const { go, life, meta, newLife, continueLife } = useGame()
   const left = remainingSec(meta)
+  const [say, setSay] = useState(false)
+  useEffect(() => {
+    if (hold) return
+    audio.busArrive(DRIVE_SEC)
+    const a = window.setTimeout(() => setSay(true), DRIVE_SEC * 1000 - 150)
+    const b = window.setTimeout(() => setSay(false), DRIVE_SEC * 1000 + 7000)
+    return () => { clearTimeout(a); clearTimeout(b) }
+  }, [hold])
   const start = () => { audio.unlock(); audio.playMusic('menu') }
   return (
     <div className="screen flex flex-col relative" onPointerDown={start}>
@@ -31,7 +44,7 @@ export function Title() {
         <span className="chip" style={{ background: 'rgba(10,7,34,.55)', backdropFilter: 'blur(6px)' }}><Icon name="shell" size={16} /><b className="num">{meta.cowries}</b></span>
         <button className="chip" style={{ background: 'rgba(10,7,34,.55)', backdropFilter: 'blur(6px)' }} onClick={() => useGame.getState().openSheet('paywall')} aria-label="Play time"><Icon name="clock" size={16} /><b className="num">{meta.tokens.unlimited ? '∞' : fmtTime(left)}</b></button>
       </div>
-      <TitleArt className="h-[56vh] min-h-[330px] max-h-[520px] shrink-0" />
+      <TitleArt className="h-[56vh] min-h-[330px] max-h-[520px] shrink-0" drive={hold ? 'wait' : 'go'} say={say ? GREETING : undefined} />
       <div className="relative -mt-14 px-5 text-center z-10">
         <div className="rise" style={{ animationDelay: '.25s' }}>
           <div className="inline-block"><span className="ribbon !text-[13px] !py-0.5 !px-5 tracking-[.18em]">Navigating</span></div>

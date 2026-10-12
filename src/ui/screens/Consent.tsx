@@ -1,5 +1,6 @@
 import { useGame } from '../../store'
 import { Btn, Modal } from '../components'
+import { audio } from '@platform/audio'
 
 /** What we collect, in plain language. Shared by the first-run screen and Settings. */
 export function PrivacyDetails() {
@@ -17,13 +18,15 @@ export function PrivacyDetails() {
 /** First-run opt-in screen. Off until the player agrees (NDPA: consent must be freely given and unticked by default). */
 export function ConsentScreen() {
   const setConsent = useGame((s) => s.setConsent)
+  // The tap on either answer is the player's first gesture: unlock audio and start the music from here.
+  const answer = (yes: boolean) => { audio.unlock(); audio.playMusic('menu'); setConsent(yes) }
   return (
     <Modal title="Help us make the game better?">
       <p className="text-sm mb-2">Can we count how the game is played? It is optional, and the game works exactly the same either way.</p>
       <PrivacyDetails />
       <div className="grid gap-2 mt-4">
-        <Btn variant="green" onClick={() => setConsent(true)}>Yes, count my play</Btn>
-        <Btn variant="ghost" onClick={() => setConsent(false)}>No thanks</Btn>
+        <Btn variant="green" onClick={() => answer(true)}>Yes, count my play</Btn>
+        <Btn variant="ghost" onClick={() => answer(false)}>No thanks</Btn>
       </div>
     </Modal>
   )

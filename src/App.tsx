@@ -34,11 +34,12 @@ export default function App() {
   useEffect(() => { if (screen === 'play' || screen === 'dash') return; if (screen === 'title' || screen === 'create') audio.playMusic('menu') }, [screen])
   useEffect(() => { void openSheet }, [openSheet])
 
+  const consentOpen = analyticsAvailable() && !meta.consentAsked && screen === 'title'
   return (
     <div className="shell">
       <Toasts items={toasts} />
-      {analyticsAvailable() && !meta.consentAsked && screen === 'title' && <ConsentScreen />}
-      {screen === 'title' && <Title />}
+      {consentOpen && <ConsentScreen />}
+      {screen === 'title' && <Title hold={consentOpen} />}
       {screen === 'create' && <Create />}
       {screen === 'play' && <Play />}
       {screen === 'ending' && <Ending />}

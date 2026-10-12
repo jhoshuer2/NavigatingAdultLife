@@ -103,6 +103,29 @@ class AudioEngine {
     }
   }
 
+  /** A danfo rolling in: engine rumble that follows the bus (loud while it is moving fast, fading as it brakes), then a brake hiss and two honks. */
+  busArrive(dur: number) {
+    const c = this.ctx; const m = this.master
+    if (!c || !m || !this.noise || !this.cfg.sound) return
+    const t = c.currentTime + 0.02
+    const env = c.createGain(); env.connect(m)
+    env.gain.setValueAtTime(0.0001, t); env.gain.exponentialRampToValueAtTime(0.5, t + 0.25)
+    env.gain.exponentialRampToValueAtTime(0.32, t + dur * 0.55); env.gain.exponentialRampToValueAtTime(0.0001, t + dur)
+    const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.setValueAtTime(700, t); lp.frequency.exponentialRampToValueAtTime(220, t + dur); lp.connect(env)
+    for (const [type, f0, f1, v] of [['sawtooth', 96, 52, 0.5], ['square', 48, 30, 0.35]] as const) {
+      const o = c.createOscillator(); const g = c.createGain(); g.gain.value = v
+      o.type = type; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + dur)
+      const lfo = c.createOscillator(); const lg = c.createGain(); lfo.frequency.value = 13; lg.gain.value = 6 // engine chug
+      lfo.connect(lg); lg.connect(o.frequency); o.connect(g); g.connect(lp); o.start(t); o.stop(t + dur + 0.05); lfo.start(t); lfo.stop(t + dur + 0.05)
+    }
+    const n = c.createBufferSource(); n.buffer = this.noise; n.loop = true // road and tyre noise
+    const nf = c.createBiquadFilter(); nf.type = 'bandpass'; nf.frequency.value = 500
+    const ng = c.createGain(); ng.gain.setValueAtTime(0.0001, t); ng.gain.exponentialRampToValueAtTime(0.22, t + 0.3); ng.gain.exponentialRampToValueAtTime(0.0001, t + dur * 0.9)
+    n.connect(nf); nf.connect(ng); ng.connect(m); n.start(t); n.stop(t + dur)
+    this.hit(t + dur * 0.78, 0.5, 0.2, 4000) // brakes
+    for (const dt of [dur - 0.1, dur + 0.22]) { this.tone(392, t + dt, 0.16, 'sawtooth', 0.2); this.tone(494, t + dt, 0.16, 'sawtooth', 0.16) }
+  }
+
   sfx(name: SfxName) {
     if (!this.cfg.sound) return
     const now = performance.now()

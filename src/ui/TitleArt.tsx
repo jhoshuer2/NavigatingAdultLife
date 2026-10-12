@@ -5,7 +5,7 @@ const WIN = Array.from({ length: 46 }, (_, i) => i)
 const B1 = [[0, 70, 46, 110], [48, 40, 40, 140], [92, 84, 56, 96], [150, 30, 36, 150], [188, 64, 60, 116], [250, 24, 44, 156], [296, 76, 50, 104], [348, 44, 52, 136]]
 const B2 = [[10, 110, 70, 70], [84, 96, 50, 84], [140, 120, 80, 60], [224, 100, 60, 80], [288, 116, 70, 64], [362, 104, 40, 76]]
 
-export function TitleArt({ className = '' }: { className?: string }) {
+export function TitleArt({ className = '', drive = 'go', say }: { className?: string; drive?: 'wait' | 'go'; say?: string }) {
   return (
     <div className={`relative ${className}`} aria-hidden="true">
       <svg viewBox="0 0 400 420" preserveAspectRatio="xMidYMax slice" className="absolute inset-0 w-full h-full">
@@ -30,7 +30,7 @@ export function TitleArt({ className = '' }: { className?: string }) {
         <g className="road-roll"><g fill="#ffe27a" opacity=".85">{Array.from({ length: 12 }, (_, i) => <rect key={i} x={i * 48 - 24} y="384" width="26" height="5" rx="2" />)}</g></g>
       </svg>
       {/* the danfo, rolling in then idling */}
-      <div className="absolute left-0 right-0 bottom-[14%] flex justify-center bus-in">
+      <div className={`absolute left-0 right-0 bottom-[14%] flex justify-center ${drive === 'go' ? 'bus-in' : 'bus-wait'}`}>
         <div className="bus-bob relative" style={{ width: '82%', maxWidth: 360 }}>
           <svg viewBox="0 0 330 150" className="w-full">
             <ellipse cx="165" cy="140" rx="150" ry="9" fill="#000" opacity=".4" />
@@ -44,6 +44,12 @@ export function TitleArt({ className = '' }: { className?: string }) {
             <circle className="puff" cx="6" cy="112" r="7" fill="#fff" opacity=".7" />
           </svg>
           <div className="absolute" style={{ left: '73%', top: '-6%' }}><Conductor size={74} mood="hype" /></div>
+          {say && (
+            <div className="bus-say absolute z-10 font-display text-[15px] leading-tight text-center" style={{ left: '34%', bottom: '88%', width: '58%', maxWidth: 230, padding: '8px 12px', borderRadius: 16, background: '#fff', color: '#1a0f55', boxShadow: '0 4px 0 rgba(0,0,0,.35)' }} role="status">
+              {say}
+              <span className="absolute" style={{ right: 22, bottom: -8, width: 16, height: 16, background: '#fff', transform: 'rotate(45deg)', borderRadius: 3 }} />
+            </div>
+          )}
         </div>
       </div>
       <div className="absolute inset-x-0 bottom-0 h-24 pointer-events-none" style={{ background: 'linear-gradient(transparent, #0f0a30)' }} />
