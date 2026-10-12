@@ -5,14 +5,15 @@ import { buildConversation, groupOf, scoreOf, type Exchange, type Setting, type 
 import { audio } from '@platform/audio'
 import { track } from '@platform/analytics'
 
+const GREET: Record<string, string> = { friend: 'Hey! Long time!', partner: 'Hey you. 😊', mother: 'Welcome, my child.', father: 'Good to see you.', sibling: 'Oh, it is you.', child: 'Yaaay!', boss: 'Good day. Come in.' }
 const TONE: Record<Tone, string> = { warm: '💚 Warm', funny: '😂 Funny', meh: '😐 Flat' }
 
 export interface Partner { id: string; name: string }
 
-export function TalkTask({ r, partner, role, setting, rounds, title, onDone }: { r: WorldRenderer; partner: Partner; role: string; setting: Setting; rounds: number; title: string; onDone: (perf: number) => void }) {
-  const convo = useMemo<Exchange[]>(() => buildConversation(role, setting, rounds), [role, setting, rounds])
+export function TalkTask({ r, partner, role, setting, rounds, title, greet, script, onDone }: { r: WorldRenderer; partner: Partner; role: string; setting: Setting; rounds: number; title: string; greet?: string; script?: Exchange[]; onDone: (perf: number) => void }) {
+  const convo = useMemo<Exchange[]>(() => script ?? buildConversation(role, setting, rounds), [role, setting, rounds, script])
   const [i, setI] = useState(0)
-  const [phase, setPhase] = useState<'ask' | 'wait' | 'end'>('ask')
+  const [phase, setPhase] = useState<'greet' | 'ask' | 'wait' | 'end'>('greet')
   const [last, setLast] = useState<{ tone: Tone } | null>(null)
   const scores = useRef<number[]>([])
   const alive = useRef(true)
@@ -30,6 +31,14 @@ export function TalkTask({ r, partner, role, setting, rounds, title, onDone }: {
     return () => { alive.current = false; r.setCameraOverride(null); r.setFrozen(false) }
   }, [r, partner.id])
 
+  // both of you speak first: a greeting each way, then the conversation starts
+  useEffect(() => {
+    const hi = greet ?? GREET[g] ?? 'Hello!'
+    r.say('player', `Hi ${partner.name}!`, 2.6)
+    const a = setTimeout(() => { if (alive.current) r.say(partner.id, hi, 2.6) }, 1500)
+    const b = setTimeout(() => { if (alive.current) setPhase('ask') }, 3300)
+    return () => { clearTimeout(a); clearTimeout(b) }
+  }, [])
   useEffect(() => { if (phase === 'ask' && convo[i]) r.say(partner.id, convo[i].npc, 60) }, [i, phase])
 
   const choose = (k: number) => {
@@ -50,10 +59,10 @@ export function TalkTask({ r, partner, role, setting, rounds, title, onDone }: {
       {phase === 'ask' && ex && (
         <>
           <div className="text-xs opacity-70 mb-1.5">{partner.name} says: “{ex.npc}”</div>
-          <div className="grid gap-1.5">{order.map((k) => <button key={k} className="card-btn !py-2 text-left" onClick={() => choose(k)}>{ex.options[k].text}</button>)}</div>
+          <div className="grid gap-1.5">{order.map((k, i) => <button key={k} className="card-btn !py-2 flex items-center gap-2.5" onClick={() => choose(k)}><span className="grid place-items-center w-7 h-7 rounded-full shrink-0 font-display text-sm" style={{ background: 'var(--gold)', color: '#3b2300' }}>{'ABCD'[i]}</span><span className="font-bold text-sm">{ex.options[k].text}</span></button>)}</div>
         </>
       )}
-      {phase === 'wait' && <div className="text-sm opacity-80 py-3 text-center">…</div>}
+      {(phase === 'wait' || phase === 'greet') && <div className="text-sm opacity-80 py-3 text-center">{phase === 'greet' ? 'Saying hello…' : '…'}</div>}
       {phase === 'end' && (
         <div className="pop">
           <div className="font-display text-2xl text-danfo">{perf >= 0.8 ? 'What a lovely time together!' : perf >= 0.5 ? 'A nice, easy conversation.' : 'A little awkward, but you showed up.'}</div>

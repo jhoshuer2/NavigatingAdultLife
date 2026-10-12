@@ -20,6 +20,14 @@ export function createNewLife(config: NewLifeConfig, seed: number): GameState {
   }).state
 }
 
+/** Set or clear a flag (used for deliveries and installed appliances). */
+export function setFlag(state: GameState, key: string, val: boolean | number | string | null): GameState {
+  const s = structuredClone(state); if (val === null) delete s.flags[key]; else s.flags[key] = val; return s
+}
+/** Pay a one-off cost outside an activity (for example a loader's fee). */
+export function payCash(state: GameState, amount: number, label: string): GameState {
+  return withCtx(state, (ctx) => { addStat(ctx, 'cash', -amount, label) }).state
+}
 export function setClock(state: GameState, hour: number, day: number): GameState {
   const s = structuredClone(state); s.clock = { hour, day }; return s
 }

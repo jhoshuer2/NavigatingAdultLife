@@ -37,7 +37,7 @@ const BUBBLES = [
   'Omo, this sun!', 'Sapa is real.', 'Na so e be.', 'Fuel don cost again!', 'Wahala for who no get generator.', 'Boss, na ₦200 only!', 'Small chops dey?', 'I dey come.',
 ]
 
-export interface WorldNpc { id: string; name: string; gender: Gender; x: number; z: number; role: string }
+export interface WorldNpc { id: string; name: string; gender: Gender; x: number; z: number; role: string; wander?: { x: number; z: number; r: number } }
 export interface Near { place: PlaceId | null; npc: string | null }
 export interface NearInside { hotspot: string | null; person: string | null; exit: boolean }
 
@@ -62,7 +62,7 @@ export class WorldRenderer {
   private time = 0
   private raycaster = new THREE.Raycaster()
   private ground: THREE.Mesh
-  private npcs = new Map<string, { parts: HumanParts; npc: WorldNpc; label: THREE.Sprite }>()
+  private npcs = new Map<string, { parts: HumanParts; npc: WorldNpc; label: THREE.Sprite; tx: number; tz: number; wt: number; moving: boolean }>()
   private ambient: { parts: HumanParts; x: number; z: number; heading: number; timer: number; speed: number; bubble?: THREE.Sprite; bubbleT: number; sayT: number }[] = []
   private labelSprites = new Map<PlaceId, THREE.Sprite>()
   private textCache = new Map<string, THREE.SpriteMaterial>()
@@ -97,7 +97,7 @@ export class WorldRenderer {
   private camOverride: { pos: [number, number, number]; look: [number, number, number]; shift?: number } | null = null
   private viewShift = 0
   private actors = new Map<string, { parts: HumanParts; x: number; z: number; tx: number; tz: number; follow: boolean; moving: boolean; locked: boolean; scene: THREE.Scene }>()
-  private bubbles: { sprite: THREE.Sprite; id: string; t: number; scene: THREE.Scene }[] = []
+  private bubbles: { sprite: THREE.Sprite; id: string; t: number; scene: THREE.Scene; text: string; tail: number }[] = []
   private ballMesh?: THREE.Mesh
   private stallGroup?: THREE.Group
   private marks = new Map<string, THREE.Sprite>()
@@ -260,19 +260,20 @@ export class WorldRenderer {
     for (const [id, o] of this.npcs) if (!keep.has(id)) { this.scene.remove(o.parts.group); this.scene.remove(o.label); this.npcs.delete(id) }
     for (const n of list) {
       const ex = this.npcs.get(n.id)
-      if (ex) { ex.npc = n; ex.parts.group.position.set(n.x, 0, n.z); ex.label.position.set(n.x, 3.7, n.z); continue }
+      if (ex) { const keep = n.wander && ex.npc.wander; ex.npc = { ...n, x: keep ? ex.npc.x : n.x, z: keep ? ex.npc.z : n.z }; if (!keep) { ex.parts.group.position.set(n.x, 0, n.z); ex.label.position.set(n.x, 3.7, n.z); ex.tx = n.x; ex.tz = n.z } continue }
       const parts = buildHuman({ look: hashLook(n.name, n.gender), age: n.role === 'child' ? 6 : 22, scale: 1.15 })
       parts.group.position.set(n.x, 0, n.z); this.scene.add(parts.group)
       const label = this.textSprite(n.name, { bg: 'rgba(255,210,63,0.92)', fg: '#1c1b22', size: 3.4 }); label.position.set(n.x, 3.7, n.z); this.scene.add(label)
-      this.npcs.set(n.id, { parts, npc: n, label })
+      this.npcs.set(n.id, { parts, npc: n, label, tx: n.x, tz: n.z, wt: 1 + Math.random() * 3, moving: false })
     }
   }
 
   // ---------- interiors ----------
   get inside(): PlaceId | null { return this.interior?.def.id ?? null }
-  enterInterior(place: PlaceId, people: { id: string; name: string; gender: Gender; role: string }[], state: InteriorState, outsideAt?: { x: number; z: number }): boolean {
+  enterInterior(place: PlaceId, people: { id: string; name: string; gender: Gender; role: string }[], state: InteriorState, outsideAt?: { x: number; z: number }, installed?: Set<string>): boolean {
     let view: InteriorView
-    try { view = new InteriorView(place) } catch { return false }
+    try { view = new InteriorView(place, installed) } catch { return false }
+    this.installedSet = installed ?? null
     this.interior?.dispose()
     this.outside = outsideAt ?? { x: this.px, z: this.pz }
     this.interior = view
@@ -295,12 +296,19 @@ export class WorldRenderer {
     this.lastNear = { place: null, npc: null }
   }
   setInteriorState(s: InteriorState) { this.istate = s; this.interior?.setState(s) }
-  setSleeping(on: boolean) {
+  private installedSet: Set<string> | null = null
+  setInstalled(set: Set<string>) { this.installedSet = set; this.interior?.setInstalled(set); this.interior?.setState(this.istate) }
+  applianceSpot(a: string) { return this.interior?.applianceSpot(a) ?? null }
+  claimSeat(kind: 'sofa' | 'table' | 'rug') { return this.interior?.claimSeat(kind, 'player') ?? null }
+  releaseSeat() { this.interior?.releaseSeat('player') }
+  setSleeping(on: boolean, zzz = true) {
     if (!this.interior) return
     this.sleeping = on
-    this.interior.setSleeping(this.player, on)
+    this.interior.setSleeping(this.player, on, zzz)
     if (!on) { const st = this.interior.bedStand(); this.px = st.x; this.pz = st.z; this.player.group.position.set(this.px, 0, this.pz) }
   }
+  setResidents(map: Record<string, import('./residents').Activity | null>, instant = false) { this.interior?.setActivities(map, instant) }
+  debugPeople() { return this.interior?.debugPeople() ?? [] }
   onNearInside(cb: (n: NearInside) => void) { this.nearInCb = cb }
   personAt(id: string) { return this.interior?.personInfo(id) ?? null }
   hotspotPos(id: string) { const h = this.interior?.def.hotspots.find((x) => x.id === id); return h ? { x: h.x, z: h.z } : null }
@@ -310,14 +318,17 @@ export class WorldRenderer {
   setFrozen(v: boolean) { this.frozen = v; if (v) { this.input = { x: 0, z: 0 }; this.path = null } }
   setSitting(v: boolean) { this.sitting = v }
   setCameraOverride(o: { pos: [number, number, number]; look: [number, number, number]; shift?: number } | null) { this.camOverride = o; this.interior?.showIcons(!o); for (const l of this.labelSprites.values()) l.visible = !o; for (const n of this.npcs.values()) n.label.visible = !o; if (o) { this.camLook.set(this.px, 1, this.pz) } }
-  placePlayer(x: number, z: number, heading = 0) {
-    this.px = this.followX = x; this.pz = this.followZ = z; this.heading = heading
-    this.player.group.position.set(x, 0, z); this.player.group.rotation.set(0, heading, 0); this.path = null
+  placePlayer(x: number, z: number, heading?: number) {
+    const h = heading ?? this.heading
+    this.px = this.followX = x; this.pz = this.followZ = z; this.heading = h
+    this.player.group.position.set(x, this.player.group.position.y, z); this.player.group.rotation.set(0, h, 0); this.path = null
   }
+  get facing() { return this.heading }
   facePlayer(x: number, z: number) { this.heading = Math.atan2(x - this.px, z - this.pz); this.player.group.rotation.y = this.heading }
-  addActor(id: string, spec: { name: string; gender: Gender; age?: number; x: number; z: number; heading?: number; label?: boolean }) {
+  addActor(id: string, spec: { name: string; gender: Gender; age?: number; x: number; z: number; heading?: number; label?: boolean; top?: string }) {
     this.removeActor(id)
-    const parts = buildHuman({ look: hashLook(spec.name, spec.gender), age: spec.age ?? 22, scale: 1.12 })
+    const look = hashLook(spec.name, spec.gender)
+    const parts = buildHuman({ look: spec.top ? { ...look, topColor: spec.top } : look, age: spec.age ?? 22, scale: 1.12 })
     parts.group.position.set(spec.x, 0, spec.z); parts.group.rotation.y = spec.heading ?? 0
     const sc = this.root(); sc.add(parts.group)
     this.actors.set(id, { parts, x: spec.x, z: spec.z, tx: spec.x, tz: spec.z, follow: false, moving: false, locked: false, scene: sc })
@@ -361,29 +372,33 @@ export class WorldRenderer {
     if (!this.ballMesh) { this.ballMesh = new THREE.Mesh(new THREE.SphereGeometry(0.32, 12, 10), new THREE.MeshLambertMaterial({ color: 0xffffff })); this.root().add(this.ballMesh) }
     this.ballMesh.position.set(p.x, p.y + 0.32, p.z)
   }
-  private bubbleSprite(text: string): THREE.Sprite {
+  private bubbleTexture(text: string, tail: number): THREE.CanvasTexture {
     const c = document.createElement('canvas'); c.width = 512; c.height = 256
     const g = c.getContext('2d')!
     g.font = '800 38px system-ui, "Nunito", sans-serif'
     const words = text.split(' '); const lines: string[] = []; let cur = ''
     for (const w of words) { const t = cur ? cur + ' ' + w : w; if (g.measureText(t).width > 440 && cur) { lines.push(cur); cur = w } else cur = t }
     if (cur) lines.push(cur)
-    const L = lines.slice(0, 4), lh = 46, h = L.length * lh + 36, y0 = (230 - h) / 2 + 4
+    const L = lines.slice(0, 4), lh = 46, h = L.length * lh + 36, y0 = 230 - h
     g.fillStyle = 'rgba(255,255,255,0.97)'; g.strokeStyle = '#1c1b22'; g.lineWidth = 6
     ;(g as CanvasRenderingContext2D & { roundRect: (...a: number[]) => void }).roundRect(14, y0, 484, h, 28); g.fill(); g.stroke()
-    g.beginPath(); g.moveTo(236, y0 + h - 2); g.lineTo(256, y0 + h + 22); g.lineTo(276, y0 + h - 2); g.closePath(); g.fillStyle = 'rgba(255,255,255,0.97)'; g.fill()
+    const tx = 14 + 484 * tail
+    g.beginPath(); g.moveTo(tx - 20, y0 + h - 2); g.lineTo(tx, y0 + h + 22); g.lineTo(tx + 20, y0 + h - 2); g.closePath(); g.fillStyle = 'rgba(255,255,255,0.97)'; g.fill()
     g.fillStyle = '#1c1b22'; g.textAlign = 'center'; g.textBaseline = 'middle'
     L.forEach((l, i) => g.fillText(l, 256, y0 + 18 + lh / 2 + i * lh, 450))
     const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace
-    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthWrite: false, depthTest: false })); sp.renderOrder = 10
-    sp.scale.set(7.2, 3.6, 1); return sp
+    return t
+  }
+  private bubbleSprite(text: string, tail = 0.5): THREE.Sprite {
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.bubbleTexture(text, tail), transparent: true, depthWrite: false, depthTest: false })); sp.renderOrder = 10
+    sp.center.set(tail, 0.03); sp.scale.set(4.4, 2.2, 1); return sp
   }
   /** Show a speech bubble over the player, an actor, an NPC or an interior person. */
   say(id: string, text: string, ttl = 3.2) {
     for (const b of this.bubbles.filter((x) => x.id === id)) { b.scene.remove(b.sprite); b.sprite.material.map?.dispose(); b.sprite.material.dispose() }
     this.bubbles = this.bubbles.filter((x) => x.id !== id)
     const sc = this.root(); const sp = this.bubbleSprite(text); sc.add(sp)
-    this.bubbles.push({ sprite: sp, id, t: ttl, scene: sc })
+    this.bubbles.push({ sprite: sp, id, t: ttl, scene: sc, text, tail: 0.5 })
   }
   private whereIs(id: string): { x: number; z: number } | null {
     if (id === 'player') return { x: this.px, z: this.pz }
@@ -419,7 +434,33 @@ export class WorldRenderer {
     for (const b of [...this.bubbles]) {
       b.t -= dt
       const w = this.whereIs(b.id)
-      if (w) { b.sprite.position.set(w.x + (b.id === 'player' ? 1.7 : -1.7), 4.9, w.z + 0.2); const f = Math.max(0.3, Math.min(1.2, this.camera.position.distanceTo(b.sprite.position) / 20)); b.sprite.scale.set(6.4 * f, 3.2 * f, 1) }
+      if (w) {
+        // each bubble sits right above its speaker, with its tail on the head. When two people talk the bubbles
+        // extend away from each other (left speaker's to the left, right speaker's to the right) so they never overlap.
+        const pos = new THREE.Vector3(w.x, 3.1, w.z + 0.1)
+        const d = this.camera.position.distanceTo(pos)
+        const f = Math.max(0.35, Math.min(1.0, d / 24))
+        const two = this.bubbles.length > 1
+        let tail = 0.5
+        if (two) {
+          const me = pos.clone().project(this.camera).x
+          const other = this.bubbles.find((o) => o !== b)!; const ow = this.whereIs(other.id)
+          const ox = ow ? new THREE.Vector3(ow.x, 3.1, ow.z + 0.1).project(this.camera).x : me + 1
+          tail = me <= ox ? 0.8 : 0.2
+        }
+        if (Math.abs(tail - b.tail) > 0.01) { b.tail = tail; b.sprite.material.map?.dispose(); b.sprite.material.map = this.bubbleTexture(b.text, tail); b.sprite.material.needsUpdate = true }
+        b.sprite.center.set(tail, 0.03)
+        const sw = 4.4 * f
+        b.sprite.scale.set(sw, 2.2 * f, 1)
+        b.sprite.position.copy(pos)
+        // keep the bubble on screen: shift sideways along the camera's right axis if it would be clipped
+        const ndc = pos.clone().project(this.camera).x
+        const half = sw / (2 * d * Math.tan((this.camera.fov * Math.PI) / 360) * this.camera.aspect)
+        const left = ndc - tail * 2 * half, right = ndc + (1 - tail) * 2 * half
+        let shiftN = 0
+        if (left < -0.96) shiftN = -0.96 - left; else if (right > 0.96) shiftN = 0.96 - right
+        if (shiftN) { const r = new THREE.Vector3(1, 0, 0).applyQuaternion(this.camera.quaternion); const k = (shiftN * d * Math.tan((this.camera.fov * Math.PI) / 360) * this.camera.aspect); b.sprite.position.addScaledVector(r, k) }
+      }
       if (b.t <= 0) { b.scene.remove(b.sprite); b.sprite.material.map?.dispose(); b.sprite.material.dispose(); this.bubbles = this.bubbles.filter((x) => x !== b) }
     }
   }
@@ -488,7 +529,7 @@ export class WorldRenderer {
       if (this.posT > 0.1) {
         this.posT = 0
         let hot: string | null = null, bd = 1e9
-        for (const h of iv.def.hotspots) { const d = Math.hypot(h.x - this.px, h.z - this.pz); if (d <= h.r && d < bd) { bd = d; hot = h.id } }
+        for (const h of iv.def.hotspots) { if (h.needs && this.installedSet && !this.installedSet.has(h.needs)) continue; const d = Math.hypot(h.x - this.px, h.z - this.pz); if (d <= h.r && d < bd) { bd = d; hot = h.id } }
         let person: string | null = null, pd = 2.3
         for (const p of iv.allPeople()) { const d = Math.hypot(p.x - this.px, p.z - this.pz); if (d < pd) { pd = d; person = p.id } }
         const exit = Math.hypot(iv.def.door.x - this.px, iv.def.door.z - this.pz) < 1.9
@@ -497,6 +538,25 @@ export class WorldRenderer {
         this.posCb?.(this.px, this.pz, this.heading)
       }
       return
+    }
+    // people with their own lives wander about near where they hang out
+    for (const o of this.npcs.values()) {
+      const w = o.npc.wander
+      if (w) {
+        o.wt -= dt
+        if (o.wt <= 0) {
+          o.wt = 3 + Math.random() * 7
+          if (Math.random() < 0.65) { const a = Math.random() * Math.PI * 2, d = Math.random() * w.r; o.tx = w.x + Math.cos(a) * d; o.tz = w.z + Math.sin(a) * d } else { o.tx = o.npc.x; o.tz = o.npc.z }
+        }
+        const vx = o.tx - o.npc.x, vz = o.tz - o.npc.z, d = Math.hypot(vx, vz)
+        o.moving = d > 0.4
+        if (o.moving) {
+          const sp = 1.7 * dt; const p = moveWithCollision(this.district.blockers, o.npc.x, o.npc.z, (vx / d) * sp, (vz / d) * sp)
+          if (Math.abs(p.x - o.npc.x) < 1e-5 && Math.abs(p.z - o.npc.z) < 1e-5) { o.tx = o.npc.x; o.tz = o.npc.z } else { o.npc.x = p.x; o.npc.z = p.z }
+          o.parts.group.position.set(o.npc.x, 0, o.npc.z); o.label.position.set(o.npc.x, 3.7, o.npc.z)
+          o.parts.group.rotation.y += this.angleDiff(Math.atan2(vx, vz), o.parts.group.rotation.y) * Math.min(1, dt * 6)
+        }
+      }
     }
     // ambient wanderers (outdoors only)
     for (const a of this.ambient) {
@@ -556,7 +616,7 @@ export class WorldRenderer {
         h.ring.visible = h.arrow.visible = !!pl
         if (pl) { h.ring.position.set(pl.door.x, 0.12, pl.door.z); h.ring.scale.setScalar(1 + Math.sin(this.time * 4) * 0.12); h.arrow.position.set(pl.door.x, 3.2 + Math.abs(Math.sin(this.time * 3)) * 0.7, pl.door.z) }
       }
-      for (const o of this.npcs.values()) { o.parts.group.rotation.y += this.angleDiff(Math.atan2(this.px - o.npc.x, this.pz - o.npc.z), o.parts.group.rotation.y) * Math.min(1, dt * 3); animateHuman(o.parts, this.time, false) }
+      for (const o of this.npcs.values()) { if (!o.moving) o.parts.group.rotation.y += this.angleDiff(Math.atan2(this.px - o.npc.x, this.pz - o.npc.z), o.parts.group.rotation.y) * Math.min(1, dt * 3); animateHuman(o.parts, this.time + o.npc.x, o.moving, 0.6) }
     }
     const shift = this.camOverride?.shift ?? 0
     if (shift !== this.viewShift) {

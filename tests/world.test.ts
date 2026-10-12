@@ -96,3 +96,16 @@ describe('shop spots', () => {
     })
   }
 })
+
+describe('home anchors', () => {
+  it('every resident anchor approach point is reachable', async () => {
+    const { INTERIORS, interiorBlockers } = await import('../src/world/interiors')
+    const { buildNavFor } = await import('../src/world/nav')
+    const def = INTERIORS.home!
+    const nav = buildNavFor(interiorBlockers(def), def.bounds, 0.5)
+    for (const a of def.anchors!) {
+      expect(walkable(nav, a.ax, a.az), `approach ${a.id}`).toBe(true)
+      expect(findPath(nav, def.spawn, { x: a.ax, z: a.az }), `path ${a.id}`).not.toBeNull()
+    }
+  })
+})

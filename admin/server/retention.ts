@@ -1,5 +1,6 @@
 // Retention (PRD section 6): raw events 90 days, summaries 25 months, audit log 24 months, tombstones/limits 7 days.
 import type { Db } from './db'
+import { purgeInactiveAccounts } from './account'
 
 export const RETENTION = { rawEventsDays: 90, summaryMonths: 25, auditMonths: 24, tombstoneDays: 7 }
 
@@ -17,4 +18,5 @@ export async function purge(db: Db, now = new Date()): Promise<void> {
     await t.query('DELETE FROM login_attempts WHERE at < $1', [ago(1)])
     await t.query('DELETE FROM admin_sessions WHERE last_seen < $1', [ago(1)])
   })
+  await purgeInactiveAccounts(db, now)
 }

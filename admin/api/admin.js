@@ -4070,10 +4070,10 @@ var require_lib = __commonJS({
     };
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.z = void 0;
-    var z2 = __importStar(require_external());
-    exports.z = z2;
+    var z3 = __importStar(require_external());
+    exports.z = z3;
     __exportStar(require_external(), exports);
-    exports.default = z2;
+    exports.default = z3;
   }
 });
 
@@ -5403,9 +5403,9 @@ var require_sasl = __commonJS({
           if (!/^.=/.test(attrValue)) {
             throw new Error("SASL: Invalid attribute pair entry");
           }
-          const name = attrValue[0];
+          const name2 = attrValue[0];
           const value = attrValue.substring(2);
-          return [name, value];
+          return [name2, value];
         })
       );
     }
@@ -6154,10 +6154,10 @@ var require_messages = __commonJS({
       length: 4
     };
     var DatabaseError = class extends Error {
-      constructor(message, length, name) {
+      constructor(message, length, name2) {
         super(message);
         this.length = length;
-        this.name = name;
+        this.name = name2;
       }
     };
     exports.DatabaseError = DatabaseError;
@@ -6170,17 +6170,17 @@ var require_messages = __commonJS({
     };
     exports.CopyDataMessage = CopyDataMessage;
     var CopyResponse = class {
-      constructor(length, name, binary, columnCount) {
+      constructor(length, name2, binary, columnCount) {
         this.length = length;
-        this.name = name;
+        this.name = name2;
         this.binary = binary;
         this.columnTypes = new Array(columnCount);
       }
     };
     exports.CopyResponse = CopyResponse;
     var Field = class {
-      constructor(name, tableID, columnID, dataTypeID, dataTypeSize, dataTypeModifier, format) {
-        this.name = name;
+      constructor(name2, tableID, columnID, dataTypeID, dataTypeSize, dataTypeModifier, format) {
+        this.name = name2;
         this.tableID = tableID;
         this.columnID = columnID;
         this.dataTypeID = dataTypeID;
@@ -6444,15 +6444,15 @@ var require_serializer = __commonJS({
     };
     var emptyArray = [];
     var parse = (query2) => {
-      const name = query2.name || "";
-      if (name.length > 63) {
+      const name2 = query2.name || "";
+      if (name2.length > 63) {
         console.error("Warning! Postgres only supports 63 characters for query names.");
-        console.error("You supplied %s (%s)", name, name.length);
+        console.error("You supplied %s (%s)", name2, name2.length);
         console.error("This can cause conflicts and silent errors executing queries");
       }
       const types = query2.types || emptyArray;
       const len = types.length;
-      const buffer = writer.addCString(name).addCString(query2.text).addInt16(len);
+      const buffer = writer.addCString(name2).addCString(query2.text).addInt16(len);
       for (let i = 0; i < len; i++) {
         buffer.addInt32(types[i]);
       }
@@ -6860,14 +6860,14 @@ var require_parser = __commonJS({
       return message;
     };
     var parseField = (reader) => {
-      const name = reader.cstring();
+      const name2 = reader.cstring();
       const tableID = reader.uint32();
       const columnID = reader.int16();
       const dataTypeID = reader.uint32();
       const dataTypeSize = reader.int16();
       const dataTypeModifier = reader.int32();
       const mode = reader.int16() === 0 ? "text" : "binary";
-      return new messages_1.Field(name, tableID, columnID, dataTypeID, dataTypeSize, dataTypeModifier, mode);
+      return new messages_1.Field(name2, tableID, columnID, dataTypeID, dataTypeSize, dataTypeModifier, mode);
     };
     var parseParameterDescriptionMessage = (reader) => {
       const parameterCount = reader.int16();
@@ -6887,9 +6887,9 @@ var require_parser = __commonJS({
       return new messages_1.DataRowMessage(LATEINIT_LENGTH, fields);
     };
     var parseParameterStatusMessage = (reader) => {
-      const name = reader.cstring();
+      const name2 = reader.cstring();
       const value = reader.cstring();
-      return new messages_1.ParameterStatusMessage(LATEINIT_LENGTH, name, value);
+      return new messages_1.ParameterStatusMessage(LATEINIT_LENGTH, name2, value);
     };
     var parseBackendKeyData = (reader) => {
       const processID = reader.int32();
@@ -6943,7 +6943,7 @@ var require_parser = __commonJS({
       }
       return message;
     };
-    var parseErrorMessage = (reader, name) => {
+    var parseErrorMessage = (reader, name2) => {
       const fields = {};
       let fieldType = reader.string(1);
       while (fieldType !== "\0") {
@@ -6951,7 +6951,7 @@ var require_parser = __commonJS({
         fieldType = reader.string(1);
       }
       const messageValue = fields.M;
-      const message = name === "notice" ? new messages_1.NoticeMessage(LATEINIT_LENGTH, messageValue) : new messages_1.DatabaseError(messageValue, LATEINIT_LENGTH, name);
+      const message = name2 === "notice" ? new messages_1.NoticeMessage(LATEINIT_LENGTH, messageValue) : new messages_1.DatabaseError(messageValue, LATEINIT_LENGTH, name2);
       message.severity = fields.S;
       message.code = fields.C;
       message.detail = fields.D;
@@ -9232,6 +9232,23 @@ CREATE TABLE error_days (day date NOT NULL, device_id uuid NOT NULL, message tex
   {
     id: 3,
     sql: `
+-- Multiplayer accounts (docs/PRD-multiplayer.md): anonymous accounts with an age band, guardian PIN and recovery code. No email or phone.
+CREATE TABLE accounts (
+  account_id uuid PRIMARY KEY, name text NOT NULL, tag int NOT NULL, friend_code text NOT NULL UNIQUE,
+  age_band text NOT NULL CHECK (age_band IN ('under13','13to17','18plus')),
+  mp_enabled boolean NOT NULL DEFAULT false, chat_level text NOT NULL DEFAULT 'none',
+  guardian_pin_hash text, recovery_hash text NOT NULL UNIQUE, token_ver int NOT NULL DEFAULT 1,
+  country text, created_at timestamptz NOT NULL DEFAULT now(), last_seen timestamptz NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX accounts_name_tag ON accounts (lower(name), tag);
+CREATE INDEX accounts_last_seen ON accounts (last_seen);
+CREATE TABLE account_attempts (key text NOT NULL, kind text NOT NULL, at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX account_attempts_key ON account_attempts (key, kind, at);
+`
+  },
+  {
+    id: 4,
+    sql: `
 -- Web addresses that tried to call the collector but are not in GAME_ORIGINS (so the owner can see what to add)
 CREATE TABLE blocked_origins (day date NOT NULL, origin text NOT NULL, n int NOT NULL DEFAULT 0, PRIMARY KEY (day, origin));
 `
@@ -9730,6 +9747,37 @@ function allowedOrigins() {
   return (process.env.GAME_ORIGINS ?? "").split(",").map((s) => s.trim().replace(/\/+$/, "")).filter(Boolean);
 }
 var json = (data, status = 200, headers = {}) => new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json", "cache-control": "no-store", ...headers } });
+
+// ../shared/account.ts
+var import_zod2 = __toESM(require_lib(), 1);
+var AGE_BANDS = ["under13", "13to17", "18plus"];
+var NAME_RE = /^[A-Za-z0-9][A-Za-z0-9 _.'-]{1,14}[A-Za-z0-9]$/;
+var PIN_RE = /^\d{4}$/;
+var RECOVERY_RE = /^[0-9A-HJKMNP-TV-Z]{4}(-[0-9A-HJKMNP-TV-Z]{4}){3}$/;
+var BLOCKED = ["fuck", "shit", "bitch", "cunt", "dick", "pussy", "nigga", "nigger", "rape", "porn", "sex", "admin", "moderator", "support", "official", "asshole", "bastard"];
+function isCleanName(raw) {
+  const name2 = raw.trim();
+  if (!NAME_RE.test(name2)) return false;
+  const flat = name2.toLowerCase().replace(/[^a-z0-9]/g, "").replace(/0/g, "o").replace(/1/g, "i").replace(/3/g, "e").replace(/4/g, "a").replace(/5/g, "s");
+  if (BLOCKED.some((w) => flat.includes(w))) return false;
+  if (/\d{5,}/.test(name2.replace(/\s/g, ""))) return false;
+  return true;
+}
+var name = import_zod2.z.string().trim().refine(isCleanName, "bad_name");
+var pin = import_zod2.z.string().regex(PIN_RE);
+var AccountRequest = import_zod2.z.discriminatedUnion("op", [
+  import_zod2.z.object({ op: import_zod2.z.literal("create"), name, age_band: import_zod2.z.enum(AGE_BANDS) }),
+  import_zod2.z.object({ op: import_zod2.z.literal("me") }),
+  import_zod2.z.object({ op: import_zod2.z.literal("update"), name: name.optional(), mp_enabled: import_zod2.z.boolean().optional(), pin: pin.optional() }),
+  import_zod2.z.object({ op: import_zod2.z.literal("set_pin"), pin, current_pin: pin.optional() }),
+  import_zod2.z.object({ op: import_zod2.z.literal("recover"), code: import_zod2.z.string().trim().toUpperCase().regex(RECOVERY_RE) }),
+  import_zod2.z.object({ op: import_zod2.z.literal("rotate_recovery") }),
+  import_zod2.z.object({ op: import_zod2.z.literal("logout_all") }),
+  import_zod2.z.object({ op: import_zod2.z.literal("delete") })
+]);
+
+// server/account.ts
+var TOKEN_TTL_MS = 60 * 864e5;
 
 // server/retention.ts
 var RETENTION = { rawEventsDays: 90, summaryMonths: 25, auditMonths: 24, tombstoneDays: 7 };

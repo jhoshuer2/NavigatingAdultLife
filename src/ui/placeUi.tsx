@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useGame } from '../store'
 import { Btn, DeltaChips, Modal, nairaShort } from './components'
+import { Icon } from './icons'
 import { getActivities } from '@engine/api'
 import { DISTRICTS, buildDistrict, type PlaceId } from '../world/layout'
 import { placeActive, placeNote } from '../world/guide'
@@ -16,8 +17,28 @@ const BENEFIT: Record<string, string> = {
   overtime: '⭐ Reputation · promotion odds', treat: '😊 Happiness', shop: '🛒 Useful items', quitJob: 'Leave your job',
 }
 
+const emojis = (t: string) => Array.from(t.matchAll(/\p{Extended_Pictographic}/gu)).map((m) => m[0]).slice(0, 3).join(' ')
+
+/** Big square activity tile: icon, short name, then only symbols (cost and reward). */
+function ActTile({ icon, label, energy, cash, reward, reason, left, disabled, hot, onClick }: { icon: string; label: string; energy?: number; cash?: number; reward?: string; reason?: string; left?: number; disabled?: boolean; hot?: boolean; onClick: () => void }) {
+  return (
+    <button className={`tile !justify-start !gap-1 !pt-3 ${hot ? 'is-on' : ''}`} disabled={disabled} onClick={onClick}>
+      <span className="text-[34px] leading-none">{disabled && reason ? '🔒' : icon}</span>
+      <span className="font-display text-[15px] leading-tight text-center uppercase tracking-wide">{label}</span>
+      {disabled && reason ? <span className="text-[11px] font-bold text-yellow-300 leading-tight text-center">{reason}</span> : (
+        <span className="flex flex-wrap justify-center gap-1 mt-0.5">
+          <span className="chip !py-0.5">{energy ? <><Icon name="bolt" size={12} color="#ffd23f" />{energy}</> : 'free'}</span>
+          {cash ? <span className="chip chip-gold !py-0.5">{nairaShort(cash)}</span> : null}
+          {reward ? <span className="chip chip-green !py-0.5">{reward}</span> : null}
+        </span>
+      )}
+      {left !== undefined && !disabled && <span className="text-[10px] font-bold opacity-60">{left} left</span>}
+    </button>
+  )
+}
+
 export function PlaceModal() {
-  const { life, placeId, openSheet, endActions, enterPlace, hour, startPenalty, startMarket, startChores, startShop, startJog } = useGame()
+  const { life, placeId, openSheet, endActions, enterPlace, hour, startPenalty, startMarket, startChores, startShop, startJog, startMatch } = useGame()
   const route = useActivityRouter()
   const acts = useMemo(() => (life ? getActivities(life) : []), [life])
   if (!life || !placeId) return null
@@ -29,33 +50,42 @@ export function PlaceModal() {
   const active = placeActive(life, placeId)
   const closed = !isOpen(placeId, hour)
   const lastDelta = life.lastAction?.deltas ?? []
+  const idle = life.phase !== 'action'
+  const run = (def: (typeof rows)[number]['def']) => {
+    audio.sfx('click')
+    if (def.id === 'rest' && placeId === 'home') { enterPlace('home', 'sleep'); return }
+    if (def.id === 'study' && INTERIORS[placeId]) { enterPlace(placeId); return }
+    if (def.id === 'chores' && placeId === 'home') { startChores(); return }
+    if ((def.id === 'overtime' || def.id === 'community') && INTERIORS[placeId]) { enterPlace(placeId); return }
+    if (placeId === 'market' && def.id === 'shop') { startShop(); return }
+    if (placeId === 'market' && def.id === 'hustle') { startMarket(); return }
+    if (placeId === 'pitch' && def.id === 'exercise') { startJog(); return }
+    if (placeId === 'pitch' && def.id === 'play') { startPenalty(def.id); return }
+    if (def.id !== 'applyJob' && def.id !== 'socialise' && def.id !== 'familyTime' && def.id !== 'shop') openSheet(null)
+    route(def.id)
+  }
   return (
     <Modal onClose={() => openSheet(null)}>
       <div className="flex items-center gap-3">
-        <div className="text-4xl">{place.icon}</div>
-        <div className="min-w-0"><div className="font-display text-3xl text-danfo leading-none">{place.name}</div><div className="text-sm opacity-75">{place.blurb}</div></div>
+        <div className="w-16 h-16 rounded-[20px] grid place-items-center text-4xl shrink-0" style={{ background: 'radial-gradient(circle at 30% 20%, #8a5cff, #3b22a8)', boxShadow: 'inset 0 0 0 2px rgba(255,255,255,.25), 0 6px 0 rgba(0,0,0,.35)' }}>{place.icon}</div>
+        <div className="min-w-0">
+          <div className="font-display text-[26px] text-white leading-none" style={{ textShadow: '0 2px 0 rgba(0,0,0,.4)' }}>{place.name}</div>
+          <div className="text-xs opacity-70 mt-1 leading-snug">{place.blurb}</div>
+        </div>
       </div>
-      {note && <div className="card p-3 mt-3 text-sm">{note}</div>}
-      <div className="mt-3 grid gap-2">
-        {INTERIORS[placeId] && (isOpen(placeId, hour)
-          ? <button className="card-btn" style={{ borderColor: '#ffd23f' }} onClick={() => { audio.sfx('click'); enterPlace(placeId) }}><b>🚪 Go inside</b><div className="text-xs opacity-75">Open the door and walk in.</div></button>
-          : <div className="card p-3 text-sm text-yellow-300">🔒 Closed. Opens at {fmtClock(opensAt(placeId))}.</div>)}
+      {note && <div className="hud-glass rounded-2xl px-3 py-2 mt-3 text-sm flex gap-2 items-start"><Icon name="info" size={18} color="#5cc8ff" /><span>{note}</span></div>}
+      {INTERIORS[placeId] && (closed
+        ? <div className="chip chip-gold !text-sm mt-3"><Icon name="clock" size={14} color="#3b2300" /> Opens {fmtClock(opensAt(placeId))}</div>
+        : <Btn variant="green" className="w-full mt-3" onClick={() => { audio.sfx('click'); enterPlace(placeId) }}><Icon name="door" size={20} /> Go inside</Btn>)}
+      <div className="grid grid-cols-2 gap-2.5 mt-3">
+        {placeId === 'pitch' && <ActTile hot icon="⚽" label="Play a match" energy={12} reward="🏆" disabled={idle || closed} onClick={() => { audio.sfx('click'); startMatch() }} />}
         {rows.map(({ def, enabled, reason, remaining }) => (
-          <button key={def.id} className="card-btn" disabled={!enabled || life.phase !== 'action' || closed} onClick={() => { audio.sfx('click'); if (def.id === 'rest' && placeId === 'home') { enterPlace('home', 'sleep'); return } if (def.id === 'study' && INTERIORS[placeId]) { enterPlace(placeId); return } if (def.id === 'chores' && placeId === 'home') { startChores(); return } if ((def.id === 'overtime' || def.id === 'community') && INTERIORS[placeId]) { enterPlace(placeId); return } if (placeId === 'market' && def.id === 'shop') { startShop(); return } if (placeId === 'market' && def.id === 'hustle') { startMarket(); return } if (placeId === 'pitch' && def.id === 'exercise') { startJog(); return } if (placeId === 'pitch' && def.id === 'play') { startPenalty(def.id); return } if (def.id !== 'applyJob' && def.id !== 'socialise' && def.id !== 'familyTime' && def.id !== 'shop') openSheet(null); route(def.id) }}>
-            <div className="flex items-center justify-between gap-2"><b>{def.icon} {def.label}</b><span className="chip">{def.cost.energy ? `⚡${def.cost.energy}` : 'free'}{def.cost.cash ? ` · ${nairaShort(def.cost.cash)}` : ''}</span></div>
-            <div className="text-xs opacity-75 mt-0.5">{closed ? <span className="text-yellow-300">Closed until {fmtClock(opensAt(placeId))}.</span> : enabled ? <>{def.blurb} <span className="opacity-70">→ {BENEFIT[def.id] ?? ''}</span></> : <span className="text-yellow-300">{reason}</span>}</div>
-            {remaining !== undefined && enabled && <div className="text-[10px] opacity-50">{remaining} left this year</div>}
-          </button>
+          <ActTile key={def.id} icon={def.icon} label={def.label} energy={def.cost.energy} cash={def.cost.cash} reward={emojis(BENEFIT[def.id] ?? '')} reason={closed ? `Opens ${fmtClock(opensAt(placeId))}` : reason} left={remaining} disabled={!enabled || idle || closed} onClick={() => run(def)} />
         ))}
-        {placeId === 'home' && (
-          <button className="card-btn" style={{ borderColor: '#2fd27b' }} disabled={life.phase !== 'action' || !!life.quiz} onClick={() => { audio.sfx('good'); openSheet(null); endActions() }}>
-            <b>📅 End the year</b><div className="text-xs opacity-75">Age {life.character.age} → {life.character.age + 1}. Events happen, then salary, rent and fees are settled.</div>
-          </button>
-        )}
-        {rows.length === 0 && !note && active && <div className="opacity-70 text-sm">Nothing to do here right now.</div>}
+        {placeId === 'home' && <ActTile hot icon="📅" label="End the year" reward={`${life.character.age} → ${life.character.age + 1}`} disabled={idle || !!life.quiz} onClick={() => { audio.sfx('good'); openSheet(null); endActions() }} />}
       </div>
+      {rows.length === 0 && !note && active && <div className="opacity-70 text-sm mt-2">Nothing to do here right now.</div>}
       {lastDelta.length > 0 && <DeltaChips deltas={lastDelta} limit={5} />}
-      <Btn variant="ghost" className="w-full mt-3" onClick={() => openSheet(null)}>Close</Btn>
     </Modal>
   )
 }
@@ -72,26 +102,28 @@ export function NpcModal() {
   const close = () => openSheet(null)
   const acts = getActivities(life)
   const chat = acts.find((a) => a.def.id === 'chat')
+  const meal = acts.find((a) => a.def.id === 'meal')
   const hangAct = acts.find((a) => a.def.id === (family ? 'familyTime' : 'socialise'))
+  const idle = life.phase !== 'action'
   return (
     <Modal onClose={close}>
       <div className="flex items-center gap-3">
-        <div className="w-14 h-14 rounded-full grid place-items-center text-2xl font-black" style={{ background: '#3a3358' }}>{npc.name[0]}</div>
-        <div className="min-w-0"><div className="font-display text-3xl text-danfo leading-none">{npc.name}</div><div className="text-sm opacity-75 capitalize">{roleLabel} · {npc.gender === 'male' ? 'he' : 'she'}</div></div>
+        <div className="w-16 h-16 rounded-full grid place-items-center text-3xl font-display shrink-0" style={{ background: 'radial-gradient(circle at 30% 20%, #ff8ec2, #7a2a9a)', boxShadow: 'inset 0 0 0 3px rgba(255,255,255,.35), 0 6px 0 rgba(0,0,0,.35)' }}>{npc.name[0]}</div>
+        <div className="min-w-0 flex-1">
+          <div className="font-display text-[26px] text-white leading-none" style={{ textShadow: '0 2px 0 rgba(0,0,0,.4)' }}>{npc.name}</div>
+          <div className="chip chip-pink !py-0.5 mt-1.5 capitalize">{roleLabel}</div>
+        </div>
       </div>
-      <div className="mt-3 text-xs opacity-70">Closeness {npc.closeness}/100</div><div className="bar"><i style={{ width: `${npc.closeness}%`, background: '#ff7ab8' }} /></div>
-      <div className="grid gap-2 mt-3">
-        <button className="card-btn" disabled={!chat?.enabled || life.phase !== 'action'} onClick={() => startTalk('chat', role)}>
-          <div className="flex justify-between"><b>💬 Chat</b><span className="chip">⚡3</span></div><div className="text-xs opacity-75">{chat?.enabled ? 'Stand together and talk. Your replies shape the bond.' : chat?.reason}</div>
-        </button>
-        {hang && (
-          <button className="card-btn" disabled={!hangAct?.enabled || life.phase !== 'action'} onClick={() => startTalk(family ? 'family' : 'hang', role)}>
-            <div className="flex justify-between"><b>{family ? '👪 Spend time together' : '🧑‍🤝‍🧑 Hang out'}</b><span className="chip">⚡{hangAct?.def.cost.energy ?? 12}</span></div>
-            <div className="text-xs opacity-75">{hangAct?.enabled ? (family ? 'Sit down together and talk properly.' : 'Walk somewhere together: the pitch or the buka.') : hangAct?.reason}</div>
-          </button>
-        )}
+      <div className="flex items-center gap-2 mt-3">
+        <Icon name="heart" size={20} color="#ff7ab8" />
+        <div className="bar flex-1"><i style={{ width: `${npc.closeness}%`, background: 'linear-gradient(90deg,#ff7ab8,#ff3d8b)' }} /></div>
+        <span className="font-display text-sm">{npc.closeness}</span>
       </div>
-      <Btn variant="ghost" className="w-full mt-3" onClick={close}>Close</Btn>
+      <div className="grid grid-cols-3 gap-2.5 mt-3">
+        <ActTile icon="💬" label="Chat" energy={3} disabled={!chat?.enabled || idle} reason={chat?.reason} onClick={() => startTalk('chat', role)} />
+        {family && role !== 'child' && <ActTile icon="🍛" label="Food" energy={1} disabled={!meal?.enabled || idle} reason={meal?.reason} onClick={() => startTalk('food', role)} />}
+        {hang && <ActTile icon={family ? '🛋️' : '🚶'} label={family ? 'Sit together' : 'Hang out'} energy={hangAct?.def.cost.energy ?? 12} disabled={!hangAct?.enabled || idle} reason={hangAct?.reason} onClick={() => startTalk(family ? 'family' : 'hang', role)} />}
+      </div>
     </Modal>
   )
 }
@@ -101,19 +133,18 @@ export function PlacesModal() {
   if (!life) return null
   const d = buildDistrict(life.character.housing.districtId)
   return (
-    <Modal title={`${DISTRICTS[life.character.housing.districtId]?.name ?? 'Your area'} places`} onClose={() => openSheet(null)}>
-      <div className="grid gap-2">
+    <Modal title={DISTRICTS[life.character.housing.districtId]?.name ?? 'Your area'} onClose={() => openSheet(null)}>
+      <div className="grid grid-cols-3 gap-2.5">
         {d.places.map((p) => {
           const on = placeActive(life, p.id as PlaceId)
           return (
-            <button key={p.id} className="card-btn" style={{ opacity: on ? 1 : 0.55 }} onClick={() => goToPlace(p.id)}>
-              <div className="flex items-center justify-between"><b>{p.icon} {p.name}</b><span className="chip">🚶 Go</span></div>
-              <div className="text-xs opacity-75">{p.blurb}</div>
+            <button key={p.id} className="tile" style={{ opacity: on ? 1 : 0.5 }} onClick={() => { audio.sfx('click'); goToPlace(p.id) }}>
+              <span className="text-[32px] leading-none">{p.icon}</span>
+              <span className="font-display text-[13px] leading-tight text-center uppercase">{p.name}</span>
             </button>
           )
         })}
       </div>
-      <Btn variant="ghost" className="w-full mt-3" onClick={() => openSheet(null)}>Close</Btn>
     </Modal>
   )
 }

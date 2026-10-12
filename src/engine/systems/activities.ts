@@ -1,3 +1,4 @@
+import { BASE_BY_HOUSING } from '@content/appliances'
 import type { ActivityDef, NpcRole, StatDelta, TrackId } from '../core/types'
 import type { Ctx } from './ctx'
 import { ACTIVITIES, ACTIVITY_BY_ID } from '@content/activities'
@@ -47,7 +48,7 @@ function finish(ctx: Ctx, before: StatDelta[], text: string) {
   log(ctx.s, 'activity', text)
 }
 
-export interface ActivityArgs { target?: NpcRole; track?: TrackId; itemId?: string; hours?: number; appliancesOn?: number; perf?: number; donation?: number; pricePct?: number }
+export interface ActivityArgs { target?: NpcRole; track?: TrackId; itemId?: string; hours?: number; appliancesOn?: number; perf?: number; donation?: number; pricePct?: number; spend?: number }
 
 export function performActivity(ctx: Ctx, id: string, args: ActivityArgs = {}): boolean {
   const { s, rng } = ctx
@@ -178,11 +179,15 @@ export function performActivity(ctx: Ctx, id: string, args: ActivityArgs = {}): 
   if (args.perf !== undefined) {
     // skill-based bonus from playing the task in the world (0 = poor, 1 = great)
     const p = Math.max(0, Math.min(1, args.perf))
-    if (id === 'community') {
+    if (id === 'meal') {
+      addStat(ctx, 'happiness', Math.round(p * 2), 'A good meal'); addStat(ctx, 'health', Math.round(p), 'A good meal')
+      if (args.target) addRel(ctx, args.target, Math.round(p * 2))
+      const cost = Math.max(0, Math.min(args.spend ?? 0, c.stats.cash)); if (cost > 0) addStat(ctx, 'cash', -cost, 'Food')
+    } else if (id === 'community') {
       addStat(ctx, 'happiness', Math.round(p * 2), 'Fellowship'); addStat(ctx, 'stress', -Math.round(p * 2), 'Peace of mind')
       const give = Math.max(0, Math.min(args.donation ?? 0, c.stats.cash))
       if (give > 0) { addStat(ctx, 'cash', -give, 'Offering'); addStat(ctx, 'reputation', give >= 3000 ? 2 : 1, 'Generosity'); addStat(ctx, 'happiness', 1, 'Giving') }
-    } else if (id === 'chores') { addRel(ctx, 'mother', Math.round(p * 3)); addStat(ctx, 'reputation', Math.round(p), 'Well done') }
+    } else if (id === 'chores') { addRel(ctx, args.target ?? 'mother', Math.round(p * 3)); addStat(ctx, 'reputation', Math.round(p), 'Well done'); if (args.target) addStat(ctx, 'happiness', 1, 'Teamwork') }
     else if (id === 'overtime') { addStat(ctx, 'reputation', Math.round(p * 2), 'Great work'); addStat(ctx, 'knowledge', Math.round(p), 'Great work') }
     else if (id === 'hustle') applyEffects(ctx, [{ hustleIncome: Math.round(p * 90000) }], 'Great sales')
     else if (id === 'play' || id === 'exercise') { addStat(ctx, 'happiness', Math.round(p * 3), 'Great game'); addStat(ctx, 'health', Math.round(p * 2), 'Great game') }
@@ -233,7 +238,8 @@ export function answerQuiz(ctx: Ctx, optionIndex: number): { correct: boolean; f
 
 export function shopItems(ctx: Ctx) {
   const c = ctx.s.character
-  return ITEMS.filter((i) => c.age >= i.minAge && !c.items.includes(i.id)).map((i) => ({ item: i, affordable: c.stats.cash >= i.price }))
+  const base = new Set(BASE_BY_HOUSING[c.housing.type] ?? [])
+  return ITEMS.filter((i) => c.age >= i.minAge && !c.items.includes(i.id) && !(i.appliance && base.has(i.id))).map((i) => ({ item: i, affordable: c.stats.cash >= i.price }))
 }
 
 export function jobOptions(ctx: Ctx) {

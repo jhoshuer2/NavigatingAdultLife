@@ -17,7 +17,7 @@ for (let i = 0; i < 40; i++) {
   if (await page.getByText('Market closed for the day!').count()) break
   const want = await page.locator('text=/They want/').first().textContent().catch(() => null)
   if (want) { const w = want.match(/want (\w+)\./)[1]; await page.getByRole('button', { name: w, exact: true }).click(); await page.waitForTimeout(500); if (i === 2) await page.screenshot({ path: `${OUT}/121-sold.png` }) }
-  else if (await page.getByText('Fair price').count()) { await page.getByText('Fair price').click(); await page.waitForTimeout(500) }
+  else if (await page.getByText('Fair', { exact: true }).count()) { await page.getByText('Fair', { exact: true }).click(); await page.waitForTimeout(500) }
   else await page.waitForTimeout(500)
 }
 await page.screenshot({ path: `${OUT}/122-market-end.png` })

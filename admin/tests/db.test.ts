@@ -11,5 +11,5 @@ it('migrate is idempotent and safe to run twice concurrently', async () => {
   const { migrate } = await import('../server/db')
   const db = await memoryDb()
   await Promise.all([migrate(db), migrate(db)])
-  expect((await db.query<any>('SELECT count(*)::int n FROM schema_migrations')).rows[0].n).toBe(3)
+  expect((await db.query<any>('SELECT count(*)::int n FROM schema_migrations')).rows[0].n).toBe(4)
 })

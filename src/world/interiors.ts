@@ -2,13 +2,15 @@
 import type { Rect, PlaceId } from './layout'
 
 export type ObjKind =
-  | 'bed' | 'wardrobe' | 'desk' | 'chair' | 'sofa' | 'tvunit' | 'fan' | 'counter' | 'fridge' | 'table' | 'shower' | 'toilet' | 'sink' | 'pew' | 'board' | 'cubicle' | 'plant' | 'rug' | 'shelf' | 'cooler' | 'pulpit' | 'bench' | 'stool' | 'cooker'
+  | 'bed' | 'wardrobe' | 'desk' | 'chair' | 'sofa' | 'tvunit' | 'fan' | 'counter' | 'fridge' | 'table' | 'shower' | 'toilet' | 'sink' | 'pew' | 'board' | 'cubicle' | 'plant' | 'rug' | 'shelf' | 'cooler' | 'pulpit' | 'bench' | 'stool' | 'cooker' | 'ac'
 
-export interface IObj { kind: ObjKind; rect: Rect; h: number; color: number; blocks?: boolean; id?: string }
-export interface HotAction { label: string; icon: string; cmd: string; note?: string }
-export interface Hotspot { id: string; name: string; icon: string; x: number; z: number; r: number; actions: HotAction[] }
+export interface IObj { kind: ObjKind; rect: Rect; h: number; color: number; blocks?: boolean; id?: string; appl?: string }
+export interface HotAction { label: string; icon: string; cmd: string; note?: string; needs?: string }
+export interface Hotspot { id: string; name: string; icon: string; x: number; z: number; r: number; actions: HotAction[]; needs?: string }
 export interface IPerson { id: string; name: string; role: string; x: number; z: number; line: string; persistent?: string }
+export interface Anchor { id: string; kind: 'sofa' | 'table' | 'cook' | 'rug' | 'stand'; x: number; z: number; ax: number; az: number; pose: 'sit' | 'stand'; face: number; floor?: boolean }
 export interface Interior {
+  anchors?: Anchor[]
   id: PlaceId
   name: string
   bounds: Rect
@@ -36,22 +38,24 @@ export const INTERIORS: Partial<Record<PlaceId, Interior>> = {
       { kind: 'bed', rect: r(-9.6, -6.4, -6.8, -2.6), h: 0.9, color: 0xd9534f, id: 'bed' },
       { kind: 'wardrobe', rect: r(-6, -3.6, -6.9, -5.9), h: 3, color: 0x7a4a2a },
       { kind: 'desk', rect: r(-9.8, -7.4, -1.6, -0.6), h: 1, color: 0x8a5a32 }, { kind: 'chair', rect: r(-9.0, -8.3, -0.4, 0.3), h: 0.6, color: 0x2b3a8c },
-      { kind: 'tvunit', rect: r(-1, 2, -6.8, -6), h: 1.1, color: 0x4a3320, id: 'tv' }, { kind: 'sofa', rect: r(-1.5, 1.6, -1.2, 0.4), h: 0.9, color: 0x2f7a5a },
+      { kind: 'tvunit', rect: r(-1, 2, -6.8, -6), h: 1.1, color: 0x4a3320, id: 'tv', appl: 'tv' }, { kind: 'sofa', rect: r(-1.5, 1.6, -1.2, 0.4), h: 0.9, color: 0x2f7a5a, appl: 'sofa' },
+      { kind: 'ac', rect: r(2.4, 3.8, -7.0, -6.55), h: 0, color: 0xf2f2f6, appl: 'ac', blocks: false },
       { kind: 'rug', rect: r(-1.8, 2.8, -4.5, -2.0), h: 0.04, color: 0xc4562a, blocks: false },
-      { kind: 'fan', rect: r(3.2, 3.7, 2.2, 2.8), h: 1.6, color: 0x4a6a8a, id: 'fan' },
-      { kind: 'cooker', rect: r(4.6, 6.4, -6.9, -5.9), h: 1.0, color: 0x888888 }, { kind: 'counter', rect: r(6.4, 8.6, -6.9, -5.9), h: 1.0, color: 0x9a7a5a },
-      { kind: 'fridge', rect: r(8.8, 9.9, -6.0, -4.9), h: 2.3, color: 0xe8e8ee },
-      { kind: 'table', rect: r(5.5, 8, -3.4, -1.8), h: 0.9, color: 0x9a6a3a }, { kind: 'stool', rect: r(5.0, 5.5, -2.9, -2.4), h: 0.5, color: 0xc4562a }, { kind: 'stool', rect: r(8.0, 8.5, -2.9, -2.4), h: 0.5, color: 0xc4562a },
+      { kind: 'fan', rect: r(3.2, 3.7, 2.2, 2.8), h: 1.6, color: 0x4a6a8a, id: 'fan', appl: 'fan' },
+      { kind: 'cooker', rect: r(4.6, 6.4, -6.9, -5.9), h: 1.0, color: 0x888888, appl: 'cooker' }, { kind: 'counter', rect: r(6.4, 8.6, -6.9, -5.9), h: 1.0, color: 0x9a7a5a },
+      { kind: 'fridge', rect: r(8.8, 9.9, -6.0, -4.9), h: 2.3, color: 0xe8e8ee, appl: 'fridge' },
+      { kind: 'table', rect: r(6.2, 8.4, -3.4, -1.8), h: 0.9, color: 0x9a6a3a },
       { kind: 'shower', rect: r(5, 6.4, 1.8, 3.2), h: 0.2, color: 0x7ab3d4, blocks: false }, { kind: 'toilet', rect: r(7.6, 8.4, 2.0, 2.9), h: 0.9, color: 0xffffff }, { kind: 'sink', rect: r(9.1, 9.9, 2.0, 3.2), h: 1.0, color: 0xf2f2f2 },
       { kind: 'plant', rect: r(-2.4, -1.8, 5.6, 6.2), h: 1.4, color: 0x2f7a3a },
     ],
     hotspots: [
-      { id: 'bed', name: 'Bed', icon: '🛏️', x: -5.4, z: -4.6, r: 1.9, actions: [{ label: 'Go to sleep', icon: '😴', cmd: 'sleep' }] },
+      { id: 'bed', name: 'Bed', icon: '🛏️', x: -5.4, z: -4.6, r: 1.9, actions: [{ label: 'Lie down on the bed', icon: '🛏️', cmd: 'pose:bed' }, { label: 'Go to sleep', icon: '😴', cmd: 'sleep' }] },
       { id: 'desk', name: 'Desk', icon: '📚', x: -8.6, z: 1.0, r: 1.7, actions: [{ label: 'Study at your desk', icon: '📚', cmd: 'task:desk' }] },
-      { id: 'tv', name: 'TV and sofa', icon: '📺', x: 0.5, z: 1.5, r: 2.0, actions: [{ label: 'Turn the TV on/off', icon: '📺', cmd: 'toggle:tv' }, { label: 'Watch TV for a while', icon: '🍿', cmd: 'act:tv' }] },
-      { id: 'fan', name: 'Standing fan', icon: '🌀', x: 2.1, z: 1.7, r: 1.8, actions: [{ label: 'Turn the fan on/off', icon: '🌀', cmd: 'toggle:fan' }] },
+      { id: 'sofa', name: 'Sofa', icon: '🛋️', x: -0.9, z: 1.5, r: 1.7, needs: 'sofa', actions: [{ label: 'Sit on the sofa', icon: '🛋️', cmd: 'pose:sofa' }] },
+      { id: 'tv', name: 'TV', icon: '📺', x: 1.5, z: 1.5, r: 1.6, needs: 'tv', actions: [{ label: 'Turn the TV on/off', icon: '📺', cmd: 'toggle:tv' }, { label: 'Watch TV for a while', icon: '🍿', cmd: 'act:tv' }] },
+      { id: 'fan', name: 'Standing fan', icon: '🌀', x: 2.1, z: 1.7, r: 1.8, needs: 'fan', actions: [{ label: 'Turn the fan on/off', icon: '🌀', cmd: 'toggle:fan' }] },
       { id: 'light', name: 'Light switch', icon: '💡', x: 2.4, z: 5.6, r: 1.6, actions: [{ label: 'Turn the lights on/off', icon: '💡', cmd: 'toggle:light' }] },
-      { id: 'kitchen', name: 'Kitchen', icon: '🍛', x: 7.0, z: -0.6, r: 2.3, actions: [{ label: 'Eat a meal', icon: '🍛', cmd: 'act:meal' }, { label: 'Do the household chores', icon: '🧹', cmd: 'task:chores' }] },
+      { id: 'kitchen', name: 'Kitchen', icon: '🍛', x: 7.0, z: -0.6, r: 2.3, actions: [{ label: 'Cook a meal', icon: '🍳', cmd: 'task:cook', needs: 'cooker' }, { label: 'Do the household chores', icon: '🧹', cmd: 'task:chores' }] },
       { id: 'bath', name: 'Bathroom', icon: '🪥', x: 7.0, z: 4.8, r: 2.2, actions: [{ label: 'Brush teeth and freshen up', icon: '🪥', cmd: 'act:groom' }, { label: 'Take a bath', icon: '🚿', cmd: 'act:groom' }] },
     ],
     people: [
@@ -61,6 +65,19 @@ export const INTERIORS: Partial<Record<PlaceId, Interior>> = {
       { id: 'child', name: 'Little one', role: 'child', x: 2.6, z: 4.6, line: 'Play with me!', persistent: 'child' },
     ],
     windowsAt: [{ x: -6.5, z: -7 }, { x: 1, z: -7 }, { x: 7, z: -7 }],
+    anchors: [
+      { id: 'sofa1', kind: 'sofa', x: -0.7, z: -0.4, ax: -0.7, az: 1.3, pose: 'sit', face: Math.PI },
+      { id: 'sofa2', kind: 'sofa', x: 0.7, z: -0.4, ax: 0.7, az: 1.3, pose: 'sit', face: Math.PI },
+      { id: 'table1', kind: 'table', x: 6.8, z: -1.3, ax: 6.8, az: -0.6, pose: 'sit', face: Math.PI },
+      { id: 'table2', kind: 'table', x: 7.8, z: -1.3, ax: 7.8, az: -0.6, pose: 'sit', face: Math.PI },
+      { id: 'cook1', kind: 'cook', x: 5.5, z: -5.0, ax: 5.5, az: -5.0, pose: 'stand', face: Math.PI },
+      { id: 'rug1', kind: 'rug', x: 0.4, z: -3.4, ax: 0.4, az: -3.4, pose: 'sit', face: 0, floor: true },
+      { id: 'rug2', kind: 'rug', x: -0.9, z: -2.7, ax: -0.9, az: -2.7, pose: 'sit', face: 0.8, floor: true },
+      { id: 'st1', kind: 'stand', x: -4.2, z: 2.4, ax: -4.2, az: 2.4, pose: 'stand', face: 0.5 },
+      { id: 'st2', kind: 'stand', x: 2.4, z: 3.6, ax: 2.4, az: 3.6, pose: 'stand', face: -0.6 },
+      { id: 'st3', kind: 'stand', x: 6.6, z: 0.3, ax: 6.6, az: 0.3, pose: 'stand', face: 0 },
+      { id: 'st4', kind: 'stand', x: -6.0, z: 4.4, ax: -6.0, az: 4.4, pose: 'stand', face: 2.4 },
+    ],
   },
   school: {
     id: 'school', name: 'Classroom', bounds: r(-9, 9, -6, 6), wallColor: 0xf7efe0, door: { x: 0, z: 5.2 }, spawn: { x: 0, z: 4.2 },
@@ -92,7 +109,7 @@ export const INTERIORS: Partial<Record<PlaceId, Interior>> = {
       { kind: 'tvunit', rect: r(5.5, 7.5, -5.6, -4.8), h: 1.6, color: 0x333333 },
     ],
     hotspots: [
-      { id: 'order', name: 'Order at the counter', icon: '🍲', x: 0, z: -2.4, r: 2.0, actions: [{ label: 'Order a plate (eat)', icon: '🍛', cmd: 'act:meal' }, { label: 'Treat yourself', icon: '🍨', cmd: 'act:treat' }] },
+      { id: 'order', name: 'Order at the counter', icon: '🍲', x: 0, z: -2.4, r: 2.0, actions: [{ label: 'Sit down and order a meal', icon: '🍛', cmd: 'task:dine' }, { label: 'Treat yourself', icon: '🍨', cmd: 'act:treat' }] },
       { id: 'table', name: 'Table by the window', icon: '🧑‍🤝‍🧑', x: -5.5, z: 3.0, r: 2.2, actions: [{ label: 'Hang out with a friend', icon: '🧑‍🤝‍🧑', cmd: 'act:socialise' }] },
     ],
     people: [{ id: 'mama', name: 'Mama Chidi', role: 'cook', x: -6.0, z: -2.8, line: 'Rice or beans? Do not stand there like a statue.' }, { id: 'friend', name: 'Friend', role: 'friend', x: -5.5, z: 2.5, line: 'Sit down, the gist is hot.', persistent: 'friend' }],
@@ -158,7 +175,7 @@ export const HOME_CHORES: { id: string; x: number; z: number; emoji: string; not
 export function interiorFor(id: PlaceId): Interior | undefined { return INTERIORS[id] }
 
 /** All blocking rectangles inside an interior (furniture and partition walls). */
-export function interiorBlockers(it: Interior): Rect[] {
-  return [...it.walls, ...it.objs.filter((o) => o.blocks !== false).map((o) => o.rect)]
+export function interiorBlockers(it: Interior, installed?: Set<string>): Rect[] {
+  return [...it.walls, ...it.objs.filter((o) => o.blocks !== false && (!o.appl || !installed || installed.has(o.appl))).map((o) => o.rect)]
 }
 export { exit as EXIT_ACTION }

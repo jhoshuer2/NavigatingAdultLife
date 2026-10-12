@@ -2,9 +2,10 @@
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import type { Gender } from '@engine/core/types'
-import { INTERIORS, interiorBlockers, type IObj, type Interior } from './interiors'
+import { INTERIORS, interiorBlockers, type Anchor, type IObj, type Interior } from './interiors'
+import type { Activity } from './residents'
 import type { PlaceId, Rect } from './layout'
-import { buildNavFor, type Nav } from './nav'
+import { buildNavFor, findPath, type Nav } from './nav'
 import { animateHuman, buildHuman, hashLook, type HumanParts } from './characters'
 import { lightingAt } from './time'
 
@@ -32,8 +33,10 @@ export interface InteriorState { light: boolean; tv: boolean; fan: boolean; hour
 export class InteriorView {
   readonly scene = new THREE.Scene()
   readonly def: Interior
-  readonly nav: Nav
-  readonly blockers: Rect[]
+  nav: Nav
+  blockers: Rect[]
+  private installed: Set<string>
+  private applObjs = new Map<string, THREE.Object3D[]>()
   private hemi = new THREE.HemisphereLight(0xfff2d8, 0x4a3a4a, 1)
   private tvLight = new THREE.PointLight(0x7aa8ff, 0, 9)
   private tvScreen?: THREE.Mesh
@@ -42,7 +45,9 @@ export class InteriorView {
   private windowMat = new THREE.MeshBasicMaterial({ color: 0x9ed3ff })
   private fanBlades?: THREE.Object3D
   private fanOn = false
-  private people = new Map<string, { parts: HumanParts; sprite: THREE.Sprite; id: string; name: string; line: string; x: number; z: number; persistent?: string }>()
+  private people = new Map<string, { parts: HumanParts; sprite: THREE.Sprite; id: string; name: string; line: string; role: string; x: number; z: number; persistent?: string; prole?: string; act?: Activity | null; route: { x: number; z: number }[]; anchor?: Anchor; seat?: Anchor; leaving?: boolean; nextT: number; moving: boolean }>()
+  private occupied = new Map<string, string>() // anchor id -> person id
+  private clock = 0
   private marker: THREE.Mesh
   private arrow: THREE.Mesh
   private markTarget: string | null = null
@@ -51,14 +56,15 @@ export class InteriorView {
   private zzz?: THREE.Sprite
   private textCache = new Map<string, THREE.SpriteMaterial>()
   private boardCtx?: CanvasRenderingContext2D
-  private icons: THREE.Sprite[] = []
+  private icons: { s: THREE.Sprite; needs?: string }[] = []
   private boardTex?: THREE.CanvasTexture
 
-  constructor(id: PlaceId) {
+  constructor(id: PlaceId, installed?: Set<string>) {
     const def = INTERIORS[id]
     if (!def) throw new Error(`no interior for ${id}`)
     this.def = def
-    this.blockers = interiorBlockers(def)
+    this.installed = installed ?? new Set(def.objs.map((o) => o.appl).filter(Boolean) as string[])
+    this.blockers = interiorBlockers(def, this.installed)
     this.nav = buildNavFor(this.blockers, def.bounds, 0.5)
     this.scene.background = new THREE.Color(0x1b1830)
     this.scene.add(this.hemi, this.tvLight)
@@ -86,7 +92,16 @@ export class InteriorView {
     W.box(d.door.x - 0.8, d.door.x + 0.8, 0.02, 0.06, b.z1 - 1.2, b.z1 - 0.3, 0xc4562a)
     // partitions (half walls so the camera can see over them)
     for (const w of d.walls) W.box(w.x0, w.x1, 0, 1.4, w.z0, w.z1, shade(d.wallColor, 0.95)), W.box(w.x0 - 0.04, w.x1 + 0.04, 1.4, 1.5, w.z0 - 0.04, w.z1 + 0.04, shade(d.wallColor, 0.7))
-    for (const o of d.objs) this.obj(W, o)
+    for (const o of d.objs) {
+      if (!o.appl) { this.obj(W, o); continue }
+      // appliances are separate meshes so they can appear when delivered
+      const A = new Batch(); const before = this.scene.children.length
+      this.obj(A, o)
+      const mesh = A.mesh(); this.scene.add(mesh)
+      const extras = [mesh, ...this.scene.children.slice(before).filter((c) => c !== mesh)]
+      this.applObjs.set(o.appl, [...(this.applObjs.get(o.appl) ?? []), ...extras])
+    }
+    this.applyInstalled()
     this.scene.add(W.mesh())
     // north-wall windows (colour follows the time of day)
     for (const w of d.windowsAt) { const win = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 1.6), this.windowMat); win.position.set(w.x, 2.1, d.bounds.z0 + 0.03); this.scene.add(win); const fr = new THREE.Mesh(new THREE.BoxGeometry(2.5, 1.9, 0.06), new THREE.MeshLambertMaterial({ color: 0xffffff })); fr.position.set(w.x, 2.1, d.bounds.z0 + 0.0); this.scene.add(fr) }
@@ -104,9 +119,26 @@ export class InteriorView {
       this.setBoard(['Class is in session', 'Sit down and open your books'])
     }
     // hotspot icons
-    for (const h of d.hotspots) { const s = this.emoji(h.icon, 1.5); s.position.set(h.x, 2.6, h.z); this.scene.add(s); this.icons.push(s) }
+    for (const h of d.hotspots) { const s = this.emoji(h.icon, 1.5); s.position.set(h.x, 2.6, h.z); this.scene.add(s); this.icons.push({ s, needs: h.needs }) }
   }
 
+  private iconsOn = true
+  private applyInstalled() {
+    for (const i of this.icons) i.s.visible = this.iconsOn && (!i.needs || this.installed.has(i.needs))
+    for (const [k, list] of this.applObjs) for (const o of list) o.visible = this.installed.has(k)
+    if (!this.installed.has('tv')) { this.tvMat.color.setHex(0x0b0b10); this.tvLight.intensity = 0 }
+  }
+  /** Appliances that have been delivered appear (and start blocking movement). */
+  setInstalled(set: Set<string>) {
+    this.installed = set
+    this.applyInstalled()
+    this.blockers = interiorBlockers(this.def, set)
+    this.nav = buildNavFor(this.blockers, this.def.bounds, 0.5)
+  }
+  applianceSpot(appl: string): { x: number; z: number } | null {
+    const o = this.def.objs.find((x) => x.appl === appl); if (!o) return null
+    return { x: (o.rect.x0 + o.rect.x1) / 2, z: (o.rect.z0 + o.rect.z1) / 2 }
+  }
   private emoji(text: string, size: number): THREE.Sprite {
     let m = this.textCache.get(text)
     if (!m) {
@@ -166,6 +198,7 @@ export class InteriorView {
       case 'cubicle': W.box(r.x0, r.x1, 0, h, r.z0, r.z0 + 0.12, c); W.box(r.x0, r.x0 + 0.12, 0, h, r.z0, r.z1, c); W.box(r.x1 - 0.12, r.x1, 0, h, r.z0, r.z1, c); break
       case 'plant': W.cyl(cx, 0.25, cz, 0.28, 0.5, 0x8a5a32); W.cyl(cx, 0.9, cz, 0.38, 0.9, 0x2f9a4a, 6); break
       case 'rug': W.box(r.x0, r.x1, 0.02, 0.06, r.z0, r.z1, c); break
+      case 'ac': W.box(r.x0, r.x1, 2.3, 2.85, r.z0, r.z1, c); W.box(r.x0 + 0.1, r.x1 - 0.1, 2.38, 2.45, r.z1 - 0.02, r.z1 + 0.02, 0x9fb4c8); break
       case 'shelf': W.box(r.x0, r.x1, 0, h, r.z0, r.z1, c); for (let y = 0.5; y < h; y += 0.6) W.box(r.x0 - 0.02, r.x1 + 0.02, y, y + 0.05, r.z0, r.z1, shade(c, 0.6)); break
       case 'cooler': W.box(r.x0, r.x1, 0, h * 0.7, r.z0, r.z1, 0xe8e8ee); W.box(r.x0 + 0.1, r.x1 - 0.1, h * 0.7, h, r.z0 + 0.1, r.z1 - 0.1, c); break
       default: W.box(r.x0, r.x1, 0, h, r.z0, r.z1, c)
@@ -182,9 +215,10 @@ export class InteriorView {
     this.hemi.groundColor.setHex(on ? 0x6a5a5a : day ? 0x6a6a7a : 0x14142e)
     this.bulbMat.color.setHex(on ? 0xfff2a8 : 0x444444)
     this.windowMat.color.setHex(L.sky)
-    this.tvMat.color.setHex(s.tv ? 0x6fa4ff : 0x0b0b10)
-    this.tvLight.intensity = s.tv ? 1.1 : 0
-    this.fanOn = s.fan
+    const tvOk = this.installed.has('tv')
+    this.tvMat.color.setHex(s.tv && tvOk ? 0x6fa4ff : 0x0b0b10)
+    this.tvLight.intensity = s.tv && tvOk ? 1.1 : 0
+    this.fanOn = s.fan && this.installed.has('fan')
     ;(this.scene.background as THREE.Color).setHex(on ? 0x2a2540 : 0x15122a)
   }
 
@@ -192,6 +226,7 @@ export class InteriorView {
     const wanted = new Map<string, { id: string; name: string; gender: Gender; role: string }>()
     for (const p of list) wanted.set(p.role, p)
     for (const [k, o] of this.people) { this.scene.remove(o.parts.group, o.sprite); this.people.delete(k) }
+    this.occupied.clear()
     for (const p of this.def.people) {
       const persistent = p.persistent ? wanted.get(p.persistent) : undefined
       if (p.persistent && !persistent) continue
@@ -201,7 +236,7 @@ export class InteriorView {
       parts.group.position.set(p.x, 0, p.z); parts.group.rotation.y = Math.PI
       this.scene.add(parts.group)
       const sprite = this.label(name); sprite.position.set(p.x, 3.5, p.z); this.scene.add(sprite)
-      this.people.set(p.id, { parts, sprite, id: p.id, name, line: p.line, x: p.x, z: p.z, persistent: persistent?.id })
+      this.people.set(p.id, { parts, sprite, id: p.id, name, line: p.line, role: p.role, x: p.x, z: p.z, persistent: persistent?.id, prole: p.persistent, act: undefined, route: [], nextT: 0, moving: false })
     }
   }
   setBoard(lines: string[] | null) {
@@ -215,15 +250,22 @@ export class InteriorView {
     ls.forEach((l, i) => g.fillText(l, 512, 128 + (i - (ls.length - 1) / 2) * (fs + 14), 980))
     t.needsUpdate = true
   }
-  showIcons(v: boolean) { for (const s of this.icons) s.visible = v; for (const p of this.people.values()) p.sprite.visible = v && p.parts.group.visible }
+  showIcons(v: boolean) { this.iconsOn = v; for (const i of this.icons) i.s.visible = v && (!i.needs || this.installed.has(i.needs)); for (const p of this.people.values()) p.sprite.visible = v && p.parts.group.visible }
   hidePerson(id: string, hidden: boolean) { const p = this.people.get(id); if (p) { p.parts.group.visible = !hidden; p.sprite.visible = !hidden } }
-  personInfo(id: string) { const p = this.people.get(id); return p ? { id: p.id, name: p.name, line: p.line, persistent: p.persistent, x: p.x, z: p.z } : null }
-  allPeople() { return [...this.people.values()].map((p) => ({ id: p.id, x: p.x, z: p.z })) }
+  personInfo(id: string) { const p = this.people.get(id); return p ? { id: p.id, name: p.name, line: p.line, role: p.role, persistent: p.persistent, npcId: p.persistent, prole: p.prole, x: p.x, z: p.z } : null }
+  debugPeople() { return [...this.people.values()].map((p) => ({ id: p.id, act: p.act, vis: p.parts.group.visible, x: +p.x.toFixed(1), z: +p.z.toFixed(1), seat: p.seat?.id ?? null, moving: p.moving })) }
+  allPeople() { return [...this.people.values()].filter((p) => p.parts.group.visible).map((p) => ({ id: p.id, x: p.x, z: p.z })) }
 
   setMarker(hotspotId: string | null) { this.markTarget = hotspotId }
 
   /** Lay the player down in the bed (or stand up again). */
-  setSleeping(player: HumanParts, on: boolean) {
+  claimSeat(kind: Anchor['kind'], who: string): Anchor | null {
+    const a = (this.def.anchors ?? []).find((x) => x.kind === kind && !this.occupied.has(x.id))
+    if (!a) return null
+    this.occupied.set(a.id, who); return a
+  }
+  releaseSeat(who: string) { for (const [k, v] of [...this.occupied]) if (v === who) this.occupied.delete(k) }
+  setSleeping(player: HumanParts, on: boolean, zzzOn = true) {
     const bed = this.def.objs.find((o) => o.kind === 'bed')
     if (!bed) return
     const cx = (bed.rect.x0 + bed.rect.x1) / 2, cz = (bed.rect.z0 + bed.rect.z1) / 2
@@ -232,7 +274,7 @@ export class InteriorView {
       if (!this.bedGroup) { const g = new THREE.Group(); const blanket = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.25, 2.6), new THREE.MeshLambertMaterial({ color: 0x2b8a6a })); blanket.position.set(cx, 1.35, cz + 0.9); g.add(blanket); this.bedGroup = g; this.scene.add(g) }
       this.bedGroup.visible = true
       if (!this.zzz) { this.zzz = this.label('😴 Zzz…', 'rgba(255,255,255,0.9)'); this.scene.add(this.zzz) }
-      this.zzz.visible = true; this.zzz.position.set(cx, 3.2, cz)
+      this.zzz.visible = zzzOn; this.zzz.position.set(cx, 3.2, cz)
     } else {
       player.group.rotation.set(0, 0, 0)
       if (this.bedGroup) this.bedGroup.visible = false
@@ -241,6 +283,76 @@ export class InteriorView {
   }
   bedStand(): { x: number; z: number } { const h = this.def.hotspots.find((x) => x.id === 'bed'); return h ? { x: h.x, z: h.z } : this.def.spawn }
 
+
+  // ---------- residents with their own routines ----------
+  private anchorFor(p: { id: string }, act: Activity, avoid?: string): Anchor | undefined {
+    const all = this.def.anchors; if (!all) return undefined
+    const want: Anchor['kind'][] = act === 'cook' ? ['cook'] : act === 'eat' ? ['table'] : act === 'tv' ? ['sofa'] : act === 'play' ? ['rug', 'stand'] : ['stand']
+    const free = all.filter((a) => want.includes(a.kind) && a.id !== avoid && (!this.occupied.has(a.id) || this.occupied.get(a.id) === p.id))
+    if (!free.length) { const st = all.filter((a) => a.kind === 'stand' && a.id !== avoid); return st[Math.floor(Math.random() * st.length)] }
+    return free[Math.floor(Math.random() * free.length)]
+  }
+  private release(p: { id: string; seat?: Anchor }) { if (p.seat) { this.occupied.delete(p.seat.id); p.seat = undefined } }
+  private stand(p: { parts: HumanParts }) { p.parts.group.position.y = 0; p.parts.legL.rotation.x = p.parts.legR.rotation.x = 0 }
+  private goTo(p: NonNullable<ReturnType<InteriorView['people']['get']>>, a: Anchor, instant: boolean) {
+    this.release(p); this.occupied.set(a.id, p.id); p.anchor = a; p.nextT = this.clock + 14 + Math.random() * 22
+    if (instant) { this.sitOrStand(p, a); return }
+    this.stand(p)
+    const path = findPath(this.nav, { x: p.x, z: p.z }, { x: a.ax, z: a.az })
+    p.route = path ?? []
+    if (!path) this.sitOrStand(p, a)
+  }
+  private sitOrStand(p: NonNullable<ReturnType<InteriorView['people']['get']>>, a: Anchor) {
+    p.x = a.x; p.z = a.z; p.route = []; p.seat = a
+    p.parts.group.position.set(a.x, 0, a.z); p.parts.group.rotation.y = a.face; p.sprite.position.set(a.x, 3.5, a.z)
+    if (a.pose === 'sit') { p.parts.legL.rotation.x = p.parts.legR.rotation.x = -1.45; p.parts.group.position.y = a.floor ? -0.9 : -0.45 }
+    else this.stand(p)
+  }
+  /** Tell each resident what they are doing now (null = not at home). New arrivals walk in through the door. */
+  setActivities(map: Record<string, Activity | null>, instant = false) {
+    if (!this.def.anchors) { for (const p of this.people.values()) if (p.prole && p.prole in map) { const on = map[p.prole] != null; p.parts.group.visible = on; p.sprite.visible = on } return }
+    for (const p of this.people.values()) {
+      if (!p.prole || !(p.prole in map)) continue
+      const act = map[p.prole]
+      if (act === p.act) continue
+      p.act = act
+      if (act == null) {
+        if (!p.parts.group.visible) continue
+        if (instant) { this.release(p); p.parts.group.visible = false; p.sprite.visible = false; continue }
+        this.stand(p); this.release(p); p.leaving = true
+        p.route = findPath(this.nav, { x: p.x, z: p.z }, this.def.door) ?? []
+        if (!p.route.length) { p.parts.group.visible = false; p.sprite.visible = false }
+        continue
+      }
+      const a = this.anchorFor(p, act); if (!a) continue
+      p.leaving = false
+      if (!p.parts.group.visible) {
+        p.parts.group.visible = true; p.sprite.visible = true
+        const from = instant ? { x: a.x, z: a.z } : this.def.door
+        p.x = from.x; p.z = from.z; p.parts.group.position.set(from.x, 0, from.z)
+      }
+      this.goTo(p, a, instant)
+    }
+  }
+  private stepResidents(dt: number) {
+    this.clock += dt
+    for (const p of this.people.values()) {
+      if (!p.prole || !p.parts.group.visible) continue
+      // wander a little within the same activity so people keep moving about
+      if (p.act && !p.leaving && !p.route.length && this.clock > p.nextT && (p.act === 'idle' || p.act === 'play' || p.act === 'chat')) {
+        const a = this.anchorFor(p, p.act, p.anchor?.id); if (a && Math.random() < 0.6) this.goTo(p, a, false); else p.nextT = this.clock + 10 + Math.random() * 15
+      }
+      if (p.route.length) {
+        const t = p.route[0]; const vx = t.x - p.x, vz = t.z - p.z, d = Math.hypot(vx, vz)
+        if (d < 0.25) { p.route.shift(); if (!p.route.length) { if (p.leaving) { p.parts.group.visible = false; p.sprite.visible = false } else if (p.anchor) this.sitOrStand(p, p.anchor) } }
+        else { const sp = 2.3 * dt; p.x += (vx / d) * sp; p.z += (vz / d) * sp; p.parts.group.position.set(p.x, 0, p.z); p.parts.group.rotation.y = Math.atan2(vx, vz); p.sprite.position.set(p.x, 3.5, p.z) }
+        p.moving = true
+      } else p.moving = false
+      animateHuman(p.parts, this.time + p.x, p.moving, 0.7)
+      if (p.seat?.pose === 'sit' && !p.moving) { p.parts.legL.rotation.x = p.parts.legR.rotation.x = -1.45 }
+    }
+  }
+
   update(dt: number) {
     this.time += dt
     if (this.fanOn && this.fanBlades) this.fanBlades.rotation.y += dt * 14
@@ -248,7 +360,8 @@ export class InteriorView {
     const h = this.markTarget ? this.def.hotspots.find((x) => x.id === this.markTarget) : null
     this.marker.visible = this.arrow.visible = !!h
     if (h) { this.marker.position.set(h.x, 0.1, h.z); this.marker.scale.setScalar(1 + Math.sin(this.time * 4) * 0.1); this.arrow.position.set(h.x, 3.5 + Math.abs(Math.sin(this.time * 3)) * 0.5, h.z) }
-    for (const p of this.people.values()) animateHuman(p.parts, this.time, false)
+    this.stepResidents(dt)
+    for (const p of this.people.values()) if (!p.prole) animateHuman(p.parts, this.time, false)
   }
 
   dispose() {

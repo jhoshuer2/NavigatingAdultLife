@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useGame } from '../store'
-import { Btn, DeltaChips, Modal, naira, nairaShort } from './components'
+import { Btn, Confetti, CountUp, DeltaChips, Modal, Tile, naira, nairaShort } from './components'
+import { Icon } from './icons'
 import { Avatar } from './Avatar'
 import { currentEvent, getDreamProgress, getJobOptions, getShopItems } from '@engine/api'
 import { QUESTS } from '@content/quests'
@@ -28,37 +29,44 @@ export function EventModal() {
   const result = life.activeEvent?.result
   const npc = cur.event.who ? life.npcs[life.roles[cur.event.who] ?? ''] : undefined
   const queueLeft = life.eventQueue.length
+  const flag = () => { const note = window.prompt(`Feedback on "${cur.event.title}" (wrong, offensive, inaccurate, or could be funnier?)`); if (note) { track('content_flagged', { event_id: cur.event.id, reason: 'flagged' }); addFlag({ contentId: cur.event.id, kind: 'event', age: life.character.age, note }); useGame.getState().toast('Thanks, feedback saved') } }
   return (
     <Modal wide>
-      <div className="flex items-start gap-3">
-        <div className="flex-1 min-w-0">
-          <div className="text-[11px] font-extrabold uppercase tracking-wider opacity-60">Age {life.character.age} · event {life.after === 'summary' ? '' : '(milestone) '}{queueLeft > 1 ? `· ${queueLeft - 1} more` : ''}</div>
-          <h2 className="font-display text-3xl text-danfo leading-tight">{cur.event.title}</h2>
-        </div>
-        <button className="chip shrink-0" aria-label="Flag this event for the playtest feedback log" title="Flag this (playtest feedback)" onClick={() => { const note = window.prompt(`Feedback on "${cur.event.title}" (wrong, offensive, inaccurate, or could be funnier?)`); if (note) { track('content_flagged', { event_id: cur.event.id, reason: 'flagged' }); addFlag({ contentId: cur.event.id, kind: 'event', age: life.character.age, note }); useGame.getState().toast('Thanks, feedback saved') } }}>🚩</button>
-        {npc && <div className="text-center shrink-0"><div className="w-12 h-12 rounded-full grid place-items-center text-xl font-black" style={{ background: '#3a3358' }}>{npc.name[0]}</div><div className="text-[10px] opacity-70 mt-0.5">{npc.name}</div></div>}
+      <div className="flex items-center gap-2">
+        <span className="chip chip-pink"><Icon name="clock" size={13} /> Age {life.character.age}</span>
+        {queueLeft > 1 && <span className="chip">+{queueLeft - 1}</span>}
+        <span className="flex-1" />
+        <button className="chip" aria-label="Flag this event for the playtest feedback log" onClick={flag}><Icon name="flag" size={13} /></button>
       </div>
-      <p className="mt-2 leading-relaxed">{cur.text}</p>
+      <div className="flex items-center gap-3 mt-2">
+        {npc && <div className="w-14 h-14 rounded-full grid place-items-center text-2xl font-display shrink-0" style={{ background: 'radial-gradient(circle at 30% 20%, #ff8ec2, #7a2a9a)', boxShadow: 'inset 0 0 0 3px rgba(255,255,255,.35)' }} title={npc.name}>{npc.name[0]}</div>}
+        <h2 className="font-display text-[28px] text-white leading-[1.05]" style={{ textShadow: '0 2px 0 rgba(0,0,0,.4)' }}>{cur.event.title}</h2>
+      </div>
+      <p className="mt-3 text-[15px] leading-relaxed opacity-90">{cur.text}</p>
       {!result ? (
-        <div className="mt-3 flex flex-col gap-2">
-          {cur.choices.map(({ choice, label, affordable }) => (
-            <button key={choice.id} className="card-btn" onClick={() => { audio.sfx('click'); choose(choice.id) }}>
-              <div className="font-extrabold">{label}</div>
-              <div className="flex flex-wrap gap-1.5 mt-1">
-                {choice.risk && <span className="chip">{RISK[choice.risk][0]} {RISK[choice.risk][1]}</span>}
-                {choice.cost?.cash ? <span className="chip" style={{ background: affordable ? '#ffffff14' : '#5a1f24' }}>{naira(-choice.cost.cash)}{!affordable ? ' (debt)' : ''}</span> : null}
-                {choice.cost?.energy ? <span className="chip">⚡ −{choice.cost.energy}</span> : null}
-                {choice.hint && <span className="text-xs opacity-70">{choice.hint}</span>}
-              </div>
+        <div className="mt-4 flex flex-col gap-2.5 stagger">
+          {cur.choices.map(({ choice, label, affordable }, i) => (
+            <button key={choice.id} className="card-btn flex items-center gap-3" onClick={() => { audio.sfx('click'); choose(choice.id) }}>
+              <span className="grid place-items-center w-8 h-8 rounded-full shrink-0 font-display" style={{ background: 'var(--gold)', color: '#3b2300' }}>{'ABCD'[i]}</span>
+              <span className="flex-1 min-w-0">
+                <span className="block font-extrabold leading-snug">{label}</span>
+                <span className="flex flex-wrap gap-1.5 mt-1 empty:hidden">
+                  {choice.risk && <span className="chip !py-0.5">{RISK[choice.risk][0]} {RISK[choice.risk][1]}</span>}
+                  {choice.cost?.cash ? <span className={`chip !py-0.5 ${affordable ? 'chip-gold' : 'chip-red'}`}>{naira(-choice.cost.cash)}{!affordable ? ' (debt)' : ''}</span> : null}
+                  {choice.cost?.energy ? <span className="chip !py-0.5"><Icon name="bolt" size={12} color="#ffd23f" />−{choice.cost.energy}</span> : null}
+                </span>
+                {choice.hint && <span className="block text-xs opacity-65 mt-0.5">{choice.hint}</span>}
+              </span>
             </button>
           ))}
         </div>
       ) : (
-        <div className="mt-3 pop">
-          {result.tier && <div className="chip !text-sm mb-2">{TIER_LABEL[result.tier][0]} {TIER_LABEL[result.tier][1]}</div>}
-          <div className="card p-3 text-lg leading-snug">{result.text || 'It is done.'}</div>
+        <div className="mt-4 pop">
+          {result.tier && <div className={`chip !text-sm mb-2 ${result.tier === 'critSuccess' || result.tier === 'success' ? 'chip-green' : 'chip-red'}`}>{TIER_LABEL[result.tier][0]} {TIER_LABEL[result.tier][1]}</div>}
+          {result.tier === 'critSuccess' && <Confetti />}
+          <div className="hud-glass rounded-2xl p-3 text-[17px] leading-snug">{result.text || 'It is done.'}</div>
           <DeltaChips deltas={result.deltas} />
-          <Btn className="w-full mt-4" onClick={proceed}>Continue ▶</Btn>
+          <Btn variant="green" shine className="w-full mt-4 !text-lg" onClick={proceed}>Continue <Icon name="chevron" size={18} /></Btn>
         </div>
       )}
     </Modal>
@@ -72,27 +80,33 @@ export function QuizModal() {
   const quiz = life.quiz
   const q = fb ? fb.q : quiz?.questions[quiz.index]
   if (!q) return null
-  const total = quiz?.questions.length ?? (fb ? life.log.length * 0 + 3 : 3)
+  const total = quiz?.questions.length ?? 3
+  const n = quiz ? Math.min(quiz.index + 1, total) : total
   return (
     <Modal wide title="Pop quiz!">
-      <div className="text-xs opacity-60 mb-1">{q.subject.toUpperCase()}{quiz ? ` · question ${Math.min(quiz.index + 1, total)}/${total}` : ''}</div>
-      <p className="text-lg font-bold leading-snug">{q.q}</p>
-      <div className="mt-3 grid gap-2">
+      <div className="flex items-center gap-2">
+        <span className="chip chip-pink uppercase">{q.subject}</span>
+        <div className="flex gap-1.5 flex-1 justify-end">{Array.from({ length: total }, (_, i) => <span key={i} className="w-7 h-2 rounded-full" style={{ background: i < n ? 'var(--gold)' : 'rgba(255,255,255,.18)' }} />)}</div>
+      </div>
+      <p className="text-xl font-bold leading-snug mt-3">{q.q}</p>
+      <div className="mt-3 grid gap-2.5">
         {q.options.map((o, i) => {
           const picked = fb && fb.picked === i
           const right = fb && q.answer === i
           return (
-            <button key={i} className="card-btn" disabled={!!fb} onClick={() => answer(i)}
+            <button key={i} className="card-btn flex items-center gap-3" disabled={!!fb} onClick={() => answer(i)}
               style={fb ? { borderColor: right ? '#2fd27b' : picked ? '#ff6b5e' : undefined, background: right ? '#1d5a3a' : picked ? '#5a1f24' : undefined, opacity: 1 } : undefined}>
-              <span className="font-extrabold mr-2">{'ABCD'[i]}.</span>{o}
+              <span className="grid place-items-center w-8 h-8 rounded-full shrink-0 font-display bg-white/15">{right ? <Icon name="check" size={16} color="#8dffbb" /> : picked ? <Icon name="close" size={14} color="#ffb0b3" /> : 'ABCD'[i]}</span>
+              <span className="font-bold">{o}</span>
             </button>
           )
         })}
       </div>
       {fb && (
         <div className="mt-3 pop">
-          <div className="card p-3">{fb.correct ? '✅ Correct! ' : '❌ Not quite. '}{fb.funny ?? (fb.correct ? '+Knowledge' : 'It happens to the best of us.')}</div>
-          <Btn className="w-full mt-3" onClick={clearQuiz}>{fb.last ? 'Finish quiz ▶' : 'Next question ▶'}</Btn>
+          <div className={`chip !text-sm ${fb.correct ? 'chip-green' : 'chip-red'}`}>{fb.correct ? 'Correct!' : 'Not quite'}</div>
+          <div className="hud-glass rounded-2xl p-3 mt-2 text-sm">{fb.funny ?? (fb.correct ? '+Knowledge' : 'It happens to the best of us.')}</div>
+          <Btn variant="green" className="w-full mt-3" onClick={clearQuiz}>{fb.last ? 'Finish' : 'Next'} <Icon name="chevron" size={18} /></Btn>
         </div>
       )}
     </Modal>
@@ -103,21 +117,30 @@ export function SummaryModal() {
   const { life, nextYear } = useGame()
   if (!life?.summary) return null
   const s = life.summary
-  const c = life.character
   const dp = getDreamProgress(life)
-  const dream = DREAM_BY_ID[c.dreamId]
+  const dream = DREAM_BY_ID[life.character.dreamId]
+  const net = s.income - s.expenses
   return (
-    <Modal wide>
-      <div className="text-xs font-extrabold uppercase tracking-wider opacity-60">Age {s.age} · {life.year}</div>
-      <h2 className="font-display text-3xl text-danfo leading-tight">{s.headline}</h2>
-      <div className="grid grid-cols-2 gap-2 mt-3">
-        <div className="card p-2.5"><div className="text-xs opacity-60">Income</div><div className="font-black text-green-300">{naira(s.income)}</div></div>
-        <div className="card p-2.5"><div className="text-xs opacity-60">Expenses</div><div className="font-black text-red-300">{naira(-s.expenses)}</div></div>
+    <Modal wide title={`Age ${s.age}`}>
+      {net > 0 && <Confetti n={24} />}
+      <h2 className="font-display text-[26px] text-white leading-tight text-center" style={{ textShadow: '0 2px 0 rgba(0,0,0,.4)' }}>{s.headline}</h2>
+      <div className="grid grid-cols-2 gap-2.5 mt-3">
+        <div className="hud-glass rounded-2xl p-3 text-center"><div className="chip chip-green !py-0.5"><Icon name="up" size={12} /> In</div><div className="font-display text-2xl text-green-300 mt-1"><CountUp to={s.income} format={naira} /></div></div>
+        <div className="hud-glass rounded-2xl p-3 text-center"><div className="chip chip-red !py-0.5"><Icon name="down" size={12} /> Out</div><div className="font-display text-2xl text-red-300 mt-1"><CountUp to={-s.expenses} format={naira} /></div></div>
       </div>
       <DeltaChips deltas={s.deltas.filter((d) => d.stat !== 'cash')} limit={10} />
-      <ul className="mt-3 text-sm space-y-1 opacity-90">{s.lines.slice(0, 9).map((l, i) => <li key={i}>• {l}</li>)}</ul>
-      <div className="mt-3 text-xs opacity-70">{dream.icon} {dream.name}: {dp.text} <div className="bar mt-1"><i style={{ width: `${Math.round(dp.pct * 100)}%`, background: '#ffd23f' }} /></div></div>
-      <Btn variant="green" className="w-full mt-4 !text-lg" onClick={() => { audio.sfx('click'); nextYear() }}>Next year ▶</Btn>
+      <div className="hud-glass rounded-2xl p-3 mt-3 flex items-center gap-3">
+        <span className="text-3xl">{dream.icon}</span>
+        <div className="flex-1 min-w-0"><div className="font-display text-sm uppercase">{dream.name}</div><div className="bar mt-1.5"><i style={{ width: `${Math.round(dp.pct * 100)}%`, background: 'linear-gradient(90deg,#ffe27a,#ffc72c)' }} /></div></div>
+        <span className="font-display text-gold">{Math.round(dp.pct * 100)}%</span>
+      </div>
+      {s.lines.length > 0 && (
+        <details className="mt-3 group">
+          <summary className="chip cursor-pointer list-none">What happened <Icon name="chevron" size={12} /></summary>
+          <ul className="mt-2 text-sm space-y-1 opacity-85">{s.lines.slice(0, 9).map((l, i) => <li key={i}>• {l}</li>)}</ul>
+        </details>
+      )}
+      <Btn variant="green" shine className="w-full mt-4 !text-xl" onClick={() => { audio.sfx('click'); nextYear() }}>Next year <Icon name="chevron" size={20} /></Btn>
     </Modal>
   )
 }
@@ -127,16 +150,16 @@ export function ShopModal() {
   const items = useMemo(() => (life ? getShopItems(life) : []), [life])
   return (
     <Modal title="Shop" onClose={() => openSheet(null)}>
-      {items.length === 0 && <p className="opacity-70">Nothing new to buy right now. Check back when you are older or richer.</p>}
-      <div className="grid gap-2">
+      {items.length === 0 && <p className="opacity-70 text-center py-6">Nothing new to buy yet.</p>}
+      <div className="grid grid-cols-2 gap-2.5">
         {items.map(({ item, affordable }) => (
-          <button key={item.id} className="card-btn" disabled={!affordable} onClick={() => act('shop', { itemId: item.id })}>
-            <div className="flex justify-between"><b>{item.icon} {item.name}</b><span className="chip">{nairaShort(item.price)}</span></div>
-            <div className="text-xs opacity-75">{item.desc}</div>
+          <button key={item.id} className="tile" disabled={!affordable} onClick={() => act('shop', { itemId: item.id })}>
+            <span className="text-[34px] leading-none">{item.icon}</span>
+            <span className="font-display text-[14px] uppercase leading-tight text-center">{item.name}</span>
+            <span className="chip chip-gold !py-0.5">{nairaShort(item.price)}</span>
           </button>
         ))}
       </div>
-      <Btn variant="ghost" className="w-full mt-3" onClick={() => openSheet(null)}>Close</Btn>
     </Modal>
   )
 }
@@ -146,17 +169,16 @@ export function JobsModal() {
   const opts = useMemo(() => (life ? getJobOptions(life) : []), [life])
   return (
     <Modal title="Look for work" onClose={() => openSheet(null)}>
-      <p className="text-sm opacity-75 mb-2">Pick a career track to apply for an entry job. Costs ⚡15.</p>
-      <div className="grid gap-2">
+      <div className="grid grid-cols-2 gap-2.5">
         {opts.map((o) => (
-          <button key={o.track.id} className="card-btn" disabled={!o.ok} onClick={() => act('applyJob', { track: o.track.id })}>
-            <div><b>{o.track.icon} {o.track.name}</b></div>
-            <div className="text-xs opacity-75">{o.track.blurb}</div>
-            {!o.ok && <div className="text-xs mt-1 text-yellow-300">🔒 {o.why}</div>}
+          <button key={o.track.id} className="tile" disabled={!o.ok} onClick={() => act('applyJob', { track: o.track.id })}>
+            <span className="text-[34px] leading-none">{o.ok ? o.track.icon : '🔒'}</span>
+            <span className="font-display text-[14px] uppercase leading-tight text-center">{o.track.name}</span>
+            {!o.ok && <span className="text-[11px] font-bold text-yellow-300 text-center leading-tight">{o.why}</span>}
           </button>
         ))}
       </div>
-      <Btn variant="ghost" className="w-full mt-3" onClick={() => openSheet(null)}>Close</Btn>
+      <div className="text-center mt-3"><span className="chip"><Icon name="bolt" size={12} color="#ffd23f" />15</span></div>
     </Modal>
   )
 }
@@ -165,24 +187,20 @@ export function PickModal({ kind }: { kind: 'social' | 'family' }) {
   const { life, openSheet, startTalk } = useGame()
   if (!life) return null
   const roles: NpcRole[] = kind === 'social' ? ['friend', 'friend2', 'partner'] : ['mother', 'father', 'sibling', 'partner', 'child']
-  const entries = roles.map((r) => ({ r, n: life.npcs[life.roles[r] ?? ''] })).filter((e) => e.n && e.n.alive && (kind === 'family' || e.r !== 'partner' || true))
+  const entries = roles.map((r) => ({ r, n: life.npcs[life.roles[r] ?? ''] })).filter((e) => e.n && e.n.alive)
   const kids = kind === 'family' ? life.character.childrenIds.map((id) => life.npcs[id]).filter((n) => n?.alive) : []
+  const people = [...entries.filter((e) => e.r !== 'child').map(({ r, n }) => ({ id: n.id, name: n.name, closeness: n.closeness, role: r })), ...kids.slice(0, 1).map((k) => ({ id: k.id, name: k.name, closeness: k.closeness, role: 'child' as NpcRole }))]
   return (
-    <Modal title={kind === 'social' ? 'Who do you hang out with?' : 'Family time'} onClose={() => openSheet(null)}>
-      <div className="grid gap-2">
-        {entries.filter((e) => e.r !== 'child').map(({ r, n }) => (
-          <button key={n.id} className="card-btn" onClick={() => startTalk(kind === 'social' ? 'hang' : 'family', r)}>
-            <div className="flex justify-between"><b>{n.name} <span className="opacity-60 text-xs">({r === 'friend2' ? 'friend' : r})</span></b><span className="chip">❤ {n.closeness}</span></div>
-            <div className="bar mt-1.5"><i style={{ width: `${n.closeness}%`, background: '#ff7ab8' }} /></div>
-          </button>
-        ))}
-        {kids.length > 0 && kids.slice(0, 1).map((k) => (
-          <button key={k.id} className="card-btn" onClick={() => startTalk('family', 'child')}>
-            <div className="flex justify-between"><b>{k.name} <span className="opacity-60 text-xs">(child)</span></b><span className="chip">❤ {k.closeness}</span></div>
+    <Modal title={kind === 'social' ? 'Hang out with' : 'Family time'} onClose={() => openSheet(null)}>
+      <div className="grid grid-cols-3 gap-2.5">
+        {people.map((p) => (
+          <button key={p.id} className="tile" onClick={() => startTalk(kind === 'social' ? 'hang' : 'family', p.role)}>
+            <span className="w-12 h-12 rounded-full grid place-items-center text-xl font-display" style={{ background: 'radial-gradient(circle at 30% 20%, #ff8ec2, #7a2a9a)', boxShadow: 'inset 0 0 0 2px rgba(255,255,255,.35)' }}>{p.name[0]}</span>
+            <span className="font-display text-[14px] uppercase leading-tight">{p.name}</span>
+            <span className="flex items-center gap-1 text-[12px] font-extrabold"><Icon name="heart" size={12} color="#ff7ab8" />{p.closeness}</span>
           </button>
         ))}
       </div>
-      <Btn variant="ghost" className="w-full mt-3" onClick={() => openSheet(null)}>Cancel</Btn>
     </Modal>
   )
 }
@@ -193,21 +211,34 @@ export function QuestsModal() {
   const dp = getDreamProgress(life)
   const dream = DREAM_BY_ID[life.character.dreamId]
   return (
-    <Modal title="Quests & Dream" onClose={() => openSheet(null)} wide>
-      <div className="card p-3"><b>{dream.icon} Dream: {dream.name}</b><div className="text-sm opacity-75">{dream.blurb}</div><div className="text-xs mt-1">{dp.text}</div><div className="bar mt-1.5"><i style={{ width: `${Math.round(dp.pct * 100)}%`, background: '#ffd23f' }} /></div></div>
-      <div className="mt-3 grid gap-2">
+    <Modal title="Quests" onClose={() => openSheet(null)} wide>
+      <div className="hud-glass rounded-2xl p-3 flex items-center gap-3">
+        <span className="text-4xl">{dream.icon}</span>
+        <div className="flex-1 min-w-0">
+          <div className="font-display text-lg uppercase leading-none">{dream.name}</div>
+          <div className="text-xs opacity-70 mt-1">{dp.text}</div>
+          <div className="bar mt-1.5"><i style={{ width: `${Math.round(dp.pct * 100)}%`, background: 'linear-gradient(90deg,#ffe27a,#ffc72c)' }} /></div>
+        </div>
+        <span className="font-display text-xl text-gold">{Math.round(dp.pct * 100)}%</span>
+      </div>
+      <div className="mt-3 grid gap-2.5 stagger">
         {QUESTS.map((q) => {
           const st = life.quests[q.id] ?? { stage: 0, done: false }
+          const stage = Math.min(st.stage, q.stages.length - 1)
           return (
-            <div key={q.id} className="card p-3" style={st.done ? { opacity: 0.6 } : undefined}>
-              <div className="flex justify-between"><b>{st.done ? '✅' : '🎯'} {q.title}</b><span className="chip">🐚 {q.cowries}</span></div>
-              <div className="text-sm opacity-80 mt-0.5">{st.done ? q.rewardText : q.stages[Math.min(st.stage, q.stages.length - 1)].text}</div>
+            <div key={q.id} className="card p-3 flex gap-3 items-center" style={st.done ? { opacity: 0.65 } : undefined}>
+              <span className="grid place-items-center w-11 h-11 rounded-full shrink-0" style={{ background: st.done ? 'var(--green)' : 'rgba(255,255,255,.14)' }}><Icon name={st.done ? 'check' : 'flag'} size={20} color={st.done ? '#04361c' : '#fff'} /></span>
+              <div className="flex-1 min-w-0">
+                <div className="font-display uppercase text-[15px] leading-tight">{q.title}</div>
+                <div className="text-xs opacity-75 mt-0.5 leading-snug">{st.done ? q.rewardText : q.stages[stage].text}</div>
+                {!st.done && <div className="flex gap-1 mt-1.5">{q.stages.map((_, i) => <span key={i} className="h-1.5 flex-1 rounded-full" style={{ background: i < st.stage ? 'var(--green)' : 'rgba(255,255,255,.18)' }} />)}</div>}
+              </div>
+              <span className="chip chip-gold shrink-0"><Icon name="shell" size={13} color="#3b2300" />{q.cowries}</span>
             </div>
           )
         })}
       </div>
-      <div className="text-xs opacity-60 mt-3">Achievements this life: {life.achievements.length}/{ACHIEVEMENTS.length}</div>
-      <Btn variant="ghost" className="w-full mt-3" onClick={() => openSheet(null)}>Close</Btn>
+      <div className="text-center mt-3"><span className="chip"><Icon name="trophy" size={13} color="#ffd23f" /> {life.achievements.length}/{ACHIEVEMENTS.length}</span></div>
     </Modal>
   )
 }
@@ -259,19 +290,14 @@ export function LifestyleModal() {
   const { life, lifestyle, openSheet } = useGame()
   if (!life) return null
   const opts = [
-    { id: 'frugal', icon: '🪙', name: 'Frugal', desc: 'Costs 30% less. Fewer treats, more savings.' },
-    { id: 'normal', icon: '🏠', name: 'Normal', desc: 'Balanced spending.' },
-    { id: 'baller', icon: '💎', name: 'Baller', desc: 'Costs 60% more. People notice. Your bank also notices.' },
+    { id: 'frugal', icon: '🪙', name: 'Frugal', tag: '−30% costs' },
+    { id: 'normal', icon: '🏠', name: 'Normal', tag: 'Balanced' },
+    { id: 'baller', icon: '💎', name: 'Baller', tag: '+60% costs' },
   ] as const
   return (
     <Modal title="Lifestyle" onClose={() => openSheet(null)}>
-      <p className="text-sm opacity-75 mb-2">Affects what food, rent and upkeep cost each year.</p>
-      <div className="grid gap-2">
-        {opts.map((o) => (
-          <button key={o.id} className="card-btn" style={life.character.lifestyle === o.id ? { borderColor: '#ffd23f' } : undefined} onClick={() => lifestyle(o.id)}>
-            <b>{o.icon} {o.name}</b><div className="text-xs opacity-75">{o.desc}</div>
-          </button>
-        ))}
+      <div className="grid grid-cols-3 gap-2.5">
+        {opts.map((o) => <Tile key={o.id} emoji={o.icon} label={o.name} sub={o.tag} on={life.character.lifestyle === o.id} onClick={() => lifestyle(o.id)} />)}
       </div>
     </Modal>
   )
@@ -284,24 +310,25 @@ export function PaywallModal() {
   const refill = fmtTime(secondsToNextRefill())
   return (
     <Modal title={out ? 'Out of play time' : 'Play time'} onClose={out ? undefined : () => openSheet(null)} wide>
-      <div className="card p-3 text-center">
-        <div className="text-xs opacity-60">Time left</div>
-        <div className="font-display text-5xl text-danfo">{fmtTime(left)}</div>
-        <div className="text-xs opacity-70 mt-1">Free: {fmtTime(meta.tokens.freeSec)} · Topped up: {fmtTime(meta.tokens.paidSec)}</div>
+      <div className="hud-glass rounded-3xl p-4 text-center">
+        <Icon name="hourglass" size={30} color="#ffd23f" />
+        <div className="font-display text-5xl text-gold leading-none mt-1">{fmtTime(left)}</div>
+        <div className="flex justify-center gap-2 mt-2"><span className="chip">Free {fmtTime(meta.tokens.freeSec)}</span><span className="chip chip-gold">Paid {fmtTime(meta.tokens.paidSec)}</span></div>
+        <div className="text-xs opacity-70 mt-2">{out ? 'Your life is saved. ' : ''}Free refill in {refill}</div>
       </div>
-      <p className="text-sm opacity-80 mt-3 leading-relaxed">{out ? 'Your life is safely saved. ' : ''}You get free play time every day (up to 2 hours banked). Next free refill in <b>{refill}</b>. Or top up to keep playing now.</p>
-      <div className="grid gap-2 mt-3">
+      <div className="grid grid-cols-2 gap-2.5 mt-3">
         {TOP_UP_PACKS.map((p) => (
-          <button key={p.id} className="card-btn" onClick={() => topUpTest(p.minutes)}>
-            <div className="flex justify-between"><b>⏱ {p.label}</b><span className="chip">{naira(p.price)}</span></div>
-            <div className="text-xs opacity-60">Test mode: tapping adds the time without payment. Real payments come in the next milestone.</div>
+          <button key={p.id} className="tile" onClick={() => topUpTest(p.minutes)}>
+            <Icon name="clock" size={28} />
+            <span className="font-display text-[15px] uppercase">{p.label}</span>
+            <span className="chip chip-gold !py-0.5">{naira(p.price)}</span>
           </button>
         ))}
       </div>
+      <div className="text-[11px] opacity-55 text-center mt-2">Test mode: no payment is taken yet.</div>
       <div className="flex gap-2 mt-3">
-        {!out && <Btn variant="ghost" className="flex-1" onClick={() => openSheet(null)}>Close</Btn>}
-        <Btn variant="ghost" className="flex-1" onClick={() => go('achievements')}>🏆 Browse achievements</Btn>
-        {out && <Btn variant="ghost" className="flex-1" onClick={() => go('title')}>Main menu</Btn>}
+        <Btn variant="ghost" className="flex-1" onClick={() => go('achievements')}><Icon name="trophy" size={18} /> Trophies</Btn>
+        {out && <Btn variant="ghost" className="flex-1" onClick={() => go('title')}>Menu</Btn>}
       </div>
     </Modal>
   )
@@ -309,16 +336,14 @@ export function PaywallModal() {
 
 export function TutorialModal() {
   const finish = useGame((x) => x.finishTutorial)
+  const steps: [string, string][] = [['⚡', 'Energy each year. Spend it on activities.'], ['🎲', 'Events bring choices. Trade-offs, not answers.'], ['💰', 'Money settles once a year.'], ['🎯', 'Chase your dream. Earn 🐚 for next life.']]
   return (
     <Modal title="How life works" wide>
-      <ol className="space-y-2 text-sm leading-relaxed">
-        <li>⚡ <b>Each year you have Energy.</b> School and work use some automatically; spend the rest on activities: study, hustle, friends, rest, or the Go-Slow Dash game.</li>
-        <li>🎲 <b>Then life happens.</b> Events show up with choices. There is rarely a perfect answer, only trade-offs.</li>
-        <li>💰 <b>Money moves once a year.</b> Salary, rent, fees and family obligations ("black tax") are settled in the Year Summary.</li>
-        <li>🎯 <b>Chase your Dream</b>, complete quests, collect achievements and earn 🐚 Cowries for new looks and perks next life.</li>
-        <li>🏃 <b>Go-Slow Dash</b> is an arcade runner: coins become cash, distance keeps you healthy.</li>
-      </ol>
-      <Btn className="w-full mt-4" onClick={finish}>Got it. Let's live!</Btn>
+      <div className="grid grid-cols-2 gap-2.5 stagger">
+        {steps.map(([e, t]) => <div key={e} className="hud-glass rounded-2xl p-3 text-center"><div className="text-3xl">{e}</div><div className="text-sm font-bold mt-1 leading-snug">{t}</div></div>)}
+      </div>
+      <Btn variant="green" shine className="w-full mt-4 !text-lg" onClick={finish}>Let's live!</Btn>
     </Modal>
   )
 }
+

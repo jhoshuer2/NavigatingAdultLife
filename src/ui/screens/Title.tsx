@@ -1,49 +1,62 @@
 import { useGame } from '../../store'
-import { Btn } from '../components'
-import { SceneArt } from '../SceneArt'
-import { Avatar } from '../Avatar'
+import { Btn, nairaShort } from '../components'
+import { Icon, type IconName } from '../icons'
+import { TitleArt } from '../TitleArt'
 import { audio } from '@platform/audio'
-import { fmtTime } from '@platform/tokens'
-import { remainingSec } from '@platform/tokens'
+import { fmtTime, remainingSec } from '@platform/tokens'
+import { randomConfig } from '@engine/bot'
+import { makeRng } from '@engine/core/rng'
 
-const demo = { skinTone: 5, faceShape: 1, hairStyle: 'braids', hairColor: '#141414', outfitType: 'owambe', fabric: 'ankara', topColor: '#0f7a4a', bottomColor: '#222222' }
-const demo2 = { skinTone: 3, faceShape: 0, hairStyle: 'lowcut', hairColor: '#141414', facialHair: 'stubble', outfitType: 'traditional', fabric: 'asoOke', topColor: '#2b3a8c', bottomColor: '#222222' }
+const quick = () => randomConfig(makeRng((Math.random() * 2 ** 32) >>> 0))
+
+function Round({ icon, label, onClick, badge }: { icon: IconName; label: string; onClick: () => void; badge?: string | number }) {
+  return (
+    <button className="flex flex-col items-center gap-1.5 group" onClick={() => { audio.sfx('click'); onClick() }} aria-label={label}>
+      <span className="relative grid place-items-center w-14 h-14 rounded-2xl transition-transform group-active:translate-y-1" style={{ background: 'linear-gradient(180deg, rgba(150,120,255,.45), rgba(60,40,170,.7))', border: '1px solid rgba(255,255,255,.22)', boxShadow: 'inset 0 2px 0 rgba(255,255,255,.35), 0 4px 0 rgba(0,0,0,.45), 0 10px 16px rgba(0,0,0,.3)' }}>
+        <Icon name={icon} size={28} />
+        {badge !== undefined && <span className="absolute -top-1.5 -right-1.5 num text-[11px] px-1.5 rounded-full" style={{ background: 'var(--gold)', color: '#3b2300' }}>{badge}</span>}
+      </span>
+      <span className="text-[11px] font-extrabold uppercase tracking-wider opacity-85">{label}</span>
+    </button>
+  )
+}
 
 export function Title() {
   const { go, life, meta, newLife, continueLife } = useGame()
   const left = remainingSec(meta)
   const start = () => { audio.unlock(); audio.playMusic('menu') }
   return (
-    <div className="min-h-full flex flex-col" onPointerDown={start}>
-      <div className="relative h-64 overflow-hidden">
-        <SceneArt scene="danfo" className="absolute inset-0 w-full h-full" />
-        <div className="absolute inset-x-0 bottom-0 h-24" style={{ background: 'linear-gradient(transparent, #1a1530)' }} />
-        <div className="absolute left-2 bottom-0"><Avatar look={demo} gender="female" size={110} /></div>
-        <div className="absolute right-2 bottom-0"><Avatar look={demo2} gender="male" size={110} /></div>
+    <div className="screen flex flex-col relative" onPointerDown={start}>
+      <div className="absolute top-0 inset-x-0 z-10 flex items-center justify-between px-3 pt-3" style={{ paddingTop: 'calc(.75rem + var(--safe-t))' }}>
+        <span className="chip" style={{ background: 'rgba(10,7,34,.55)', backdropFilter: 'blur(6px)' }}><Icon name="shell" size={16} /><b className="num">{meta.cowries}</b></span>
+        <button className="chip" style={{ background: 'rgba(10,7,34,.55)', backdropFilter: 'blur(6px)' }} onClick={() => useGame.getState().openSheet('paywall')} aria-label="Play time"><Icon name="clock" size={16} /><b className="num">{meta.tokens.unlimited ? '∞' : fmtTime(left)}</b></button>
       </div>
-      <div className="px-5 -mt-8 relative text-center">
-        <h1 className="font-display text-6xl leading-[0.9] text-danfo drop-shadow-[0_4px_0_#1c1b22]">Navigating<br />Adult Life</h1>
-        <p className="mt-3 text-base font-bold opacity-90">Grow up Nigerian. Choose well. Or choose funny.</p>
-        <p className="text-xs opacity-60 mt-1">School · hustle · love · family · legacy</p>
+      <TitleArt className="h-[56vh] min-h-[330px] max-h-[520px] shrink-0" />
+      <div className="relative -mt-14 px-5 text-center z-10">
+        <div className="rise" style={{ animationDelay: '.25s' }}>
+          <div className="inline-block"><span className="ribbon !text-[13px] !py-0.5 !px-5 tracking-[.18em]">Navigating</span></div>
+          <h1 className="font-display leading-[.82] mt-1" style={{ fontSize: 'clamp(64px, 19vw, 92px)', background: 'linear-gradient(180deg,#fffbd6 0%,#ffd23f 48%,#ff9d2e 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent', filter: 'drop-shadow(3px 0 0 #1a0f55) drop-shadow(-3px 0 0 #1a0f55) drop-shadow(0 3px 0 #1a0f55) drop-shadow(0 -3px 0 #1a0f55) drop-shadow(0 8px 0 #1a0f55) drop-shadow(0 0 26px rgba(255,199,44,.5))' }}>ADULT<br />LIFE</h1>
+        </div>
+        <p className="mt-2 text-[15px] font-extrabold opacity-90 rise" style={{ animationDelay: '.45s' }}>Grow up Nigerian. Choose well, or choose funny.</p>
       </div>
-      <div className="px-5 mt-6 flex flex-col gap-3 safe-pad">
-        {life && <Btn onClick={() => { start(); continueLife() }}>▶ Continue — {life.character.nickname || life.character.name}, age {life.character.age}</Btn>}
-        <Btn variant={life ? 'ghost' : 'primary'} onClick={() => { start(); go('create') }}>✨ New life</Btn>
-        <div className="grid grid-cols-2 gap-3">
-          <Btn variant="ghost" onClick={() => go('achievements')}>🏆 Achievements</Btn>
-          <Btn variant="ghost" onClick={() => go('unlocks')}>🐚 Unlocks <span className="chip">{meta.cowries}</span></Btn>
-          <Btn variant="ghost" onClick={() => go('history')}>📜 Past lives</Btn>
-          <Btn variant="ghost" onClick={() => go('settings')}>⚙️ Settings</Btn>
+      <div className="px-5 mt-5 flex flex-col items-center gap-4 safe-pad z-10">
+        {life ? (
+          <>
+            <Btn className="w-full max-w-sm !min-h-16 !text-2xl" shine onClick={() => { start(); continueLife() }}><Icon name="play" size={24} color="#fff" /> Continue</Btn>
+            <button className="text-[13px] font-extrabold opacity-80 -mt-1" onClick={() => { start(); go('create') }}>{life.character.nickname || life.character.name}, age {life.character.age} · <u>start a new life</u></button>
+          </>
+        ) : (
+          <Btn className="w-full max-w-sm !min-h-16 !text-2xl" shine onClick={() => { start(); go('create') }}><Icon name="play" size={24} color="#fff" /> Play</Btn>
+        )}
+        <div className="flex items-start justify-center gap-5 mt-1 rise" style={{ animationDelay: '.6s' }}>
+          <Round icon="trophy" label="Trophies" onClick={() => go('achievements')} />
+          <Round icon="shell" label="Shop" onClick={() => go('unlocks')} badge={meta.cowries || undefined} />
+          <Round icon="scroll" label="Lives" onClick={() => go('history')} />
+          <Round icon="gear" label="Settings" onClick={() => go('settings')} />
         </div>
-        <div className="text-center text-xs opacity-70 mt-1">
-          Play time left: <b>{fmtTime(left)}</b> · {meta.tokens.unlimited ? 'unlimited test mode' : 'free daily time refills every day'}
-        </div>
-        {!life && meta.stats.lives === 0 && <button className="text-xs underline opacity-60" onClick={() => newLife(quick())}>Skip creation: random life</button>}
+        {!life && meta.stats.lives === 0 && <button className="text-[12px] font-bold opacity-60 underline" onClick={() => newLife(quick())}>Quick start with a random life</button>}
+        <span className="hidden">{nairaShort(0)}</span>
       </div>
     </div>
   )
 }
-
-import { randomConfig } from '@engine/bot'
-import { makeRng } from '@engine/core/rng'
-const quick = () => randomConfig(makeRng((Math.random() * 2 ** 32) >>> 0))

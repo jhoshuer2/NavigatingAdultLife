@@ -26,7 +26,7 @@ console.log('after penalty', await st())
 // hangout with friend: walk to the pitch together
 await page.evaluate(() => window.__nal.useGame.getState().startTalk('hang', 'friend'))
 await page.waitForTimeout(500)
-await page.getByText('Where to?').waitFor()
+await page.getByText(/Where to/).waitFor()
 await page.screenshot({ path: `${OUT}/113-dest.png` })
 await page.getByText('Street Football Pitch', { exact: false }).or(page.getByText('Pitch')).first().click()
 await page.waitForTimeout(2500)

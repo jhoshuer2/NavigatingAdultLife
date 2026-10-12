@@ -42,6 +42,7 @@ Tests: `npm test` (collector, auth, roles, dashboards run on in-process Postgres
    | `ID_HASH_SECRET` | Random string; keys the hashed player IDs analysts see |
    | `IP_SALT` | Random string; salts the hashed admin IP in the audit log |
    | `CRON_SECRET` | Random string; Vercel Cron sends it so only the daily retention job can run |
+   | `ACCOUNT_SECRET` | Random string (32+ characters); signs player account tokens and hashes recovery codes. Changing it signs every player out and invalidates recovery codes |
 4. **Game project** (the existing one): set `VITE_COLLECTOR_URL=https://<admin-domain>/api/collect` (and optionally `VITE_APP_VERSION`). Without it the game sends nothing and does not show the consent screen.
 5. **First admin**: `DATABASE_URL=... npm run create-user -- you@example.com owner` prints a password and a 2FA secret once.
 
@@ -61,3 +62,16 @@ Tests: `npm test` (collector, auth, roles, dashboards run on in-process Postgres
 - Phase C pages: Funnels (funnel, retention cohorts by week/country/device, drop-off age, endings), Content (flags, story choices, tone mix, task completion), Quality (errors, slow and no-3D rates, load time, by version/device) and Live. The weekly summary is generated and previewable in Settings, but **not emailed**: sending needs an email service account, which has not been set up.
 - Not built yet: revenue (payments are out of scope), consent-text versions and API keys in Settings, A/B tests and alerts (Phase D).
 - Not tracked by the game yet: `tokens_spent`, `door_opened`, `tutorial_step/skipped` (the schema allows them). The flag button sends only the event id, never the player's note.
+
+
+## Player accounts (online play)
+
+`POST /api/account` (one endpoint, `op` field) implements the accounts part of `docs/PRD-multiplayer.md`: anonymous accounts with a display name and tag (`Tobi#4821`), a friend code, an age band (`under13`, `13to17`, `18plus`), an optional 4-digit guardian PIN and a recovery code for restoring on another device. No email or phone is collected. The game talks to it from Settings > Online profile.
+
+- Under-13 accounts cannot switch online play on until a guardian PIN is set; once a PIN exists, switching it on needs the PIN (switching off never does). Free chat stays off for everyone (`chat_level: none`) until the chat phase.
+- Tokens are signed (HMAC) with `ACCOUNT_SECRET`, valid 60 days, and revoked by recovery or "sign out everywhere".
+- Throttling: 8 creations per hour and 10 recovery tries per hour per address, 8 PIN tries per hour per account.
+- Inactive accounts are deleted after 18 months (daily cron). Players can delete their own account any time.
+- Age is self-declared. It cannot be raised later by the player.
+- Accounts are deliberately **not** linked to the analytics device ID.
+- Tests: `tests/account.test.ts`.

@@ -102,16 +102,16 @@ export function MarketTask({ r, spot, onDone }: { r: WorldRenderer; spot: { x: n
         {phase === 'order' && (
           <>
             <div className="text-xs font-bold opacity-80 mb-1.5">They want {ITEMS[want].n}. Tap the right goods{haggle ? ' (then settle the price)' : ''}:</div>
-            <div className="grid grid-cols-4 gap-2">{ITEMS.map((it, i) => <button key={it.n} className="card-btn !p-2 text-center" onClick={() => sell(i)} aria-label={it.n}><div className="text-3xl">{it.e}</div><div className="text-[11px] font-bold">{it.n}</div></button>)}</div>
+            <div className="grid grid-cols-4 gap-2">{ITEMS.map((it, i) => <button key={it.n} className="tile !min-h-[72px] !p-1.5" onClick={() => sell(i)} aria-label={it.n}><span className="text-3xl leading-none">{it.e}</span><span className="font-display text-[11px] uppercase">{it.n}</span></button>)}</div>
           </>
         )}
         {phase === 'price' && (
           <>
             <div className="text-xs font-bold opacity-80 mb-1.5">“Last price?” Name your price:</div>
             <div className="grid grid-cols-3 gap-2">
-              <button className="card-btn !p-2 text-center" onClick={() => price('fair')}><div className="text-2xl">🤝</div><div className="text-[11px] font-bold">Fair price</div></button>
-              <button className="card-btn !p-2 text-center" onClick={() => price('high')}><div className="text-2xl">💰</div><div className="text-[11px] font-bold">Add 20% (risky)</div></button>
-              <button className="card-btn !p-2 text-center" onClick={() => price('low')}><div className="text-2xl">📉</div><div className="text-[11px] font-bold">Give discount</div></button>
+              <button className="tile !min-h-[72px] !p-1.5" onClick={() => price('fair')}><span className="text-2xl leading-none">🤝</span><span className="font-display text-[11px] uppercase">Fair</span></button>
+              <button className="tile !min-h-[72px] !p-1.5" onClick={() => price('high')}><span className="text-2xl leading-none">💰</span><span className="font-display text-[11px] uppercase">+20%</span><span className="chip chip-red !py-0 !text-[10px]">Risky</span></button>
+              <button className="tile !min-h-[72px] !p-1.5" onClick={() => price('low')}><span className="text-2xl leading-none">📉</span><span className="font-display text-[11px] uppercase">Discount</span></button>
             </div>
           </>
         )}

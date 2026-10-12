@@ -96,14 +96,14 @@ export function WorshipTask({ r, cash, onDone }: { r: WorldRenderer; cash: numbe
         {phase === 'quiz' && (
           <div>
             <div className="font-bold mb-2">{lesson.q}</div>
-            <div className="grid gap-1.5">{lesson.o.map((o, i) => <button key={i} className="card-btn !py-2 text-left" disabled={right !== null} onClick={() => answer(i)} style={right !== null ? { borderColor: i === lesson.a ? '#2fd27b' : undefined, opacity: 1 } : undefined}>{o}</button>)}</div>
+            <div className="grid gap-1.5">{lesson.o.map((o, i) => <button key={i} className="card-btn !py-2 flex items-center gap-2.5" disabled={right !== null} onClick={() => answer(i)} style={right !== null ? { borderColor: i === lesson.a ? '#2bd978' : undefined, opacity: 1 } : undefined}><span className="grid place-items-center w-7 h-7 rounded-full shrink-0 font-display text-sm" style={{ background: 'var(--gold)', color: '#3b2300' }}>{'ABCD'[i]}</span><span className="font-bold text-sm">{o}</span></button>)}</div>
           </div>
         )}
         {phase === 'offering' && (
           <div>
             <div className="font-bold mb-1">Offering</div>
             <div className="text-xs opacity-75 mb-2">Give what you are able. Giving is optional and nobody is watching your hand.</div>
-            <div className="grid grid-cols-2 gap-2">{opts.map((a) => <button key={a} className="card-btn !py-2 text-center" onClick={() => give(a)}>{a === 0 ? '🙏 Give nothing' : `₦${a.toLocaleString()}`}</button>)}</div>
+            <div className="grid grid-cols-2 gap-2">{opts.map((a) => <button key={a} className="tile !min-h-[60px]" onClick={() => give(a)}><span className="font-display">{a === 0 ? '🙏 None' : `₦${a.toLocaleString()}`}</span></button>)}</div>
           </div>
         )}
         {phase === 'end' && (

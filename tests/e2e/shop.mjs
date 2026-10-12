@@ -21,7 +21,7 @@ for (const [x, z] of spots) {
   await page.waitForTimeout(700)
   if (n === 0) await page.screenshot({ path: `${OUT}/151-near.png` })
   if (await page.getByText('🤝 Haggle').count()) {
-    if (n === 0) { await page.getByText('🤝 Haggle').click(); await page.waitForTimeout(500); await page.screenshot({ path: `${OUT}/152-haggle.png` }); await page.locator('.card-btn:not([disabled])').last().click(); await page.waitForTimeout(800); await page.locator('.card-btn:not([disabled])').last().click({ timeout: 2000 }).catch(() => {}); await page.waitForTimeout(800) }
+    if (n === 0) { await page.getByText('🤝 Haggle').click(); await page.waitForTimeout(500); await page.screenshot({ path: `${OUT}/152-haggle.png` }); await page.locator('.tile:not([disabled])').last().click(); await page.waitForTimeout(800); await page.locator('.card-btn:not([disabled])').last().click({ timeout: 2000 }).catch(() => {}); await page.waitForTimeout(800) }
     else { await page.getByRole('button', { name: /^Buy/ }).click({ timeout: 3000 }).catch(() => {}); await page.waitForTimeout(600) }
   }
   n++
