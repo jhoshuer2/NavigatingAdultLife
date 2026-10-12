@@ -4,7 +4,7 @@ import { Btn, Mentor, RoundBtn, nairaShort } from '../components'
 import { Icon } from '../icons'
 import { Avatar, SKIN_TONES, HAIR_COLORS, OUTFIT_COLORS } from '../Avatar'
 import { TRAITS } from '@content/traits'
-import { DREAMS } from '@content/dreams'
+import { DREAM_BY_ID, dreamsFor } from '@content/dreams'
 import { ARCHETYPES, HOMES, taglineFor, tierRank } from '@content/archetypes'
 import { NAME_POOLS, HERITAGE_LABEL, HERITAGE_HINT } from '@content/names'
 import { FREE_FABRICS, FREE_HAIR, FREE_OUTFITS, UNLOCKABLES } from '@platform/meta'
@@ -18,8 +18,8 @@ const HAIRS = [['afro', 'Afro'], ['lowcut', 'Low cut'], ['braids', 'Braids'], ['
 const OUTFITS = [['casual', 'Casual'], ['hoodie', 'Hoodie'], ['office', 'Office'], ['chill', 'Chill'], ['siteWork', 'Site work'], ['owambe', 'Owambe'], ['traditional', 'Traditional']] as const
 const FABRICS = [['plain', 'Plain'], ['ankara', 'Ankara'], ['adire', 'Adire'], ['asoOke', 'Aso-oke']] as const
 const BAD = ['fuck', 'shit', 'bitch', 'nigga', 'rape', 'dick', 'pussy', 'whore']
-const STEPS = ['City', 'Look', 'Vibe', 'Dream', 'Luck', 'Home', 'Name']
-const SAY = ['Where are we starting this journey?', 'Make it yours!', 'Pick two traits that fit you.', 'What is the big dream?', 'Let luck decide!', 'Where do you call home?', 'And what do they call you?']
+const STEPS = ['City', 'Look', 'Vibe', 'Dream', 'Home', 'Name']
+const SAY = ['Where are we starting this journey?', 'Make it yours!', 'Pick two traits that fit you.', 'Spin the scroll. It reveals your big dream!', 'Where do you call home?', 'And what do they call you?']
 type Tab = 'you' | 'skin' | 'hair' | 'face' | 'fit'
 
 export function Create() {
@@ -48,7 +48,8 @@ export function Create() {
   const outfitOk = (o: string) => FREE_OUTFITS.includes(o) || unlocked(`outfit:${o}`)
   const fabricOk = (f: string) => FREE_FABRICS.includes(f) || unlocked(`fabric:${f}`)
   const arch = ARCHETYPES.find((a) => a.id === archetype)
-  const heirloom = arch ? ITEM_BY_ID[arch.heirloom] : undefined
+  const dreamDef = dream ? DREAM_BY_ID[dream] : undefined
+  const heirloom = dreamDef?.item ? ITEM_BY_ID[dreamDef.item] : undefined
   const wear = heirloom?.wear ?? []
   const pool = NAME_POOLS[heritage][gender]
   const suggestions = useMemo(() => [...pool].sort(() => Math.random() - 0.5).slice(0, 6), [pool])
@@ -61,27 +62,30 @@ export function Create() {
     if (spinning || (!first && rerolled)) return
     setSpinning(true); if (!first) setRerolled(true)
     let i = 0
-    const t = setInterval(() => { setSpinName(ARCHETYPES[i++ % ARCHETYPES.length].title); audio.sfx('tap') }, 90)
+    const pool = dreamsFor(city ?? 'lagos')
+    const t = setInterval(() => { setSpinName(pool[i++ % pool.length].name); audio.sfx('tap') }, 90)
     setTimeout(() => {
       clearInterval(t)
+      const d = pool[Math.floor(Math.random() * pool.length)]
       const pick = ARCHETYPES[Math.floor(Math.random() * ARCHETYPES.length)]
-      setArchetype(pick.id); setHome(null); setSpinning(false); audio.sfx('level')
-    }, 1300)
+      setDream(d.id); setArchetype(pick.id); setHome(null); setSpinning(false); audio.sfx('level')
+    }, 1500)
   }
 
-  const canNext = [!!city, true, traits.length === 2, !!dream, !!archetype && !spinning, !!home, nameOk][step]
+  const canNext = [!!city, true, traits.length === 2, !!dream && !!archetype && !spinning, !!home, nameOk][step]
 
   const surprise = () => {
     const g: Gender = Math.random() < 0.5 ? 'male' : 'female'
     const h = (['yoruba', 'igbo', 'hausa', 'mix'] as Heritage[])[Math.floor(Math.random() * 4)]
     const t = [...TRAITS].sort(() => Math.random() - 0.5).slice(0, 2).map((x) => x.id) as [TraitId, TraitId]
     const a = ARCHETYPES[Math.floor(Math.random() * ARCHETYPES.length)]
-    const homes = HOMES.filter((x) => (!city || x.city === city) && tierRank(a.tier) >= tierRank(x.minTier))
+    const cityPick: CityId = city ?? (Math.random() < 0.5 ? 'lagos' : 'abuja')
+    const homes = HOMES.filter((x) => x.city === cityPick && tierRank(a.tier) >= tierRank(x.minTier))
     const hair = HAIRS.filter(([id]) => hairOk(id)).map(([id]) => id)
     const outf = OUTFITS.filter(([id]) => outfitOk(id)).map(([id]) => id)
     const pick = <T,>(arr: readonly T[]) => arr[Math.floor(Math.random() * arr.length)]
     const cfg: NewLifeConfig = {
-      name: pick(NAME_POOLS[h][g]), gender: g, heritage: h, traits: t, dreamId: pick(DREAMS).id, archetypeId: a.id, homeId: pick(homes).id,
+      name: pick(NAME_POOLS[h][g]), gender: g, heritage: h, traits: t, dreamId: pick(dreamsFor(cityPick)).id, archetypeId: a.id, homeId: pick(homes).id,
       appearance: { skinTone: Math.floor(Math.random() * 10), faceShape: Math.floor(Math.random() * 4), hairStyle: pick(hair), hairColor: pick(HAIR_COLORS), outfitType: pick(outf), fabric: 'plain', topColor: pick(OUTFIT_COLORS), bottomColor: OUTFIT_COLORS[6] },
     }
     audio.unlock(); newLife(cfg)
@@ -197,22 +201,6 @@ export function Create() {
         )}
 
         {step === 3 && (
-          <div className="grid gap-2.5 stagger">
-            {DREAMS.map((d) => (
-              <button key={d.id} className={`card-btn flex items-center gap-3 ${dream === d.id ? 'is-on' : ''}`} onClick={() => { audio.sfx('pop'); setDream(d.id) }} aria-pressed={dream === d.id}>
-                <span className="grid place-items-center w-14 h-14 rounded-2xl text-[32px]" style={{ background: 'radial-gradient(circle at 30% 25%, rgba(255,226,122,.5), rgba(106,61,245,.35))', boxShadow: 'inset 0 0 0 2px rgba(255,255,255,.2)' }}>{d.icon}</span>
-                <span className="flex-1 min-w-0">
-                  <span className="block font-display text-[19px] uppercase leading-tight">{d.name}</span>
-                  <span className="chip chip-gold mt-1"><Icon name="flag" size={12} color="#7a4700" />{d.target}</span>
-                </span>
-                {dream === d.id && <Icon name="check" size={22} color="var(--gold)" />}
-              </button>
-            ))}
-            {dream && <div className="card px-3 py-2 text-[13px] pop">{DREAMS.find((x) => x.id === dream)?.blurb}</div>}
-          </div>
-        )}
-
-        {step === 4 && (
           <div className="flex-1 flex flex-col items-center justify-center text-center">
             {!arch && !spinning && (
               <div className="w-full max-w-xs">
@@ -221,23 +209,29 @@ export function Create() {
               </div>
             )}
             {spinning && <div className="card w-full max-w-xs py-10 overflow-hidden" style={{ borderRadius: 28 }}><div className="reel font-display text-[34px] uppercase leading-tight px-3">{spinName || '…'}</div></div>}
-            {arch && !spinning && avatarStage(96)}
-            {arch && !spinning && (
-              <div className="card w-full max-w-sm p-4 text-left flip" style={{ borderRadius: 26, background: 'linear-gradient(170deg, rgba(120,90,255,.6), rgba(24,16,80,.9))' }} key={arch.id}>
-                <div className="flex items-center gap-3">
-                  <span className="grid place-items-center w-20 h-20 rounded-3xl text-[44px]" style={{ background: 'radial-gradient(circle at 30% 25%, rgba(255,226,122,.7), rgba(106,61,245,.3))', boxShadow: 'inset 0 0 0 2px rgba(255,255,255,.3)' }}>{arch.icon}</span>
-                  <div className="min-w-0"><div className="font-display text-[27px] uppercase leading-none">{arch.title}</div><div className="text-[13px] opacity-80 mt-1 leading-snug">{taglineFor(arch, city ?? 'lagos')}</div></div>
+            {dreamDef && arch && !spinning && avatarStage(96)}
+            {dreamDef && arch && !spinning && (
+              <div className="card w-full max-w-sm p-4 text-left flip" style={{ borderRadius: 26, background: 'linear-gradient(170deg, rgba(120,90,255,.6), rgba(24,16,80,.9))' }} key={dreamDef.id}>
+                <div className="text-[10px] font-extrabold uppercase tracking-wider text-yellow-300">Your big dream</div>
+                <div className="flex items-center gap-3 mt-1">
+                  <span className="grid place-items-center w-20 h-20 rounded-3xl text-[44px] shrink-0" style={{ background: 'radial-gradient(circle at 30% 25%, rgba(255,226,122,.7), rgba(106,61,245,.3))', boxShadow: 'inset 0 0 0 2px rgba(255,255,255,.3)' }}>{dreamDef.icon}</span>
+                  <div className="min-w-0"><div className="font-display text-[28px] uppercase leading-none">{dreamDef.name}</div><div className="text-[13px] opacity-85 mt-1 leading-snug">{dreamDef.blurb}</div></div>
                 </div>
-                <div className="flex flex-wrap gap-1.5 mt-3">{arch.perks.map((p) => <span key={p} className="chip chip-green"><Icon name="up" size={11} />{p}</span>)}</div>
-                <div className="flex flex-wrap gap-1.5 mt-1.5">{arch.constraints.map((p) => <span key={p} className="chip chip-red"><Icon name="down" size={11} />{p}</span>)}</div>
+                <div className="text-[10px] font-extrabold uppercase tracking-wider opacity-70 mt-3">Your road, from child to done</div>
+                <ol className="mt-1 grid gap-1">{dreamDef.stages.map((st, i) => <li key={i} className="flex items-center gap-2 text-[12.5px] font-bold leading-tight"><span className="grid place-items-center w-5 h-5 rounded-full text-[11px] shrink-0" style={{ background: i === dreamDef.stages.length - 1 ? 'var(--gold)' : 'rgba(255,255,255,.18)', color: i === dreamDef.stages.length - 1 ? '#3b2300' : '#fff' }}>{i === dreamDef.stages.length - 1 ? '★' : i + 1}</span>{st.title}</li>)}</ol>
                 {heirloom && (
                   <div className="mt-3 rounded-2xl p-2.5 flex items-center gap-3" style={{ background: 'rgba(255,210,63,.14)', boxShadow: 'inset 0 0 0 1.5px rgba(255,210,63,.55)' }}>
-                    <span className="text-[34px] leading-none">{heirloom.icon}</span>
-                    <div className="min-w-0"><div className="text-[10px] font-extrabold uppercase tracking-wider text-yellow-300">Handed down to you</div><div className="font-display text-[17px] leading-tight">{heirloom.name}</div><div className="text-[12px] opacity-80 leading-snug">{heirloom.desc}</div></div>
+                    <span className="text-[30px] leading-none">{heirloom.icon}</span>
+                    <div className="min-w-0"><div className="text-[10px] font-extrabold uppercase tracking-wider text-yellow-300">Your dream symbol</div><div className="font-display text-[16px] leading-tight">{heirloom.name}</div><div className="text-[12px] opacity-80 leading-snug">{heirloom.desc}</div></div>
                   </div>
                 )}
-                <div className="flex items-center justify-between mt-3">
-                  <div className="flex gap-1.5"><span className="chip chip-gold"><Icon name="coin" size={14} />{nairaShort(arch.startCash)}</span><span className="chip"><Icon name="book" size={13} />{arch.schoolType}</span></div>
+                <div className="mt-3 rounded-2xl p-2.5 bg-white/10">
+                  <div className="text-[10px] font-extrabold uppercase tracking-wider opacity-70">Family background</div>
+                  <div className="font-display text-[16px] leading-tight uppercase">{arch.icon} {arch.title}</div>
+                  <div className="text-[12px] opacity-80 leading-snug">{taglineFor(arch, city ?? 'lagos')}</div>
+                  <div className="flex flex-wrap gap-1.5 mt-1.5"><span className="chip chip-gold"><Icon name="coin" size={14} />{nairaShort(arch.startCash)}</span><span className="chip"><Icon name="book" size={13} />{arch.schoolType}</span>{arch.perks.slice(0, 1).map((p) => <span key={p} className="chip chip-green"><Icon name="up" size={11} />{p}</span>)}</div>
+                </div>
+                <div className="flex justify-end mt-3">
                   <button className="chip !py-1.5 !px-3" style={{ opacity: rerolled ? 0.4 : 1 }} disabled={rerolled} onClick={() => spin(false)}><Icon name="swap" size={14} />{rerolled ? 'Used' : 'Re-roll'}</button>
                 </div>
               </div>
@@ -245,13 +239,13 @@ export function Create() {
           </div>
         )}
 
-        {step === 5 && arch && city && (
+        {step === 4 && arch && city && (
           <div className="flex items-center justify-between mb-2">
             <span className="chip chip-gold">{CITIES[city].icon} Homes in {CITIES[city].name}</span>
             <button className="text-[12px] font-extrabold underline opacity-80" onClick={() => { audio.sfx('tap'); setStep(0) }}>Change city</button>
           </div>
         )}
-        {step === 5 && arch && (
+        {step === 4 && arch && (
           <div className="grid grid-cols-2 gap-2.5 stagger">
             {HOMES.filter((h) => h.city === (city ?? 'lagos')).map((h, i) => {
               const locked = tierRank(arch.tier) < tierRank(h.minTier)
@@ -269,9 +263,9 @@ export function Create() {
             })}
           </div>
         )}
-        {step === 5 && !arch && <div className="text-center opacity-70">Spin the lottery first.</div>}
+        {step === 4 && !arch && <div className="text-center opacity-70">Spin the lottery first.</div>}
 
-        {step === 6 && (
+        {step === 5 && (
           <>
             {avatarStage(118)}
             <div className="grid grid-cols-4 gap-2 mb-2">{(['yoruba', 'igbo', 'hausa', 'mix'] as Heritage[]).map((h) => <button key={h} className={`tile !min-h-[52px] !py-1 ${heritage === h ? 'is-on' : ''}`} onClick={() => { audio.sfx('tap'); setHeritage(h); setName('') }}><span className="text-[12px] font-extrabold">{HERITAGE_LABEL[h]}</span></button>)}</div>

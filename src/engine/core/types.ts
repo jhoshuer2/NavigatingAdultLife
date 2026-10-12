@@ -13,7 +13,10 @@ export type TrackId = 'trade' | 'civil' | 'corporate' | 'tech' | 'creative'
 export type TraitId =
   | 'hustler' | 'bookworm' | 'charmer' | 'streetSmart' | 'devout' | 'creative' | 'athletic'
   | 'frugal' | 'lucky' | 'anxious' | 'foodie' | 'owambeSpirit' | 'nightCrawler' | 'musical'
-export type DreamId = 'bigOga' | 'propertyOwner' | 'star' | 'padi' | 'unicorn'
+export type DreamId =
+  | 'politician' | 'business' | 'nineToFiver' | 'creator' | 'degree' | 'unsureAbuja' // Abuja
+  | 'onile' | 'lastma' | 'governor' | 'pastor' | 'jobPerson' | 'unsureLagos' // Lagos
+  | 'bigOga' | 'propertyOwner' | 'star' | 'padi' | 'unicorn' // older saves
 export type NpcRole =
   | 'mother' | 'father' | 'sibling' | 'friend' | 'friend2' | 'partner' | 'boss' | 'rival'
   | 'neighbour' | 'child' | 'colleague' | 'mentor'
@@ -317,6 +320,7 @@ export interface GameState {
   avgHappiness: { sum: number; n: number }
   maxCash: number
   dreamDone: boolean
+  dreamStage?: number // how many steps of the dream path are complete (older saves start at 0)
   dashBest: number
   cowriesEarnedLife: number
   lastAction?: { text: string; deltas: StatDelta[] }

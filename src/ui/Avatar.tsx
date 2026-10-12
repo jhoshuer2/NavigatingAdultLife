@@ -59,6 +59,10 @@ export function Avatar({ look, gender, age = 25, uniform = false, size = 160, cl
         {wear.includes('chain') && <g><path d="M78 132 Q100 176 122 132" fill="none" stroke="#f5c518" strokeWidth="5" strokeLinecap="round" /><circle cx="100" cy="168" r="8" fill="#f5c518" stroke="#b8860b" strokeWidth="2" /></g>}
         {wear.includes('badge') && <g><path d="M84 128 L100 172 L116 128" fill="none" stroke="#1c7ea6" strokeWidth="5" /><rect x="88" y="170" width="24" height="30" rx="3" fill="#fff" stroke="#1c7ea6" strokeWidth="2" /><rect x="88" y="170" width="24" height="8" fill="#0f7a4a" /></g>}
         {wear.includes('scarf') && <g><path d="M72 132 Q100 156 128 132 L130 146 Q100 170 70 146 Z" fill="#c4562a" /><path d="M112 150 L128 196 L114 198 L104 160 Z" fill="#e6a817" /></g>}
+        {wear.includes('vest') && <g><path d="M60 140 L84 132 L92 232 L40 232 Z" fill="#ff8a1f" /><path d="M140 140 L116 132 L108 232 L160 232 Z" fill="#ff8a1f" /><rect x="44" y="176" width="48" height="8" fill="#eee" opacity=".9" /><rect x="108" y="176" width="48" height="8" fill="#eee" opacity=".9" /></g>}
+        {wear.includes('cross') && <g><path d="M78 132 Q100 172 122 132" fill="none" stroke="#ddd" strokeWidth="4" /><rect x="96" y="160" width="8" height="26" rx="2" fill="#f5f5f5" /><rect x="88" y="168" width="24" height="7" rx="2" fill="#f5f5f5" /></g>}
+        {wear.includes('keys') && <g><circle cx="150" cy="206" r="9" fill="none" stroke="#cfcfcf" strokeWidth="4" /><path d="M150 215 L150 232" stroke="#f5c518" strokeWidth="5" /></g>}
+        {wear.includes('case') && <g><rect x="132" y="190" width="40" height="30" rx="5" fill="#5a3a1c" /><rect x="144" y="186" width="16" height="8" rx="3" fill="none" stroke="#e6a817" strokeWidth="3" /></g>}
         {wear.includes('pouch') && <g><path d="M138 196 Q166 196 168 222 L140 224 Z" fill="#7a4a2a" /><path d="M138 196 Q152 186 166 198" fill="none" stroke="#e6a817" strokeWidth="4" /></g>}
         {wear.includes('backpack') && <g fill="#14587a"><path d="M52 150 Q40 190 48 230 L62 230 L68 140 Z" /><path d="M148 150 Q160 190 152 230 L138 230 L132 140 Z" /></g>}
         {/* head */}
@@ -85,6 +89,9 @@ export function Avatar({ look, gender, age = 25, uniform = false, size = 160, cl
         {!male && <><circle cx="64" cy="80" r="3" fill="#f5b91c" /><circle cx="136" cy="80" r="3" fill="#f5b91c" /></>}
         {(outfit === 'traditional' && male) && <path d="M70 46 Q100 26 130 46 L130 54 Q100 44 70 54 Z" fill={top} stroke={shade(top, -0.3)} strokeWidth="1.5" />}
         {wear.includes('cap') && <g><path d="M62 56 Q100 8 138 56 Q100 44 62 56 Z" fill="#c4262e" /><path d="M120 54 Q160 52 164 62 Q140 66 118 60 Z" fill="#8f1b21" /><circle cx="100" cy="18" r="4" fill="#8f1b21" /></g>}
+        {wear.includes('fila') && <g><path d="M66 56 Q100 22 134 56 L134 50 Q100 18 66 50 Z" fill="#1c7ea6" /><rect x="64" y="46" width="72" height="12" rx="4" fill="#1c7ea6" stroke="#0e4a63" strokeWidth="2" /></g>}
+        {wear.includes('gradcap') && <g><path d="M52 38 L100 20 L148 38 L100 54 Z" fill="#14121f" /><rect x="76" y="40" width="48" height="14" rx="3" fill="#14121f" /><path d="M140 40 L140 62" stroke="#f5b91c" strokeWidth="3" /><circle cx="140" cy="64" r="4" fill="#f5b91c" /></g>}
+        {wear.includes('headphones') && <g><path d="M60 72 Q60 26 100 26 Q140 26 140 72" fill="none" stroke="#222" strokeWidth="6" /><rect x="52" y="64" width="14" height="26" rx="6" fill="#ff3d8b" /><rect x="134" y="64" width="14" height="26" rx="6" fill="#ff3d8b" /></g>}
         {wear.includes('glasses') && <g fill="none" stroke="#111" strokeWidth="3"><circle cx="86" cy="68" r="11" /><circle cx="114" cy="68" r="11" /><path d="M97 68 L103 68" /><path d="M75 66 L64 62" /><path d="M125 66 L136 62" /></g>}
         {old && <g stroke={skinShade} strokeWidth="1.2" fill="none" opacity=".7"><path d="M80 52 Q86 49 92 52" /><path d="M108 52 Q114 49 120 52" /><path d="M88 96 Q86 100 87 104" /><path d="M112 96 Q114 100 113 104" /></g>}
       </g>

@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { GameState, NewLifeConfig, Lifestyle, QuizQuestion } from '@engine/core/types'
-import { createNewLife, doActivity, setClock, setFlag, payCash, submitQuizAnswer, finishActions, chooseOption, continueAfterEvent, advanceYear, setLifestyle, applyDashResult, relocate, type ActivityArgs, type MiniGameResult } from '@engine/api'
+import { createNewLife, doActivity, setClock, setFlag, payCash, submitQuizAnswer, finishActions, chooseOption, continueAfterEvent, advanceYear, setLifestyle, applyDashResult, relocate, finishDreamLife, type ActivityArgs, type MiniGameResult } from '@engine/api'
 import { ACHIEVEMENT_BY_ID } from '@content/achievements'
 import { defaultMeta, mergeEnding, UNLOCKABLES, type MetaProfile, type Settings } from '@platform/meta'
 import { loadLife, loadMeta, saveLife, saveMeta, importSave, exportSave } from '@platform/storage'
@@ -12,7 +12,7 @@ import { track, setLifeId, restoreLifeId, newLifeId, setAnalyticsConsent, setAna
 import { ACTIVITY_HOURS } from './world/time'
 
 export type Screen = 'title' | 'create' | 'play' | 'ending' | 'achievements' | 'unlocks' | 'settings' | 'dash' | 'history'
-export type Sheet = null | 'shop' | 'jobs' | 'quests' | 'profile' | 'pick-social' | 'pick-family' | 'lifestyle' | 'paywall' | 'place' | 'npc' | 'places'
+export type Sheet = null | 'shop' | 'jobs' | 'quests' | 'profile' | 'pick-social' | 'pick-family' | 'lifestyle' | 'paywall' | 'place' | 'npc' | 'places' | 'dreamDone'
 
 import type { PlaceId } from './world/layout'
 import type { Say } from '@content/lang'
@@ -93,6 +93,7 @@ interface Store {
   setGuideTrack: (t: { place: PlaceId; say: Say; act?: string; voice?: string } | null) => void
   setConsent: (granted: boolean) => void
   moveHome: (homeId: string) => boolean
+  finishDream: () => void
 }
 
 let toastId = 1
@@ -106,6 +107,14 @@ export const useGame = create<Store>((set, get) => {
     const q = prev ? Object.entries(life.quests).filter(([id, s]) => s.done && !prev.quests[id]?.done) : []
     for (const [id] of q) get().toast(`✅ Quest complete: ${id.replace('q_', '').replace(/_/g, ' ')}`, 'info')
     set({ life })
+    // a dream step just got done
+    const stepNow = life.flags.dreamStepJust
+    if (prev && stepNow && stepNow !== prev.flags.dreamStepJust && !life.dreamDone) get().toast(`⭐ Dream step done: ${String(stepNow)}`, 'ach')
+    // the big dream is complete: offer to close this life and roll a new one
+    if (life.dreamDone && !life.flags.dreamShown && life.phase === 'action' && !life.activeEvent) {
+      const l2 = setFlag(life, 'dreamShown', true)
+      saveLife(l2); set({ life: l2, sheet: 'dreamDone' }); audio.sfx('level')
+    }
     if (prev) {
       for (const a of life.achievements) if (!prev.achievements.includes(a)) track('achievement_unlocked', { id: a })
       for (const [id] of q) track('quest_completed', { id })
@@ -237,6 +246,7 @@ export const useGame = create<Store>((set, get) => {
     setLang: (l) => { const m = get().meta; setMeta({ ...m, langAsked: true, settings: { ...m.settings, lang: l } }) },
     setGuideTrack: (t) => set({ guideTrack: t, sheet: t ? null : get().sheet }),
     finishTutorial: () => { if (!get().meta.seenTutorial) track('tutorial_completed'); setMeta({ ...get().meta, seenTutorial: true }) },
+    finishDream: () => { const life = get().life; if (!life) return; set({ sheet: null }); commit(finishDreamLife(life)) },
     moveHome: (homeId) => {
       const life = get().life; if (!life) return false
       const r = relocate(life, homeId)

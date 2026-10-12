@@ -70,7 +70,7 @@ export function buildHuman(opts: { look: Appearance; age: number; gender?: 'male
   add(0.14, 0.03, 0.04, 0x7a2a22, 0, 2.2, -0.31)
   if (female && !kid) for (const x of [-0.34, 0.34]) { const e = new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 6), lam(0xf5b91c)); e.position.set(x, 2.28, 0); body.add(e) }
   const hs = look.hairStyle
-  const capOn = wear.includes('cap') || outfit === 'siteWork' || (outfit === 'traditional' && !female)
+  const capOn = wear.includes('cap') || wear.includes('fila') || wear.includes('gradcap') || outfit === 'siteWork' || (outfit === 'traditional' && !female)
   if (!capOn) {
     if (hs === 'afro') { const h = new THREE.Mesh(new THREE.SphereGeometry(0.46, 10, 8), lam(hair)); h.position.set(0, 2.5, 0.15); body.add(h) }
     else if (hs !== 'bald') {
@@ -103,6 +103,13 @@ export function buildHuman(opts: { look: Appearance; age: number; gender?: 'male
   if (wear.includes('scarf')) { const sc = new THREE.Mesh(new THREE.CylinderGeometry(0.31, 0.34, 0.16, 10), fabricMat('ankara', '#c4562a', '#1d2f6f')); sc.position.y = 2.06; body.add(sc); add(0.16, 0.5, 0.05, '#c4562a', -0.15, 1.8, -0.3) }
   if (wear.includes('glasses')) { for (const x of [-0.13, 0.13]) add(0.17, 0.13, 0.03, 0x111111, x, 2.4, -0.33); add(0.1, 0.03, 0.03, 0x111111, 0, 2.42, -0.33) }
   if (wear.includes('backpack')) { add(0.7, 0.9, 0.3, 0x1c7ea6, 0, 1.6, 0.4); add(0.5, 0.35, 0.06, 0x14587a, 0, 1.45, 0.57) }
+  if (wear.includes('fila')) add(0.52, 0.24, 0.46, 0x1c7ea6, 0, 2.7, 0).scale.set(1.1, 1, 1.1)
+  if (wear.includes('case')) { add(0.45, 0.32, 0.12, 0x5a3a1c, 0.62, 0.95, -0.05); add(0.2, 0.05, 0.14, 0xe6a817, 0.62, 1.12, -0.05) }
+  if (wear.includes('headphones')) { const band = new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.035, 6, 14, Math.PI), lam(0x222222)); band.position.y = 2.38; band.rotation.z = 0; body.add(band); for (const x of [-0.35, 0.35]) add(0.1, 0.2, 0.2, 0xff3d8b, x, 2.35, 0) }
+  if (wear.includes('gradcap')) { add(0.8, 0.05, 0.8, 0x14121f, 0, 2.76, 0); add(0.34, 0.14, 0.34, 0x14121f, 0, 2.68, 0); add(0.04, 0.3, 0.04, 0xf5b91c, 0.34, 2.6, 0.1) }
+  if (wear.includes('keys')) { const k = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.025, 6, 10), lam(0xcfcfcf)); k.position.set(-0.5, 1.15, -0.2); body.add(k); add(0.04, 0.2, 0.04, 0xf5c518, -0.5, 0.98, -0.2) }
+  if (wear.includes('vest')) { add(bw + 0.08, 1.0, 0.56, 0xff8a1f, 0, 1.55, 0); add(bw + 0.1, 0.1, 0.58, 0xe8e8e8, 0, 1.4, 0); add(bw + 0.1, 0.1, 0.58, 0xe8e8e8, 0, 1.8, 0) }
+  if (wear.includes('cross')) { const c = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.04, 6, 14), lam(0xdddddd)); c.rotation.x = Math.PI / 2; c.position.y = 2.03; body.add(c); add(0.06, 0.26, 0.04, 0xf5f5f5, 0, 1.82, -0.3); add(0.18, 0.06, 0.04, 0xf5f5f5, 0, 1.87, -0.3) }
   if (wear.includes('cap')) { const cp = new THREE.Mesh(new THREE.SphereGeometry(0.38, 10, 6, 0, Math.PI * 2, 0, Math.PI * 0.5), lam(0xc4262e)); cp.position.y = 2.4; body.add(cp); add(0.5, 0.05, 0.3, 0xc4262e, 0, 2.43, -0.38) }
   const limb = (x: number, w: number, c: THREE.Color, y: number, h: number) => { const p = new THREE.Group(); p.position.set(x, y, 0); const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, w), lam(c)); m.position.y = -h / 2; p.add(m); body.add(p); return p }
   const lw = female ? 0.26 : 0.3

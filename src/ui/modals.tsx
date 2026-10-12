@@ -3,7 +3,7 @@ import { useGame } from '../store'
 import { Btn, Confetti, CountUp, DeltaChips, Modal, Tile, naira, nairaShort } from './components'
 import { Icon } from './icons'
 import { Lines } from './Guide'
-import { QUEST_HINTS } from '../world/guide'
+import { QUEST_HINTS, dreamGoal } from '../world/guide'
 import { Avatar } from './Avatar'
 import { currentEvent, getDreamProgress, getJobOptions, getShopItems } from '@engine/api'
 import { QUESTS } from '@content/quests'
@@ -215,16 +215,39 @@ export function QuestsModal() {
   const lang = meta.settings.lang ?? 'en'
   const dp = getDreamProgress(life)
   const dream = DREAM_BY_ID[life.character.dreamId]
+  const goal = dreamGoal(life)
   return (
     <Modal title="Quests" onClose={() => openSheet(null)} wide>
-      <div className="hud-glass rounded-2xl p-3 flex items-center gap-3">
-        <span className="text-4xl">{dream.icon}</span>
-        <div className="flex-1 min-w-0">
-          <div className="font-display text-lg uppercase leading-none">{dream.name}</div>
-          <div className="text-xs opacity-70 mt-1">{dp.text}</div>
-          <div className="bar mt-1.5"><i style={{ width: `${Math.round(dp.pct * 100)}%`, background: 'linear-gradient(90deg,#ffe27a,#ffc72c)' }} /></div>
+      <div className="hud-glass rounded-2xl p-3">
+        <div className="flex items-center gap-3">
+          <span className="text-4xl">{dream.icon}</span>
+          <div className="flex-1 min-w-0">
+            <div className="text-[10px] font-extrabold uppercase tracking-wider text-yellow-300">Your big dream</div>
+            <div className="font-display text-lg uppercase leading-none">{dream.name}</div>
+            <div className="bar mt-1.5"><i style={{ width: `${Math.round(dp.pct * 100)}%`, background: 'linear-gradient(90deg,#ffe27a,#ffc72c)' }} /></div>
+          </div>
+          <span className="font-display text-xl text-gold">{Math.round(dp.pct * 100)}%</span>
         </div>
-        <span className="font-display text-xl text-gold">{Math.round(dp.pct * 100)}%</span>
+        {dream.stages.length > 0 ? (
+          <ol className="mt-3 grid gap-1.5">
+            {dream.stages.map((st, i) => {
+              const at = life.dreamDone ? dream.stages.length : life.dreamStage ?? 0
+              const done = i < at, now = i === at
+              return (
+                <li key={i} className="flex items-center gap-2 text-[13px] font-bold leading-tight" style={{ opacity: done ? 0.6 : now ? 1 : 0.5 }}>
+                  <span className="grid place-items-center w-6 h-6 rounded-full text-[12px] shrink-0" style={{ background: done ? 'var(--green)' : now ? 'var(--gold)' : 'rgba(255,255,255,.16)', color: done ? '#04361c' : now ? '#3b2300' : '#fff' }}>{done ? '✓' : i === dream.stages.length - 1 ? '★' : i + 1}</span>
+                  <span className={now ? 'text-gold' : ''}>{st.title}</span>
+                </li>
+              )
+            })}
+          </ol>
+        ) : <div className="text-xs opacity-70 mt-2">{dp.text}</div>}
+        {goal && (
+          <div className="mt-3 rounded-2xl p-2.5" style={{ background: 'rgba(255,210,63,.12)' }}>
+            <div className="text-[12px] font-bold leading-snug text-gold">📍 <Lines lang={lang} s={goal.suggestion.say} /></div>
+            <button className="chip chip-green mt-1.5" onClick={() => { audio.sfx('click'); setGuideTrack({ place: goal.suggestion.place, say: goal.suggestion.say, act: goal.suggestion.act }); openSheet(null) }}><Icon name="pin" size={12} />Show me</button>
+          </div>
+        )}
       </div>
       <div className="mt-3 grid gap-2.5 stagger">
         {QUESTS.map((q) => {
@@ -270,7 +293,7 @@ export function ProfileModal() {
           <div className="text-xs opacity-80">📍 {DISTRICTS[c.housing.districtId]?.name ?? 'Home'}, {CITIES[cityOfHome(c.housing.districtId)].name}</div>
         </div>
       </div>
-      {ITEM_BY_ID[arch.heirloom] && <div className="mt-3 rounded-2xl p-2.5 flex items-center gap-3" style={{ background: 'rgba(255,210,63,.14)', boxShadow: 'inset 0 0 0 1.5px rgba(255,210,63,.5)' }}><span className="text-[30px] leading-none">{ITEM_BY_ID[arch.heirloom].icon}</span><div className="min-w-0"><div className="text-[10px] font-extrabold uppercase tracking-wider text-yellow-300">Handed down by your luck scroll</div><div className="font-display text-[16px] leading-tight">{ITEM_BY_ID[arch.heirloom].name}</div><div className="text-[12px] opacity-80 leading-snug">{ITEM_BY_ID[arch.heirloom].desc}</div></div></div>}
+      {dream.item && ITEM_BY_ID[dream.item] && <div className="mt-3 rounded-2xl p-2.5 flex items-center gap-3" style={{ background: 'rgba(255,210,63,.14)', boxShadow: 'inset 0 0 0 1.5px rgba(255,210,63,.5)' }}><span className="text-[30px] leading-none">{ITEM_BY_ID[dream.item!].icon}</span><div className="min-w-0"><div className="text-[10px] font-extrabold uppercase tracking-wider text-yellow-300">Your dream symbol</div><div className="font-display text-[16px] leading-tight">{ITEM_BY_ID[dream.item!].name}</div><div className="text-[12px] opacity-80 leading-snug">{ITEM_BY_ID[dream.item!].desc}</div></div></div>}
       <div className="mt-3 flex flex-wrap gap-1.5">{c.traits.map((t) => <span key={t} className="chip">{TRAIT_BY_ID[t].icon} {TRAIT_BY_ID[t].name}</span>)}</div>
       <div className="grid grid-cols-2 gap-2 mt-3 text-sm">
         <div className="card p-2"><div className="text-xs opacity-60">Education</div><b>{{ none: c.edu.credential === 'degree' ? 'Degree' : c.edu.credential === 'ond' ? 'Diploma (OND)' : c.edu.credential === 'trade' ? 'Trade certified' : c.edu.credential === 'ssce' ? 'WAEC/SSCE' : 'Primary', primary: 'Primary school', jss: 'Junior secondary', sss: 'Senior secondary', university: 'University', polytechnic: 'Polytechnic', apprentice: 'Apprentice' }[c.edu.level]}</b></div>
@@ -357,3 +380,26 @@ export function TutorialModal() {
   )
 }
 
+
+/** The big dream just came true. Keep playing, or close this life and roll a new one. */
+export function DreamDoneModal() {
+  const { life, openSheet, finishDream } = useGame()
+  if (!life) return null
+  const c = life.character
+  const dream = DREAM_BY_ID[c.dreamId]
+  return (
+    <Modal>
+      <Confetti n={36} />
+      <div className="text-center">
+        <div className="text-[64px] leading-none">{dream.icon}</div>
+        <div className="text-[11px] font-extrabold uppercase tracking-wider text-yellow-300 mt-2">Dream achieved</div>
+        <h2 className="font-display text-[30px] text-white leading-tight uppercase" style={{ textShadow: '0 3px 0 rgba(0,0,0,.45)' }}>{dream.name}</h2>
+        <p className="text-sm opacity-90 mt-2 leading-snug">{c.nickname || c.name} did it at {c.age}. From a small child to the dream. Well done!</p>
+      </div>
+      <div className="grid gap-2 mt-4">
+        <Btn variant="green" shine onClick={() => { audio.sfx('click'); finishDream() }}><Icon name="trophy" size={20} color="#fff" /> Finish this life and roll a new one</Btn>
+        <Btn variant="ghost" onClick={() => { audio.sfx('click'); openSheet(null) }}>Keep playing this life</Btn>
+      </div>
+    </Modal>
+  )
+}

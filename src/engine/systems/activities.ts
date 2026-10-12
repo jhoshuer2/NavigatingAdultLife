@@ -61,6 +61,7 @@ export function performActivity(ctx: Ctx, id: string, args: ActivityArgs = {}): 
   c.stats.energy -= def.cost.energy
   if (def.cost.cash) addStat(ctx, 'cash', -def.cost.cash, 'Spending')
   s.activityCounts[id] = (s.activityCounts[id] ?? 0) + 1
+  s.flags[`n_${id}`] = Number(s.flags[`n_${id}`] ?? 0) + 1 // lifetime count, used by the dream path
   let text = def.label
 
   switch (def.special) {

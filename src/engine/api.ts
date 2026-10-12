@@ -5,6 +5,7 @@ import { newState, setupLife, endActions, acknowledgeEvent, nextYear } from './s
 import { listActivities, performActivity, answerQuiz, shopItems, jobOptions, type ActivityArgs } from './systems/activities'
 import { resolveChoice, choiceAvailable } from './systems/events'
 import { addStat, moment } from './systems/effects'
+import { log } from './systems/log'
 import { HOMES } from '@content/archetypes'
 import { CITIES, cityOfHome } from '@content/cities'
 import { npcByRole } from './core/helpers'
@@ -127,6 +128,15 @@ function ageStage(age: number) { return age < 12 ? 'child' : age < 18 ? 'teen' :
 
 import { buildEnding } from './systems/ending'
 /** Compute what ending a state would get right now (used by tests and previews). */
+/** The player reached the big dream and chose to close this life: build the ending and move on to a new life. */
+export function finishDreamLife(state: GameState): GameState {
+  return withCtx(state, (ctx) => {
+    const s = ctx.s
+    s.ending = buildEnding(ctx, 'The big dream came true.', true)
+    s.phase = 'ended'
+    log(s, 'system', `Dream achieved at ${s.character.age}.`)
+  }).state
+}
 export function previewEnding(state: GameState) { return withCtx(state, (ctx) => buildEnding(ctx, 'Preview.')).result }
 
 export function currentEvent(state: GameState) {

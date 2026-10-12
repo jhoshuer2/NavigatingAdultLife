@@ -32,18 +32,18 @@ export function legacyScore(ctx: Ctx): number {
   return Math.round(wealthTier * 20 + avgH * 0.3 + c.stats.knowledge * 0.2 + c.stats.reputation * 0.3 + Math.min(rels, 25) + s.achievements.length * 5 + (s.dreamDone ? 25 : 0) + (underdog && wealthTier >= 2 ? underdog : 0))
 }
 
-export function buildEnding(ctx: Ctx, cause: string): Ending {
+export function buildEnding(ctx: Ctx, cause: string, achieved = false): Ending {
   const { s } = ctx
   const c = s.character
   const nw = netWorth(s)
-  const def = ENDINGS.find((e) => e.test(ctx, nw)) ?? ENDINGS[ENDINGS.length - 1]
+  const def = achieved ? { id: 'dreamAchieved', title: `${DREAM_BY_ID[c.dreamId].name}: Dream Achieved`, test: () => true } : ENDINGS.find((e) => e.test(ctx, nw)) ?? ENDINGS[ENDINGS.length - 1]
   const legacy = legacyScore(ctx)
   const moments = [...s.moments].sort((a, b) => b.weight - a.weight || a.age - b.age).slice(0, 5).sort((a, b) => a.age - b.age)
   const dream = DREAM_BY_ID[c.dreamId]
   const dp = dreamProgress(ctx)
   const job = c.job?.title ?? (s.flags.lastJob ? String(s.flags.lastJob) : 'whatever honest work came along')
   const kids = c.childrenIds.length
-  const intro = `${c.nickname || c.name} died at ${c.age}. ${cause}`
+  const intro = achieved ? `${c.nickname || c.name} reached the big dream at ${c.age}. ${cause}` : `${c.nickname || c.name} died at ${c.age}. ${cause}`
   const body = [
     def.id === 'cutShort' ? 'Life ended before the story was done, but the people who loved them remember the laughter.' : '',
     `Known as "${def.title}". Worked as ${job}, left behind ${kids ? `${kids} ${kids === 1 ? 'child' : 'children'}` : 'good memories'} and a net worth of ${fmtNaira(nw)}.`,

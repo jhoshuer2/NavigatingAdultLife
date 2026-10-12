@@ -1,7 +1,7 @@
 import type { Effect } from '@engine/core/types'
 
 /** What a character visibly wears or carries (3D world and portrait). */
-export type Wear = 'chain' | 'badge' | 'pouch' | 'scarf' | 'glasses' | 'backpack' | 'cap'
+export type Wear = 'chain' | 'badge' | 'pouch' | 'scarf' | 'glasses' | 'backpack' | 'cap' | 'fila' | 'case' | 'headphones' | 'gradcap' | 'keys' | 'vest' | 'cross'
 
 export interface ItemDef {
   id: string
@@ -12,7 +12,7 @@ export interface ItemDef {
   minAge: number
   effects?: Effect[]
   appliance?: boolean
-  heirloom?: boolean // handed down by the luck scroll, never sold in the market
+  heirloom?: boolean // handed to you by the luck scroll, never sold in the market
   wear?: Wear[]
   light?: boolean // light enough to carry home yourself
   passive?: { studyBonus?: number; hustleMult?: number; hireBonus?: number; yearlyHappiness?: number; yearlyStress?: number; yearlyRep?: number; examBonus?: number }
@@ -40,6 +40,16 @@ export const ITEMS: ItemDef[] = [
   { id: 'familyScarf', name: 'Mama’s ankara scarf', icon: '🧣', desc: 'Seven people, one scarf, plenty of love. Happier every year.', price: 0, minAge: 0, heirloom: true, wear: ['scarf'], passive: { yearlyHappiness: 2 } },
   { id: 'scholarKit', name: 'Teacher’s backpack and glasses', icon: '🎒', desc: 'A teacher believed in you. You study and write exams better.', price: 0, minAge: 0, heirloom: true, wear: ['backpack', 'glasses'], passive: { studyBonus: 2, examBonus: 4 } },
   { id: 'cousinCap', name: 'Cousin’s cap from abroad', icon: '🧢', desc: 'A little of the world on your head. Good vibes, better hiring odds.', price: 0, minAge: 0, heirloom: true, wear: ['cap'], passive: { yearlyHappiness: 1, hireBonus: 3 } },
+  // Dream symbols: the luck scroll rolls your dream and gives you its symbol. They are worn and they help.
+  { id: 'dreamFila', name: 'The politician’s fila', icon: '🧢', desc: 'Looks like a leader. People listen to you a little more.', price: 0, minAge: 0, heirloom: true, wear: ['fila'], passive: { yearlyRep: 1, hireBonus: 2 } },
+  { id: 'dreamCase', name: 'The business briefcase', icon: '💼', desc: 'Deals go better with a briefcase. Side hustles pay more.', price: 0, minAge: 0, heirloom: true, wear: ['case'], passive: { hustleMult: 1.15, hireBonus: 2 } },
+  { id: 'dreamLanyard', name: 'The staff lanyard', icon: '🪪', desc: 'A proper job is waiting. Interviews go easier.', price: 0, minAge: 0, heirloom: true, wear: ['badge'], passive: { hireBonus: 4 } },
+  { id: 'dreamPhones', name: 'The creator’s headphones', icon: '🎧', desc: 'Always creating. A little happier every year.', price: 0, minAge: 0, heirloom: true, wear: ['headphones'], passive: { yearlyHappiness: 2 } },
+  { id: 'dreamGrad', name: 'The graduate’s cap', icon: '🎓', desc: 'Books stick better. You study and write exams well.', price: 0, minAge: 0, heirloom: true, wear: ['gradcap'], passive: { studyBonus: 2, examBonus: 4 } },
+  { id: 'dreamCompass', name: 'The traveller’s cap', icon: '🧭', desc: 'No plan, no problem. You adapt and stay cheerful.', price: 0, minAge: 0, heirloom: true, wear: ['cap'], passive: { yearlyHappiness: 2, hireBonus: 1 } },
+  { id: 'dreamKeys', name: 'The landlord’s keys', icon: '🗝️', desc: 'One day these keys will open your own doors.', price: 0, minAge: 0, heirloom: true, wear: ['keys'], passive: { yearlyRep: 1, hustleMult: 1.1 } },
+  { id: 'dreamVest', name: 'The reflective vest', icon: '🦺', desc: 'Respect at the junction. Civil service hiring goes better.', price: 0, minAge: 0, heirloom: true, wear: ['vest'], passive: { hireBonus: 4, yearlyRep: 1 } },
+  { id: 'dreamCross', name: 'The pastor’s cross', icon: '✝️', desc: 'Peace and purpose. Happier and calmer every year.', price: 0, minAge: 0, heirloom: true, wear: ['cross'], passive: { yearlyHappiness: 1, yearlyStress: -1, yearlyRep: 1 } },
 ]
 export const ITEM_BY_ID = Object.fromEntries(ITEMS.map((i) => [i.id, i]))
 

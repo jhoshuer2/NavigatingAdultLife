@@ -4,24 +4,43 @@ import { QUESTS } from '@content/quests'
 import { evalGroup } from '../core/conditions'
 import { applyEffects, moment } from './effects'
 import { log } from './log'
+import { DREAM_BY_ID } from '@content/dreams'
 
 export function dreamProgress(ctx: Ctx): { done: boolean; pct: number; text: string } {
   const { s } = ctx
   const c = s.character
   const alive = Object.values(s.npcs).filter((n) => n.alive)
+  const def = DREAM_BY_ID[c.dreamId]
+  if (def && def.stages.length) {
+    const at = Math.min(s.dreamStage ?? 0, def.stages.length)
+    const done = at >= def.stages.length
+    return { done, pct: at / def.stages.length, text: done ? 'Dream achieved' : `Step ${at + 1} of ${def.stages.length}: ${def.stages[at].title}` }
+  }
   switch (c.dreamId) {
     case 'bigOga': { const l = c.job?.level ?? 0; return { done: l >= 4, pct: l / 4, text: `Career level ${l}/4` } }
     case 'star': { const l = c.job?.trackId === 'creative' ? c.job.level : 0; return { done: l >= 4, pct: l / 4, text: `Creative level ${l}/4` } }
     case 'unicorn': { const l = c.job?.trackId === 'tech' ? c.job.level : 0; const done = l >= 4 && !!s.flags.startupFunded; return { done, pct: (l + (s.flags.startupFunded ? 1 : 0)) / 5, text: `Tech level ${l}/4${s.flags.startupFunded ? ', funded' : ''}` } }
     case 'propertyOwner': { const own = c.housing.type === 'own'; const done = own && c.stats.cash >= 15000000; return { done, pct: (own ? 0.5 : 0) + Math.min(0.5, c.stats.cash / 30000000), text: `${own ? 'Home owned' : 'No home yet'}, cash ₦${Math.round(c.stats.cash / 1000000)}M/15M` } }
     case 'padi': { const close = alive.filter((n) => n.closeness >= 80).length; const done = c.stats.reputation >= 70 && close >= 4; return { done, pct: (Math.min(close, 4) / 4 + Math.min(1, c.stats.reputation / 70)) / 2, text: `${close}/4 close, Reputation ${c.stats.reputation}/70` } }
+    default: return { done: false, pct: 0, text: '' }
   }
 }
 
 export function evaluateProgress(ctx: Ctx): string[] {
   const { s } = ctx
   const unlocked: string[] = []
-  // dream
+  // dream path: finish steps in order, several at once if the player already qualifies
+  const dd = DREAM_BY_ID[s.character.dreamId]
+  if (dd && dd.stages.length && !s.dreamDone) {
+    let at = s.dreamStage ?? 0
+    while (at < dd.stages.length && evalGroup(s, dd.stages[at].when)) {
+      s.moments.push({ age: s.character.age, text: `Dream step: ${dd.stages[at].title}`, weight: at === dd.stages.length - 1 ? 10 : 4 })
+      log(s, 'system', `Dream step ${at + 1}/${dd.stages.length} done: ${dd.stages[at].title}`)
+      s.flags.dreamStepJust = dd.stages[at].title
+      at++
+    }
+    s.dreamStage = at
+  }
   if (!s.dreamDone && dreamProgress(ctx).done) {
     s.dreamDone = true
     moment(s, 'Achieved the Dream.', 10)

@@ -148,3 +148,10 @@ Players said they were not sure where to begin, so the game now tells them, GTA 
 - **Luck scroll heirloom:** each scroll result hands down an item (`heirloom: true` in `content/items.ts`) that is worn by the character (portrait and 3D), has a passive effect, shows in the profile and is never sold in the market.
 - **"Other" tribe** replaces "Naija Mix" (Akwa Ibom, Cross River, Delta, Edo, Rivers, Benue names by gender); includes a Carnival event.
 - Known follow-ups: the Dash how-to voice clips still say "danfo", so Abuja uses the phone voice for the cab version; Abuja place and event wording is a first draft for native review.
+
+## Big dream as the whole game (latest)
+- The separate "big dream" screen is gone. The **luck scroll now rolls your dream** (Abuja: Politician, Business Person, 9-5er, Content Creator, Degree Collector, I Never Know o. Lagos: Onile, LASTMA Officer, Governor, Pastor, Job Person, I no know o) and, in the same roll, a family background. Re-roll once. Each dream hands you a **symbol** that your character wears (3D world, portrait) and that has a small passive effect (`heirloom` items in `content/items.ts`).
+- Every dream is a **path of six steps** (`content/dreams.ts`): finish school, join the community, get a job, save, and so on. Steps complete in order from conditions on the game state (lifetime activity counters `n_<activity>` are kept for this). The guide's "next step" now points at the current dream step first (after energy/health/mood), the Quests sheet shows the whole path with a "Show me" button, and a toast fires when a step is done.
+- **Finishing the dream** opens a "Dream achieved" sheet: finish this life (ending screen, legacy and cowries recorded, then roll a new life) or keep playing. Onile has a dedicated land-buying event.
+- Older saves keep their old dream and its old goal; they do not get a path.
+- `tools/dream-sim.ts` shows how far headless players get on each path (rough guide: most paths complete for 20 to 100% of naive bots, 9-5er, Business and I-don't-know are easiest).

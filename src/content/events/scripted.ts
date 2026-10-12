@@ -75,5 +75,14 @@ export const scriptedEvents: GameEvent[] = [
       ch('wait', { label: 'Keep renting and invest in your business or career', fx: [happy(-1), stress(1)], text: 'Smart or scared? The future will tell.' }),
     ],
   }),
+  ev({
+    id: 'evt_dream_onile_land', title: 'A plot of land for you', scripted: true, once: true, stage: ['youngAdult', 'adult'],
+    when: { all: [{ dream: 'onile' }, { cashAtLeast: 6000000 }], not: [{ housing: 'own' }] },
+    text: "An old friend of your father is selling a plot of land: good title, close to the road, and a neighbour who already built next door. He says he would rather sell to someone who will actually build. This is the moment you have been saving for.",
+    choices: [
+      ch('buy', { label: 'Buy the land and build (₦5,000,000)', cost: { cash: 5000000 }, fx: [{ buyHome: true }, happy(12), rep(6), stress(-4)], text: 'The foundation went up in a hurry. Soon the first tenant will be asking about the rent.' }),
+      ch('wait', { label: 'Not yet. Save a little more', fx: [stress(1)], text: 'The land will still be there. Probably.' }),
+    ],
+  }),
 ]
 

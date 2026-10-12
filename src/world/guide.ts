@@ -3,6 +3,7 @@ import type { GameState } from '@engine/core/types'
 import type { District, PlaceId } from './layout'
 import { INTERIORS } from './interiors'
 import { say, type Say } from '@content/lang'
+import { DREAM_BY_ID, type DreamStage, type DreamVerb } from '@content/dreams'
 
 export interface Suggestion { id: string; place: PlaceId; text: string; icon: string; say: Say; act?: string }
 const S = (id: string, place: PlaceId, icon: string, en: string, pcm: string, act?: string): Suggestion => ({ id, place, text: en, icon, say: say(en, pcm), act })
@@ -22,6 +23,36 @@ export const SUGS = {
   endYear: S('endYear', 'home', '🌙', 'Sleep to end the year', 'Go house sleep, make new year start', 'sleep'),
 } as const
 
+/** What each kind of dream step means in the world: where to go and what to do there. */
+const GOALS: Record<DreamVerb, { place: PlaceId; icon: string; act?: string; en: string; pcm: string }> = {
+  study: { place: 'school', icon: '📚', act: 'study', en: 'Study at school', pcm: 'Go school read your book' },
+  church: { place: 'worship', icon: '🙏', act: 'community', en: 'Join the service at worship', pcm: 'Go worship join service' },
+  hustle: { place: 'market', icon: '🛍️', act: 'hustle', en: 'Hustle at the market', pcm: 'Go market hustle small money' },
+  save: { place: 'market', icon: '💰', act: 'hustle', en: 'Hustle and save your money', pcm: 'Hustle for market, save your money' },
+  job: { place: 'jobcentre', icon: '📝', act: 'applyJob', en: 'Find a job at the Job Centre', pcm: 'Go Job Centre find work' },
+  work: { place: 'office', icon: '⏰', act: 'overtime', en: 'Work hard at the office', pcm: 'Go office work well well' },
+  social: { place: 'mamaput', icon: '🧑‍🤝‍🧑', act: 'socialise', en: 'Hang out with people at the buka', pcm: 'Go the buka gist with people' },
+  fit: { place: 'pitch', icon: '🏃', act: 'exercise', en: 'Exercise at the pitch', pcm: 'Go the pitch do exercise' },
+  shop: { place: 'market', icon: '🛒', act: 'shop', en: 'Buy what you need at the market', pcm: 'Go market buy wetin you need' },
+  house: { place: 'market', icon: '🏠', act: 'hustle', en: 'Keep saving. Your house chance will come', pcm: 'Dey save. Your house chance go come' },
+  family: { place: 'home', icon: '👪', act: 'familyTime', en: 'Spend time with your people', pcm: 'Go sit with your people' },
+}
+
+export interface DreamGoal { index: number; total: number; stage: DreamStage; suggestion: Suggestion; doable: boolean }
+/** The next step on the way to the big dream, as something the guide can point at. null when there is no path (older saves) or it is done. */
+export function dreamGoal(life: GameState): DreamGoal | null {
+  const def = DREAM_BY_ID[life.character.dreamId]
+  if (!def || !def.stages.length || life.dreamDone) return null
+  const index = Math.min(life.dreamStage ?? 0, def.stages.length - 1)
+  const stage = def.stages[index]
+  const g = GOALS[stage.verb]
+  const c = life.character
+  const inSchool = c.edu.level !== 'none'
+  const doable = { study: inSchool, church: c.age >= 8, hustle: c.age >= 14, save: c.age >= 14, job: !c.job && !inSchool && c.age >= 16, work: !!c.job, social: true, fit: c.age >= 10, shop: c.age >= 12, house: c.age >= 14, family: true }[stage.verb]
+  const suggestion: Suggestion = { id: `dream_${stage.verb}`, place: g.place, text: `${stage.title}: ${g.en}`, icon: g.icon, say: say(`${stage.title}. ${g.en}`, `${stage.title}. ${g.pcm}`), act: g.act }
+  return { index, total: def.stages.length, stage, suggestion, doable }
+}
+
 export function suggest(life: GameState): Suggestion | null {
   if (life.phase !== 'action' || life.quiz) return null
   const c = life.character
@@ -31,6 +62,8 @@ export function suggest(life: GameState): Suggestion | null {
   if (c.stats.health < 40) return SUGS.restSick
   if (c.stats.happiness < 35) return SUGS.cheer
   if (c.stats.stress > 70) return SUGS.stress
+  const goal = dreamGoal(life)
+  if (goal?.doable) return goal.suggestion
   if (inSchool && used('study') < 2) return SUGS.study
   if (!c.job && !inSchool && c.age >= 18 && c.age < 62) return SUGS.job
   if (c.job && used('overtime') < 1 && c.age < 60) return SUGS.boss

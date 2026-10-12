@@ -3,7 +3,8 @@ import type { GameState, NewLifeConfig, TrackId } from './core/types'
 import { makeRng, type Rng } from './core/rng'
 import { createNewLife, getActivities, doActivity, finishActions, chooseOption, continueAfterEvent, advanceYear, submitQuizAnswer, currentEvent, getShopItems, getJobOptions } from './api'
 import { TRAITS } from '@content/traits'
-import { DREAMS } from '@content/dreams'
+import { dreamsFor } from '@content/dreams'
+import { cityOfHome } from '@content/cities'
 import { ARCHETYPES, HOMES, tierRank } from '@content/archetypes'
 import { NAME_POOLS } from '@content/names'
 
@@ -15,10 +16,13 @@ export function randomConfig(rng: Rng): NewLifeConfig {
   const t = rng.shuffle(TRAITS.map((x) => x.id))
   const arch = rng.pick(ARCHETYPES)
   const homes = HOMES.filter((h) => tierRank(arch.tier) >= tierRank(h.minTier))
+  const dreamRoll = rng.int(0, 999)
+  const home = rng.pick(homes)
+  const pool = dreamsFor(cityOfHome(home.id))
   return {
     name: rng.pick(NAME_POOLS[heritage][gender]), gender, heritage,
     appearance: { skinTone: rng.int(0, 9), faceShape: rng.int(0, 3), hairStyle: 'afro', hairColor: '#111', outfitType: 'casual', fabric: 'plain', topColor: '#2b3a8c', bottomColor: '#222' },
-    traits: [t[0], t[1]], dreamId: rng.pick(DREAMS).id, archetypeId: arch.id, homeId: rng.pick(homes).id,
+    traits: [t[0], t[1]], dreamId: pool[dreamRoll % pool.length].id, archetypeId: arch.id, homeId: home.id,
   }
 }
 

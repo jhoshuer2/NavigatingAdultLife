@@ -1,5 +1,6 @@
 import type { Ctx } from './ctx'
 import type { Character, GameState, NewLifeConfig, StatDelta, Stats, YearSummary } from '../core/types'
+import { DREAM_BY_ID } from '@content/dreams'
 import { ARCHETYPE_BY_ID, HOMES } from '@content/archetypes'
 import { EVENT_BY_ID } from '@content/events'
 import { clamp, stageForAge, traitSum } from '../core/helpers'
@@ -27,7 +28,7 @@ export function newState(config: NewLifeConfig, seed: number): GameState {
     id: `life_${seed}`, name: config.name, nickname: config.nickname, gender: config.gender, heritage: config.heritage, familyTier: arch.tier,
     archetypeId: arch.id, dreamId: config.dreamId, traits: [...config.traits], appearance: config.appearance, age: START_AGE, stats,
     edu: { level: 'primary', yearsInLevel: 0, schoolType: arch.schoolType, credential: 'none', studyPoints: 0, gpa: 0 },
-    lifestyle: 'normal', housing: { type: 'family', tier: 0, districtId: home.id }, items: [arch.heirloom], childrenIds: [], hustleIncome: 0, dashCashouts: 0,
+    lifestyle: 'normal', housing: { type: 'family', tier: 0, districtId: home.id }, items: DREAM_BY_ID[config.dreamId]?.item ? [DREAM_BY_ID[config.dreamId].item!] : [], childrenIds: [], hustleIncome: 0, dashCashouts: 0,
     perkIds: config.perkId ? [config.perkId] : [],
   }
   return {
@@ -35,7 +36,7 @@ export function newState(config: NewLifeConfig, seed: number): GameState {
     flags: { ...(arch.startFlags ?? {}), __archGain: JSON.stringify(arch.gain ?? {}) },
     eventQueue: [], after: 'action', scheduled: [], eventHistory: {}, quests: {}, achievements: [], log: [], moments: [], yearDeltas: [],
     yearStartCash: stats.cash, yearIncome: 0, yearExpenses: 0, yearLines: [], phase: 'action', newUnlocks: [], activityCounts: {},
-    avgHappiness: { sum: 0, n: 0 }, maxCash: stats.cash, dreamDone: false, dashBest: 0, cowriesEarnedLife: 0,
+    avgHappiness: { sum: 0, n: 0 }, maxCash: stats.cash, dreamDone: false, dreamStage: 0, dashBest: 0, cowriesEarnedLife: 0,
   }
 }
 
