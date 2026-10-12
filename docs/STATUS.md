@@ -137,5 +137,5 @@ Players said they were not sure where to begin, so the game now tells them, GTA 
 - The spoken line is now exactly the line on the card. Variable parts (direction and steps, place name, spot name) moved into a small gold chip under the line and are not spoken.
 - Voice likeness: the 94 clips were made with `eleven_v4`; the owner reports they do not sound like the "Joshua Jumbo" clone. Test takes with other models were generated for comparison; re-record everything once a model is chosen.
 
-## Voice re-recording (in progress)
-- Owner chose `eleven_multilingual_v2` as the model that sounds most like their "Joshua Jumbo" clone. 32 of 94 clips are re-recorded with it (all 12 suggestions, g_stuckQ in both languages, g_stuckM en, g_enter en, how_study, how_talk). The ElevenLabs quota (40,000 credits) ran out, so the other 62 are still the first take (`eleven_v4`); they are listed in `public/voice/RERECORD-TODO.txt`. Mixed takes may sound slightly different until the rest are redone (about 5,500 credits).
+## Voice re-recording (done)
+- All 94 clips are now recorded with `eleven_multilingual_v2` in the owner's "Joshua Jumbo" cloned voice (the model the owner chose as sounding most like them). The earlier `eleven_v4` takes were replaced. Total ElevenLabs use for the whole voice work was roughly 20,000 credits including tests.
