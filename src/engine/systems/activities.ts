@@ -27,7 +27,7 @@ export function listActivities(ctx: Ctx): ActivityOption[] {
     let enabled = true
     let reason: string | undefined
     if (s.quiz) { enabled = false; reason = 'Finish the quiz first' }
-    else if (remaining !== undefined && remaining <= 0) { enabled = false; reason = 'Done this year' }
+    else if (remaining !== undefined && remaining <= 0) { enabled = false; reason = 'Done this year. Sleep at home to start the next year' }
     else if (c.stats.energy < def.cost.energy) { enabled = false; reason = 'Not enough Energy' }
     else if (def.cost.cash && c.stats.cash < def.cost.cash) { enabled = false; reason = 'Not enough cash' }
     else if (def.id === 'applyJob' && c.edu.level !== 'none') { enabled = false; reason = 'Finish school first' }

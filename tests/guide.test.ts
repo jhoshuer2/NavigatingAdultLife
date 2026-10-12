@@ -3,7 +3,7 @@ import { makeRng } from '../src/engine/core/rng'
 import { randomConfig } from '../src/engine/bot'
 import { createNewLife } from '../src/engine/api'
 import { buildDistrict } from '../src/world/layout'
-import { bearing, guideStep, QUEST_HINTS, suggest } from '../src/world/guide'
+import { bearing, dreamGoal, guideStep, QUEST_HINTS, suggest } from '../src/world/guide'
 import { QUESTS } from '../src/content/quests'
 import { pick, say } from '../src/content/lang'
 
@@ -71,5 +71,15 @@ describe('voice', () => {
     const v = await import('../src/platform/voice')
     v.configureVoice({ on: false, volume: 1 }); v.speak('off'); expect(spoken).toEqual([])
     v.configureVoice({ on: true, volume: 1 }); v.speak('Waka go ₦5 🙂', 'k1'); v.speak('again', 'k1'); expect(spoken).toEqual(['Waka go naira 5 '])
+  })
+  it('never keeps sending you to study once the year is used up: it tells you to end the year', () => {
+    const l = life(); l.character.dreamId = 'unsureLagos'; l.dreamStage = 0;
+    l.character.edu.level = 'sss'; l.character.stats.energy = 90
+    expect(suggest(l)!.act).toBe('study')
+    l.activityCounts.study = 2
+    const next = suggest(l)!
+    expect(next.act).not.toBe('study')
+    expect(dreamGoal(l)!.doable).toBe(false)
+    expect(dreamGoal(l)!.note).toMatch(/Sleep at home/)
   })
 })

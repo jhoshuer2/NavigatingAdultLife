@@ -245,6 +245,7 @@ export function QuestsModal() {
         {goal && (
           <div className="mt-3 rounded-2xl p-2.5" style={{ background: 'rgba(255,210,63,.12)' }}>
             <div className="text-[12px] font-bold leading-snug text-gold">📍 <Lines lang={lang} s={goal.suggestion.say} /></div>
+            {goal.note && <div className="text-[12px] leading-snug mt-1 opacity-90">⏳ {goal.note}</div>}
             <button className="chip chip-green mt-1.5" onClick={() => { audio.sfx('click'); setGuideTrack({ place: goal.suggestion.place, say: goal.suggestion.say, act: goal.suggestion.act }); openSheet(null) }}><Icon name="pin" size={12} />Show me</button>
           </div>
         )}

@@ -3,6 +3,7 @@ import type { GameState } from '@engine/core/types'
 import type { District, PlaceId } from './layout'
 import { INTERIORS } from './interiors'
 import { say, type Say } from '@content/lang'
+import { ACTIVITY_BY_ID } from '@content/activities'
 import { DREAM_BY_ID, type DreamStage, type DreamVerb } from '@content/dreams'
 
 export interface Suggestion { id: string; place: PlaceId; text: string; icon: string; say: Say; act?: string }
@@ -38,7 +39,7 @@ const GOALS: Record<DreamVerb, { place: PlaceId; icon: string; act?: string; en:
   family: { place: 'home', icon: '👪', act: 'familyTime', en: 'Spend time with your people', pcm: 'Go sit with your people' },
 }
 
-export interface DreamGoal { index: number; total: number; stage: DreamStage; suggestion: Suggestion; doable: boolean }
+export interface DreamGoal { index: number; total: number; stage: DreamStage; suggestion: Suggestion; doable: boolean; note?: string }
 /** The next step on the way to the big dream, as something the guide can point at. null when there is no path (older saves) or it is done. */
 export function dreamGoal(life: GameState): DreamGoal | null {
   const def = DREAM_BY_ID[life.character.dreamId]
@@ -49,8 +50,12 @@ export function dreamGoal(life: GameState): DreamGoal | null {
   const c = life.character
   const inSchool = c.edu.level !== 'none'
   const doable = { study: inSchool, church: c.age >= 8, hustle: c.age >= 14, save: c.age >= 14, job: !c.job && !inSchool && c.age >= 16, work: !!c.job, social: true, fit: c.age >= 10, shop: c.age >= 12, house: c.age >= 14, family: true }[stage.verb]
+  // not doable right now if the activity is used up for the year or you are too tired for it: then the guide falls back to ending the year
+  const actDef = g.act ? ACTIVITY_BY_ID[g.act] : undefined
+  const capped = !!actDef?.maxPerYear && Number(life.activityCounts[actDef.id] ?? 0) >= actDef.maxPerYear
+  const tired = !!actDef && c.stats.energy < actDef.cost.energy
   const suggestion: Suggestion = { id: `dream_${stage.verb}`, place: g.place, text: `${stage.title}: ${g.en}`, icon: g.icon, say: say(`${stage.title}. ${g.en}`, `${stage.title}. ${g.pcm}`), act: g.act }
-  return { index, total: def.stages.length, stage, suggestion, doable }
+  return { index, total: def.stages.length, stage, suggestion, doable: doable && !capped && !tired, note: capped ? 'You have done this enough for the year. Sleep at home to start the next year.' : tired ? 'You are too tired for this now. Rest first.' : undefined }
 }
 
 export function suggest(life: GameState): Suggestion | null {
