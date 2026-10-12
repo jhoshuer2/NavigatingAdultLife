@@ -319,7 +319,7 @@ export class WorldRenderer {
   private installedSet: Set<string> | null = null
   setInstalled(set: Set<string>) { this.installedSet = set; this.interior?.setInstalled(set); this.interior?.setState(this.istate) }
   applianceSpot(a: string) { return this.interior?.applianceSpot(a) ?? null }
-  claimSeat(kind: 'sofa' | 'table' | 'rug') { return this.interior?.claimSeat(kind, 'player') ?? null }
+  claimSeat(kind: 'sofa' | 'table' | 'rug' | 'chair') { return this.interior?.claimSeat(kind, 'player') ?? null }
   releaseSeat() { this.interior?.releaseSeat('player') }
   setSleeping(on: boolean, zzz = true) {
     if (!this.interior) return

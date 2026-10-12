@@ -62,7 +62,7 @@ export default function World() {
     | { kind: 'shop' }
     | { kind: 'jog' }
     | { kind: 'match'; actAs: string }
-    | { kind: 'pose'; mode: 'sofa' | 'bed' }
+    | { kind: 'pose'; mode: 'sofa' | 'bed' | 'chair' }
     | { kind: 'cook' }
     | { kind: 'dine' }
     | { kind: 'talk'; partner: Partner; role: NpcRole; setting: Setting; rounds: number; title: string; actId: string; hidden?: string; greet?: string; script?: Exchange[] }
@@ -489,7 +489,7 @@ export default function World() {
     const cmd = a.cmd
     if (cmd === 'sleep') { setHotId(null); startSleep() }
     else if (cmd.startsWith('toggle:')) toggle(cmd.slice(7) as 'light' | 'tv' | 'fan')
-    else if (cmd === 'pose:sofa' || cmd === 'pose:bed') { setHotId(null); setTask({ kind: 'pose', mode: cmd === 'pose:sofa' ? 'sofa' : 'bed' }) }
+    else if (cmd === 'pose:sofa' || cmd === 'pose:bed' || cmd === 'pose:chair') { setHotId(null); setTask({ kind: 'pose', mode: cmd === 'pose:sofa' ? 'sofa' : cmd === 'pose:chair' ? 'chair' : 'bed' }) }
     else if (cmd === 'task:cook') { setHotId(null); const why = enabledAct('meal'); if (why) g.toast(why); else setTask({ kind: 'cook' }) }
     else if (cmd === 'task:dine') { setHotId(null); const why = enabledAct('meal'); if (why) g.toast(why); else setTask({ kind: 'dine' }) }
     else if (cmd === 'task:chores') { setHotId(null); beginChores() }
@@ -659,7 +659,7 @@ export default function World() {
       {task?.kind === 'study' && !holdTask && rendRef.current && <StudyTask r={rendRef.current} mode={task.mode} onDone={() => setTask(null)} />}
       {task?.kind === 'penalty' && !holdTask && rendRef.current && <PenaltyTask r={rendRef.current} pitch={district.places.find((p) => p.id === 'pitch')!.rect} onDone={(perf) => endTask(perf)} />}
       {task?.kind === 'chores' && !holdTask && rendRef.current && <ChoresTask r={rendRef.current} motherId={INTERIORS.home?.people.find((p) => p.persistent === 'mother')?.id ?? null} helper={task.helper} onDone={(perf, hr) => endTask(perf, 0, 0, hr)} />}
-      {task?.kind === 'pose' && !holdTask && rendRef.current && <PoseTask r={rendRef.current} mode={task.mode} tvOn={appl.tv} onToggleTv={() => toggle('tv')} onWatch={() => { const why = enabledAct('tv'); if (why) g.toast(why); else g.act('tv') }} onSleep={() => startSleep()} onDone={() => setTask(null)} />}
+      {task?.kind === 'pose' && !holdTask && rendRef.current && <PoseTask r={rendRef.current} mode={task.mode} tvOn={appl.tv} onToggleTv={() => toggle('tv')} onWatch={() => { const why = enabledAct('tv'); if (why) g.toast(why); else g.act('tv') }} onSleep={() => startSleep()} onStudy={() => startStudy('desk')} onDone={() => setTask(null)} />}
       {task?.kind === 'cook' && !holdTask && rendRef.current && <CookTask r={rendRef.current} free={life.character.housing.type === 'family'} onDone={(perf, sp) => endTask(perf, 0, sp)} />}
       {task?.kind === 'dine' && !holdTask && rendRef.current && <DineTask r={rendRef.current} cash={life.character.stats.cash} onDone={(perf, sp) => endTask(sp ? perf : undefined, 0, sp)} />}
       {task?.kind === 'match' && !holdTask && rendRef.current && <MatchTask r={rendRef.current} pitch={district.places.find((p) => p.id === 'pitch')!.rect} actAs={task.actAs} onDone={(perf) => endTask(perf)} />}
