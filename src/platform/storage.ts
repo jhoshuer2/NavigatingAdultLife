@@ -30,7 +30,13 @@ function migrate(p: { schemaVersion: number; state: GameState }): GameState | nu
 export function loadMeta(): MetaProfile {
   const raw = read(META_KEY)
   if (!raw) return defaultMeta()
-  try { const d = defaultMeta(); const m = JSON.parse(raw) as MetaProfile; return { ...d, ...m, settings: { ...d.settings, ...(m.settings ?? {}) } } } catch { return defaultMeta() }
+  try {
+    const d = defaultMeta(); const m = JSON.parse(raw) as MetaProfile
+    const settings = { ...d.settings, ...(m.settings ?? {}) }
+    // sound is on by default; one time only, turn it back on for saves that have it off (people thought it was broken)
+    if (!m.soundOnV2) { settings.sound = true; settings.music = true; if (!(settings.volume > 0)) settings.volume = d.settings.volume }
+    return { ...d, ...m, soundOnV2: true, settings }
+  } catch { return defaultMeta() }
 }
 export function saveMeta(m: MetaProfile): boolean { return write(META_KEY, JSON.stringify(m)) }
 

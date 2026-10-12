@@ -6,6 +6,7 @@ export interface TokenState { freeSec: number; paidSec: number; lastRefillDay: s
 
 export interface MetaProfile {
   version: 1
+  soundOnV2?: boolean // sound and music were switched back on once for everyone (they are on by default)
   cowries: number
   unlocks: string[]
   achievements: Record<string, number>
