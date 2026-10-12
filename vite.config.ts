@@ -13,14 +13,14 @@ export default defineConfig({
       includeAssets: ['icon-192.png', 'icon-512.png'],
       manifest: {
         name: 'Navigating Adult Life', short_name: 'Adult Life', description: 'Grow up Nigerian: a funny life simulator.',
-        theme_color: '#14121f', background_color: '#14121f', display: 'standalone', orientation: 'portrait', start_url: '/', scope: '/',
+        theme_color: '#14121f', background_color: '#14121f', display: 'standalone', orientation: 'portrait', id: '/', start_url: '/', scope: '/', categories: ['games', 'simulation'],
         icons: [
           { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },
           { src: 'icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
-      workbox: { globPatterns: ['**/*.{js,css,html,png,svg,woff2}'], runtimeCaching: [{ urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/i, handler: 'StaleWhileRevalidate', options: { cacheName: 'fonts' } }] },
+      workbox: { globPatterns: ['**/*.{js,css,html,png,svg,woff2}'], runtimeCaching: [{ urlPattern: /\/voice\/.*\.(mp3|json)$/i, handler: 'CacheFirst', options: { cacheName: 'voice', expiration: { maxEntries: 140 }, cacheableResponse: { statuses: [200] } } }, { urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/i, handler: 'StaleWhileRevalidate', options: { cacheName: 'fonts' } }] },
     }),
   ],
   resolve: {

@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { useGame } from '../../store'
+import { InstallRow } from '../Install'
 import { Btn, CountUp, Ribbon, RoundBtn, Tile } from '../components'
 import { LANGS, plain, say } from '@content/lang'
 import { speak, voiceAvailable } from '@platform/voice'
@@ -150,6 +151,8 @@ export function Settings() {
       <h2 className="font-display text-xl text-white/90 uppercase tracking-wide mt-6 mb-1">Play time</h2>
       <div className="card p-3 mt-1 text-sm">Time left: <b>{fmtTime(remainingSec(meta))}</b>. Free time refills daily (up to 2 hours banked).
         <div className="mt-2"><Toggle label="Unlimited time (playtest mode)" on={meta.tokens.unlimited} onChange={setUnlimited} /></div></div>
+      <h2 className="font-display text-xl text-white/90 uppercase tracking-wide mt-6 mb-1">Install</h2>
+      <InstallRow />
       <h2 className="font-display text-xl text-white/90 uppercase tracking-wide mt-6 mb-1">Your data</h2>
       <div className="grid gap-2 mt-1">
         <Btn variant="ghost" onClick={download}>⬇️ Export save file</Btn>

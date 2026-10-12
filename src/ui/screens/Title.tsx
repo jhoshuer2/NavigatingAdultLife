@@ -3,7 +3,10 @@ import { useGame } from '../../store'
 import { Btn, nairaShort } from '../components'
 import { Icon, type IconName } from '../icons'
 import { TitleArt } from '../TitleArt'
+import { InstallChip } from '../Install'
 import { audio } from '@platform/audio'
+import { speakLine } from '@platform/voice'
+import { vlang } from '../../content/lang'
 import { fmtTime, remainingSec } from '@platform/tokens'
 import { randomConfig } from '@engine/bot'
 import { makeRng } from '@engine/core/rng'
@@ -33,7 +36,7 @@ export function Title({ hold = false }: { hold?: boolean }) {
   useEffect(() => {
     if (hold) return
     audio.busArrive(DRIVE_SEC)
-    const a = window.setTimeout(() => setSay(true), DRIVE_SEC * 1000 - 150)
+    const a = window.setTimeout(() => { setSay(true); void speakLine({ id: 'bus_greet', lang: vlang(useGame.getState().meta.settings.lang), text: GREETING, key: 'bus_greet', gapMs: 20000 }) }, DRIVE_SEC * 1000 - 150)
     const b = window.setTimeout(() => setSay(false), DRIVE_SEC * 1000 + 7000)
     return () => { clearTimeout(a); clearTimeout(b) }
   }, [hold])
@@ -67,6 +70,7 @@ export function Title({ hold = false }: { hold?: boolean }) {
           <Round icon="scroll" label="Lives" onClick={() => go('history')} />
           <Round icon="gear" label="Settings" onClick={() => go('settings')} />
         </div>
+        <InstallChip />
         {!life && meta.stats.lives === 0 && <button className="text-[12px] font-bold opacity-60 underline" onClick={() => newLife(quick())}>Quick start with a random life</button>}
         <span className="hidden">{nairaShort(0)}</span>
       </div>
