@@ -129,6 +129,7 @@ export function hustleMult(ctx: Ctx): number {
   }
   if (c.items.includes('laptop')) m *= 1.15
   if (c.items.includes('sewing')) m *= 1.25
+  if (c.items.includes('coinPouch')) m *= 1.15
   if (ctx.s.flags.marketKid) m *= 1.1
   return m
 }

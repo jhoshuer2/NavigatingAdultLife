@@ -12,7 +12,9 @@ import { DREAM_BY_ID } from '@content/dreams'
 import { TRAIT_BY_ID } from '@content/traits'
 import { ARCHETYPE_BY_ID } from '@content/archetypes'
 import { TRACKS } from '@content/jobs'
-import { ITEM_BY_ID } from '@content/items'
+import { ITEM_BY_ID, wearOf } from '@content/items'
+import { CITIES, cityOfHome } from '@content/cities'
+import { DISTRICTS } from '../world/layout'
 import { RENT_NAME } from '@engine/systems/economy'
 import { fmtTime, remainingSec, secondsToNextRefill, TOP_UP_PACKS } from '@platform/tokens'
 import type { NpcRole } from '@engine/core/types'
@@ -259,14 +261,16 @@ export function ProfileModal() {
   return (
     <Modal title="Profile" onClose={() => openSheet(null)} wide>
       <div className="flex gap-3 items-center">
-        <div className="card p-1 pattern-ankara"><Avatar look={c.appearance} gender={c.gender} age={c.age} size={96} /></div>
+        <div className="card p-1 pattern-ankara"><Avatar look={c.appearance} gender={c.gender} age={c.age} wear={wearOf(c.items)} size={96} /></div>
         <div className="min-w-0">
           <div className="font-display text-3xl text-danfo leading-none">{c.nickname || c.name}</div>
           <div className="text-xs opacity-70">{c.gender === 'male' ? 'Male' : 'Female'} · {HERITAGE_LABEL[c.heritage]} · age {c.age}</div>
           <div className="text-xs mt-1">{arch.icon} {arch.title}</div>
           <div className="text-xs">{dream.icon} Dream: {dream.name}</div>
+          <div className="text-xs opacity-80">📍 {DISTRICTS[c.housing.districtId]?.name ?? 'Home'}, {CITIES[cityOfHome(c.housing.districtId)].name}</div>
         </div>
       </div>
+      {ITEM_BY_ID[arch.heirloom] && <div className="mt-3 rounded-2xl p-2.5 flex items-center gap-3" style={{ background: 'rgba(255,210,63,.14)', boxShadow: 'inset 0 0 0 1.5px rgba(255,210,63,.5)' }}><span className="text-[30px] leading-none">{ITEM_BY_ID[arch.heirloom].icon}</span><div className="min-w-0"><div className="text-[10px] font-extrabold uppercase tracking-wider text-yellow-300">Handed down by your luck scroll</div><div className="font-display text-[16px] leading-tight">{ITEM_BY_ID[arch.heirloom].name}</div><div className="text-[12px] opacity-80 leading-snug">{ITEM_BY_ID[arch.heirloom].desc}</div></div></div>}
       <div className="mt-3 flex flex-wrap gap-1.5">{c.traits.map((t) => <span key={t} className="chip">{TRAIT_BY_ID[t].icon} {TRAIT_BY_ID[t].name}</span>)}</div>
       <div className="grid grid-cols-2 gap-2 mt-3 text-sm">
         <div className="card p-2"><div className="text-xs opacity-60">Education</div><b>{{ none: c.edu.credential === 'degree' ? 'Degree' : c.edu.credential === 'ond' ? 'Diploma (OND)' : c.edu.credential === 'trade' ? 'Trade certified' : c.edu.credential === 'ssce' ? 'WAEC/SSCE' : 'Primary', primary: 'Primary school', jss: 'Junior secondary', sss: 'Senior secondary', university: 'University', polytechnic: 'Polytechnic', apprentice: 'Apprentice' }[c.edu.level]}</b></div>

@@ -1,5 +1,6 @@
 import type { GameState, NpcRole } from '../core/types'
 import { fmtNaira } from '../core/helpers'
+import { cityOfHome, localise } from '@content/cities'
 
 const ROLE_TOKENS: NpcRole[] = ['mother', 'father', 'sibling', 'friend', 'friend2', 'partner', 'boss', 'rival', 'neighbour', 'mentor', 'colleague']
 
@@ -20,5 +21,5 @@ export function fillText(s: GameState, text: string): string {
     hall: 'campus',
   }
   for (const r of ROLE_TOKENS) map[r] = s.npcs[s.roles[r] ?? '']?.name ?? ({ mother: 'Mama', father: 'Papa', sibling: 'your sibling', friend: 'your friend', friend2: 'your other friend', partner: 'your partner', boss: 'your boss', rival: 'a rival', neighbour: 'the neighbour', mentor: 'your mentor', colleague: 'a colleague' } as Record<string, string>)[r]
-  return text.replace(/\{(\w+)\}/g, (_, k: string) => map[k] ?? `{${k}}`)
+  return localise(cityOfHome(c.housing.districtId), text.replace(/\{(\w+)\}/g, (_, k: string) => map[k] ?? `{${k}}`))
 }

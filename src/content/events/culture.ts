@@ -19,7 +19,7 @@ export const cultureEvents: GameEvent[] = [
       ch('respect', { label: 'Take part in the rites with the elders', fx: [rep(7), happy(5), know(1)], text: 'You learned the order of the prayers, and the meaning behind each. It stays with you.' }),
       ch('work', { label: 'Send your regards and stay in the city', fx: [rep(-3), happy(-1)], text: 'Your phone rang all day with "when are you coming home?"' }),
     ] }),
-  ev({ id: 'evt_x_eyo', title: 'Eyo on the Island', stage: ANY, w: 5, cd: 4, tags: ['festival', 'h:yoruba'], when: { all: [{ any: [{ heritage: 'yoruba' }, { heritage: 'mix' }] }] },
+  ev({ id: 'evt_x_eyo', title: 'Eyo on the Island', stage: ANY, w: 5, cd: 4, tags: ['festival', 'h:yoruba'], when: { all: [{ city: 'lagos' }, { any: [{ heritage: 'yoruba' }, { heritage: 'mix' }] }] },
     text: "Lagos Island turns white: tall figures in flowing white robes and wide hats move through the streets as drummers follow. People say the Eyo procession is a blessing and a spectacle at the same time. Roads are closed and everyone is smiling.",
     choices: [
       ch('watch', { label: 'Watch from the roadside and take photos', fx: [happy(7), rep(2), stress(-3)], text: 'You returned with a dusty shirt and a very happy phone gallery.' }),
@@ -199,5 +199,37 @@ export const cultureEvents: GameEvent[] = [
     choices: [
       ch('open', { label: 'Open a POS point (₦200,000)', cost: { cash: 200000, energy: 12 }, check: { stat: 'hustle', difficulty: 38 }, out: { success: { effects: [hustle(380000), rep(3)], text: 'Steady cash and steady customers. The umbrella pays for itself.' }, fail: { effects: [hustle(60000), stress(4), rep(-1)], text: 'Network trouble and long queues cut your profit.' } } }),
       ch('pass', { label: 'Pass', fx: [], text: 'Some opportunities are for other people.' }),
+    ] }),
+  // ---- Abuja ----
+  ev({ id: 'evt_x_abj_taskforce', title: 'The task force comes calling', stage: ['teen', 'youngAdult', 'adult'], w: 6, cd: 4, tags: ['abuja'], when: { all: [{ city: 'abuja' }] },
+    text: "A city task force truck rolls into the street and the roadside traders vanish in about forty seconds. Umbrellas fold, tables disappear, and one woman balances a whole bucket of oranges on her head while walking very casually. Abuja believes in tidy streets.",
+    choices: [
+      ch('help', { label: 'Help a trader carry her goods to safety', cost: { energy: 6 }, fx: [rep(3), happy(2)], text: 'She blessed you in two languages and gave you free oranges.' }),
+      ch('watch', { label: 'Stand aside and mind your business', fx: [stress(1)], text: 'Ten minutes later the street looks like nothing happened.' }),
+    ] }),
+  ev({ id: 'evt_x_abj_jabi', title: 'Weekend at the lake', stage: ['teen', 'youngAdult', 'adult'], w: 6, cd: 3, tags: ['abuja'], when: { all: [{ city: 'abuja' }] },
+    text: "Everyone is heading to the lake this weekend: food stalls, cold drinks, a small boat ride and a very confident photographer. The air is calm, the roads are wide, and nobody is rushing. This is the Abuja version of rest.",
+    choices: [
+      ch('go', { label: 'Go with your people', cost: { cash: 8000, energy: 8 }, fx: [happy(7), stress(-4), rel('friend', 3)], text: 'You laughed until your cheeks hurt. The photographer sent the pictures a week later.' }),
+      ch('home', { label: 'Stay home and recharge', fx: [stress(-2), happy(2)], text: 'The couch won again.' }),
+    ] }),
+  ev({ id: 'evt_x_abj_secretariat', title: 'Who do you know in the secretariat?', stage: ['youngAdult', 'adult'], w: 5, cd: 4, tags: ['abuja', 'career'], when: { all: [{ city: 'abuja' }, { employed: false }] },
+    text: "In Abuja, half the conversations at a party end the same way: \"Do you know anybody at the ministry?\" A neighbour says a cousin of a friend can look at your CV, but a good first impression will matter more than the folder.",
+    choices: [
+      ch('meet', { label: 'Dress sharp and meet them', cost: { cash: 15000, energy: 8 }, check: { stat: 'charm', difficulty: 36 }, out: { success: { effects: [rep(4), happy(3), flag('secretariatContact')], text: 'They liked you. Your CV now has a friendly face behind it.' }, fail: { effects: [stress(2)], text: 'They said "we will call". Everybody knows what that means.' } } }),
+      ch('apply', { label: 'Apply online and hope', fx: [stress(1)], text: 'The portal said "submitted". Nothing else said anything.' }),
+    ] }),
+  ev({ id: 'evt_x_abj_cab', title: 'The green cab fare', stage: ['teen', 'youngAdult', 'adult'], w: 6, cd: 3, tags: ['abuja'], when: { all: [{ city: 'abuja' }] },
+    text: "You flag down a green cab and the driver quotes you a price that sounds like a typo. \"Oga, na town o. Everything is far in Abuja.\" You notice the roads are wide, the traffic is calm, and somehow the fare is still ambitious.",
+    choices: [
+      ch('haggle', { label: 'Haggle politely', check: { stat: 'charm', difficulty: 30 }, out: { success: { effects: [cash(600), happy(2)], text: 'He met you halfway, and gave you gist as a bonus.' }, fail: { effects: [cash(-400), stress(1)], text: 'He remained firm, and the price remained firm.' } } }),
+      ch('pay', { label: 'Pay and sit back', cost: { cash: 2500 }, fx: [stress(-1)], text: 'The air conditioner worked. That was worth something.' }),
+    ] }),
+  // ---- the rest of Nigeria ----
+  ev({ id: 'evt_x_carnival', title: 'Carnival season', stage: ANY, w: 5, cd: 5, tags: ['festival', 'h:mix'], when: { all: [{ heritage: 'mix' }] },
+    text: "December brings the carnival: bands in feathers and sequins, costumes that took months to sew, and drums you can feel in your ribs. Your family has opinions about which band is best, and every opinion is delivered loudly.",
+    choices: [
+      ch('dance', { label: 'Join a band and dance the whole route', cost: { cash: 20000, energy: 12 }, fx: [happy(8), rep(2), health(1)], text: 'Your feet hurt, your heart sang, and the photographs are legendary.' }),
+      ch('watch', { label: 'Watch from the roadside with food', cost: { cash: 5000 }, fx: [happy(4), stress(-2)], text: 'You ate well and shouted for your favourite band.' }),
     ] }),
 ]

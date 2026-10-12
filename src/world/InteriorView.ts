@@ -232,7 +232,7 @@ export class InteriorView {
       if (p.persistent && !persistent) continue
       const name = persistent?.name ?? p.name
       const gender: Gender = persistent?.gender ?? (p.role === 'cook' || p.role === 'clerk' || ['s2', 's4', 'm1', 'm3', 'm5'].includes(p.id) ? 'female' : 'male')
-      const parts = buildHuman({ look: hashLook(name, gender), age: p.role === 'child' ? 6 : p.role === 'teacher' || p.role === 'boss' || p.role === 'elder' || p.role === 'mother' || p.role === 'father' ? 45 : 24, scale: 1.1 })
+      const parts = buildHuman({ look: hashLook(name, gender), gender, age: p.role === 'child' ? 6 : p.role === 'teacher' || p.role === 'boss' || p.role === 'elder' || p.role === 'mother' || p.role === 'father' ? 45 : 24, scale: 1.1 })
       parts.group.position.set(p.x, 0, p.z); parts.group.rotation.y = Math.PI
       this.scene.add(parts.group)
       const sprite = this.label(name); sprite.position.set(p.x, 3.5, p.z); this.scene.add(sprite)

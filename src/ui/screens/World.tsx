@@ -31,7 +31,9 @@ import { speakLine } from '@platform/voice'
 import { COACH } from '@content/voiceLines'
 import { plain, say, vlang, type Lang } from '@content/lang'
 import { installedSet } from '@content/appliances'
-import { ITEM_BY_ID } from '@content/items'
+import { ITEM_BY_ID, wearOf } from '@content/items'
+import { Relocate } from '../Relocate'
+import { CITIES, cityOfHome } from '@content/cities'
 import { outdoorAnchor, presenceAt, type Activity } from '../../world/residents'
 import { audio } from '@platform/audio'
 import { track, setAnalyticsContext } from '@platform/analytics'
@@ -109,7 +111,7 @@ export default function World() {
     if (!el || !life) return
     const c = life.character
     let r: WorldRenderer
-    try { r = new WorldRenderer(el, district, { look: c.appearance, age: c.age, uniform: c.edu.level !== 'none' && c.age < 18, month, hour: hourRef.current, spawn: SPAWN }) } catch { track('webgl_unavailable'); setFail(true); return }
+    try { r = new WorldRenderer(el, district, { look: c.appearance, age: c.age, gender: c.gender, wear: wearOf(c.items), uniform: false, month, hour: hourRef.current, spawn: SPAWN }) } catch { track('webgl_unavailable'); setFail(true); return }
     rendRef.current = r
     r.onNear(setNear)
     r.onNearInside((n) => {
@@ -564,7 +566,7 @@ export default function World() {
         <div className="flex items-start gap-2 px-2">
           <button className="hud-glass pointer-events-auto flex items-center gap-2.5 rounded-[22px] pl-1.5 pr-3 py-1.5 text-left flex-1 min-w-0" onClick={() => { audio.sfx('click'); g.openSheet('profile') }} aria-label={`${c.nickname || c.name}, age ${c.age}. Open profile`}>
             <span className="relative shrink-0 rounded-full overflow-hidden" style={{ width: 52, height: 52, background: 'radial-gradient(circle at 35% 25%, #ffe27a, #ff7a4d)', boxShadow: '0 0 0 2px #1a0f55, 0 0 0 4px var(--gold)' }}>
-              <span className="block" style={{ marginTop: 1, marginLeft: -2 }}><Avatar look={c.appearance} gender={c.gender} age={c.age} uniform={c.edu.level !== 'none' && c.age < 18} size={56} /></span>
+              <span className="block" style={{ marginTop: 1, marginLeft: -2 }}><Avatar look={c.appearance} gender={c.gender} age={c.age} wear={wearOf(c.items)} size={56} /></span>
             </span>
             <span className="min-w-0 flex-1">
               <span className="flex items-center justify-between gap-2">
@@ -864,7 +866,7 @@ function MapModal({ district, x, z, h, hour, life, sugPlace, onClose, onGo, trai
   const place = district.places.find((p) => p.id === sel)
   const st = sel ? stateOf(sel) : null
   return (
-    <Modal title={DISTRICTS[life.character.housing.districtId]?.name ?? 'Your area'} onClose={onClose}>
+    <Modal title={`${DISTRICTS[life.character.housing.districtId]?.name ?? 'Your area'}, ${CITIES[cityOfHome(life.character.housing.districtId)].name}`} onClose={onClose}>
       <div className="relative">
       <canvas ref={ref} width={S} height={S} className="w-full rounded-3xl touch-none" style={{ border: '3px solid rgba(255,255,255,.7)', boxShadow: '0 8px 24px rgba(0,0,0,.5)', aspectRatio: '1 / 1' }} onPointerUp={tap} onPointerMove={move} onPointerLeave={() => setHover(null)} aria-label="Map. Tap a place to select it." />
         {hover && <PlaceTip place={hover.place} from={{ x, z }} lang={lang} open={stateOf(hover.place.id) !== 'closed'} px={hover.px} py={hover.py} />}
@@ -890,6 +892,7 @@ function MapModal({ district, x, z, h, hour, life, sugPlace, onClose, onGo, trai
       <div className="grid grid-cols-4 gap-2 mt-3">
         {district.places.map((p) => <button key={p.id} className={`tile !min-h-[64px] !p-1 ${p.id === sel ? 'is-on' : ''}`} style={{ opacity: stateOf(p.id) === 'open' ? 1 : 0.55 }} onClick={() => setSel(p.id)} aria-label={p.name}><span className="text-2xl leading-none">{stateOf(p.id) === 'closed' ? '🔒' : p.icon}</span></button>)}
       </div>
+      <Relocate />
     </Modal>
   )
 }

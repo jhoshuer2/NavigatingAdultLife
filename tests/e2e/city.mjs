@@ -1,0 +1,38 @@
+// Create a character through the real screens (city, look, scroll, home, name) and check it arrives in the world as chosen.
+import { chromium } from 'playwright-core'
+import { mkdirSync } from 'node:fs'
+const OUT = process.env.OUT ?? '/tmp/city'; mkdirSync(OUT, { recursive: true })
+const CITY = process.env.CITY ?? 'Abuja'
+const browser = await chromium.launch({ executablePath: process.env.CHROME, args: ['--no-sandbox', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--use-gl=angle'] })
+const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
+page.setDefaultTimeout(8000)
+const errors = []; page.on('pageerror', (e) => errors.push(String(e)))
+const shot = async (n, wait = 600) => { await page.waitForTimeout(wait); await page.screenshot({ path: `${OUT}/${n}.png` }) }
+await page.goto(`${process.env.BASE ?? 'http://localhost:4173'}/?unlimited=1&debug=1`)
+await page.waitForFunction(() => window.__nal)
+await page.locator('button.btn:has-text("Play")').first().click()
+await page.getByText('Where are we starting').waitFor(); await shot('01-city')
+await page.locator('button.card-btn', { hasText: CITY }).click(); await shot('02-city-picked', 300)
+await page.getByRole('button', { name: /Next/ }).click(); await shot('03-look')
+await page.getByRole('tab', { name: /Outfit/ }).click(); await page.getByRole('button', { name: /Office/ }).click(); await page.getByRole('button', { name: /Ankara/ }).click(); await shot('04-fit', 300)
+await page.getByRole('button', { name: /Next/ }).click()
+await page.locator('button.tile[aria-pressed]').nth(0).click(); await page.locator('button.tile[aria-pressed]').nth(1).click(); await page.getByRole('button', { name: /Next/ }).click()
+await page.locator('button.card-btn').first().click(); await page.getByRole('button', { name: /Next/ }).click()
+await page.getByRole('button', { name: /Spin/ }).click(); await page.waitForTimeout(1800); await shot('05-scroll')
+await page.getByRole('button', { name: /Next/ }).click(); await shot('06-home')
+await page.locator('button.tile', { hasText: /./ }).first().click().catch(() => {})
+const homes = await page.locator('button.tile:not([disabled])').count(); console.log('home tiles', homes)
+await page.locator('button.tile:not([disabled])').first().click(); await page.getByRole('button', { name: /Next/ }).click(); await shot('07-name')
+await page.getByPlaceholder('Your name').fill('Ekaette'); await page.getByRole('button', { name: /Start my life/ }).click()
+await page.waitForTimeout(2500)
+await page.evaluate(() => { const g = window.__nal.useGame; g.setState({ meta: { ...g.getState().meta, seenTutorial: true } }) })
+await page.waitForTimeout(1500)
+for (let i = 0; i < 4; i++) { const b = page.locator('.sheet button:has-text("March in"), .sheet button:has-text("Continue"), .sheet button:has-text("OK")').first(); if (await b.count()) { await b.click().catch(() => {}); await page.waitForTimeout(700) } }
+await page.keyboard.press('Escape'); await page.waitForTimeout(800); await shot('08-world')
+await page.evaluate(() => window.__world.placePlayer(-14, 0, 0)); await page.waitForTimeout(1200); await shot('09-facing-camera')
+await page.evaluate(() => window.__world.placePlayer(-14, 0, Math.PI)); await page.waitForTimeout(1200); await shot('10-facing-away')
+await page.evaluate(() => window.__world.placePlayer(1, 14, Math.PI)); await page.waitForTimeout(1500); await shot('11-busstop')
+const c = await page.evaluate(() => { const l = window.__nal.useGame.getState().life.character; return { name: l.name, g: l.gender, home: l.housing.districtId, items: l.items, look: l.appearance } })
+console.log(JSON.stringify(c))
+console.log('errors', errors)
+await browser.close()

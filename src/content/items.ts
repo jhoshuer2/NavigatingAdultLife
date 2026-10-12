@@ -1,5 +1,8 @@
 import type { Effect } from '@engine/core/types'
 
+/** What a character visibly wears or carries (3D world and portrait). */
+export type Wear = 'chain' | 'badge' | 'pouch' | 'scarf' | 'glasses' | 'backpack' | 'cap'
+
 export interface ItemDef {
   id: string
   name: string
@@ -9,6 +12,8 @@ export interface ItemDef {
   minAge: number
   effects?: Effect[]
   appliance?: boolean
+  heirloom?: boolean // handed down by the luck scroll, never sold in the market
+  wear?: Wear[]
   light?: boolean // light enough to carry home yourself
   passive?: { studyBonus?: number; hustleMult?: number; hireBonus?: number; yearlyHappiness?: number; yearlyStress?: number; yearlyRep?: number; examBonus?: number }
 }
@@ -28,5 +33,15 @@ export const ITEMS: ItemDef[] = [
   { id: 'fan', name: 'Standing fan', icon: '🌀', desc: 'Survive the heat. Light enough to carry home.', price: 45000, minAge: 12, appliance: true, light: true, passive: { yearlyStress: -1 } },
   { id: 'ac', name: 'Air conditioner', icon: '❄️', desc: 'Cool nights, hot electricity bills. Needs a loader.', price: 550000, minAge: 18, appliance: true, passive: { yearlyStress: -2 } },
   { id: 'medCover', name: 'Health plan (HMO)', icon: '🩺', desc: 'Hospital bills hurt less for the rest of your life.', price: 250000, minAge: 18, effects: [{ stat: 'health', delta: 4 }] },
+  // Heirlooms: one comes with every luck-scroll result. They are on your character from the first day and they work.
+  { id: 'goldChain', name: 'Grandpa’s gold chain', icon: '📿', desc: 'Old money shows. People take you more seriously.', price: 0, minAge: 0, heirloom: true, wear: ['chain'], passive: { yearlyRep: 1, hireBonus: 2 } },
+  { id: 'idBadge', name: 'Federal ID lanyard', icon: '🪪', desc: 'Your parent’s name opens doors. Interviews go easier.', price: 0, minAge: 0, heirloom: true, wear: ['badge'], passive: { hireBonus: 4, examBonus: 2 } },
+  { id: 'coinPouch', name: 'Mama’s coin pouch', icon: '👝', desc: 'Every kobo counts. Your side hustles pay more.', price: 0, minAge: 0, heirloom: true, wear: ['pouch'], passive: { hustleMult: 1.15 } },
+  { id: 'familyScarf', name: 'Mama’s ankara scarf', icon: '🧣', desc: 'Seven people, one scarf, plenty of love. Happier every year.', price: 0, minAge: 0, heirloom: true, wear: ['scarf'], passive: { yearlyHappiness: 2 } },
+  { id: 'scholarKit', name: 'Teacher’s backpack and glasses', icon: '🎒', desc: 'A teacher believed in you. You study and write exams better.', price: 0, minAge: 0, heirloom: true, wear: ['backpack', 'glasses'], passive: { studyBonus: 2, examBonus: 4 } },
+  { id: 'cousinCap', name: 'Cousin’s cap from abroad', icon: '🧢', desc: 'A little of the world on your head. Good vibes, better hiring odds.', price: 0, minAge: 0, heirloom: true, wear: ['cap'], passive: { yearlyHappiness: 1, hireBonus: 3 } },
 ]
 export const ITEM_BY_ID = Object.fromEntries(ITEMS.map((i) => [i.id, i]))
+
+/** Everything the character visibly wears, from the items they own. */
+export const wearOf = (items: string[]): Wear[] => items.flatMap((i) => ITEM_BY_ID[i]?.wear ?? [])

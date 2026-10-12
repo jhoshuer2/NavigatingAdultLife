@@ -114,6 +114,12 @@ export function History() {
   )
 }
 
+function SoundCheck() {
+  const [state, setState] = useState<string>('')
+  const msg: Record<string, string> = { running: 'Playing. If you hear nothing, raise the phone volume and check the silent switch.', suspended: 'Your browser is blocking sound. Tap this button again.', waiting: 'Sound has not started yet. Tap again.', off: 'Sound effects are switched off above.' }
+  return <div className="card p-3"><Btn variant="ghost" onClick={async () => setState(await audio.check())}>🔊 Test sound</Btn>{state && <div className="text-xs mt-2 opacity-80">{msg[state]}</div>}</div>
+}
+
 export function Settings() {
   const { meta, updateSettings, exportJson, importJson, toast, setUnlimited, life, setConsent, resetTips } = useGame()
   const file = useRef<HTMLInputElement>(null)
@@ -136,6 +142,7 @@ export function Settings() {
       <h2 className="font-display text-xl text-white/90 uppercase tracking-wide mt-6 mb-1">Sound and display</h2>
       <div className="grid gap-2">
         <Toggle label="Sound effects" on={s.sound} onChange={(v) => { updateSettings({ sound: v }); audio.configure({ ...s, sound: v }) }} />
+        <SoundCheck />
         <Toggle label="Music" on={s.music} onChange={(v) => { updateSettings({ music: v }); audio.configure({ ...s, music: v }) }} />
         <div className="card p-3"><label className="font-bold block mb-1" htmlFor="vol">Volume</label><input id="vol" type="range" min="0" max="1" step="0.05" value={s.volume} onChange={(e) => { const v = Number(e.target.value); updateSettings({ volume: v }); audio.configure({ ...s, volume: v }) }} className="w-full" /></div>
         <Toggle label="Reduced motion" on={s.reducedMotion} onChange={(v) => { updateSettings({ reducedMotion: v }); document.documentElement.classList.toggle('reduce-motion', v) }} />
@@ -165,7 +172,7 @@ export function Settings() {
         <Btn variant="ghost" onClick={() => { const blob = new Blob([exportFlags()], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'nal-feedback.json'; a.click(); URL.revokeObjectURL(a.href) }}>⬇️ Export flags</Btn>
         <Btn variant="ghost" onClick={() => { if (confirm('Clear all saved flags?')) { clearFlags(); toast('Flags cleared') } }}>🗑 Clear</Btn>
       </div>
-      <p className="text-xs opacity-50 mt-6">Navigating Adult Life · playtest build · music and art are placeholders. Saves live in this browser only.</p>
+      <p className="text-xs opacity-50 mt-6">Navigating Adult Life · build {__BUILD__} · music and art are placeholders. Saves live in this browser only.</p>
     </Page>
   )
 }

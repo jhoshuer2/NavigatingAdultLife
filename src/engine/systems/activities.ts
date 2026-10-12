@@ -239,7 +239,7 @@ export function answerQuiz(ctx: Ctx, optionIndex: number): { correct: boolean; f
 export function shopItems(ctx: Ctx) {
   const c = ctx.s.character
   const base = new Set(BASE_BY_HOUSING[c.housing.type] ?? [])
-  return ITEMS.filter((i) => c.age >= i.minAge && !c.items.includes(i.id) && !(i.appliance && base.has(i.id))).map((i) => ({ item: i, affordable: c.stats.cash >= i.price }))
+  return ITEMS.filter((i) => !i.heirloom && c.age >= i.minAge && !c.items.includes(i.id) && !(i.appliance && base.has(i.id))).map((i) => ({ item: i, affordable: c.stats.cash >= i.price }))
 }
 
 export function jobOptions(ctx: Ctx) {

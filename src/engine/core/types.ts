@@ -153,6 +153,7 @@ export type Condition =
   | { jobLevelAtLeast: number }
   | { trait: TraitId }
   | { heritage: Heritage }
+  | { city: 'lagos' | 'abuja' }
   | { tier: FamilyTier | FamilyTier[] }
   | { gender: Gender }
   | { married: boolean }

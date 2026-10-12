@@ -30,7 +30,7 @@ function migrate(p: { schemaVersion: number; state: GameState }): GameState | nu
 export function loadMeta(): MetaProfile {
   const raw = read(META_KEY)
   if (!raw) return defaultMeta()
-  try { return { ...defaultMeta(), ...(JSON.parse(raw) as MetaProfile) } } catch { return defaultMeta() }
+  try { const d = defaultMeta(); const m = JSON.parse(raw) as MetaProfile; return { ...d, ...m, settings: { ...d.settings, ...(m.settings ?? {}) } } } catch { return defaultMeta() }
 }
 export function saveMeta(m: MetaProfile): boolean { return write(META_KEY, JSON.stringify(m)) }
 
@@ -41,6 +41,6 @@ export function importSave(text: string): { life: GameState | null; meta: MetaPr
   try {
     const p = JSON.parse(text) as { app?: string; life: GameState | null; meta: MetaProfile }
     if (p.app !== 'navigating-adult-life' || !p.meta) return null
-    return { life: p.life ?? null, meta: { ...defaultMeta(), ...p.meta } }
+    return { life: p.life ?? null, meta: { ...defaultMeta(), ...p.meta, settings: { ...defaultMeta().settings, ...(p.meta.settings ?? {}) } } }
   } catch { return null }
 }

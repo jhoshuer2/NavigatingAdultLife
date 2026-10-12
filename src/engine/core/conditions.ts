@@ -1,3 +1,4 @@
+import { cityOfHome } from '@content/cities'
 import type { Condition, ConditionGroup, GameState } from './types'
 import type { Rng } from './rng'
 import { credentialAtLeast, npcByRole, stageForAge } from './helpers'
@@ -23,6 +24,7 @@ export function evalCondition(s: GameState, c: Condition, rng?: Rng): boolean {
   if ('jobLevelAtLeast' in c) return (ch.job?.level ?? 0) >= c.jobLevelAtLeast
   if ('trait' in c) return ch.traits.includes(c.trait)
   if ('heritage' in c) return ch.heritage === c.heritage
+  if ('city' in c) return cityOfHome(ch.housing.districtId) === c.city
   if ('tier' in c) return Array.isArray(c.tier) ? c.tier.includes(ch.familyTier) : ch.familyTier === c.tier
   if ('gender' in c) return ch.gender === c.gender
   if ('married' in c) return !!ch.spouseId === c.married

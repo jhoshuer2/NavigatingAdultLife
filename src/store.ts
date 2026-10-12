@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { GameState, NewLifeConfig, Lifestyle, QuizQuestion } from '@engine/core/types'
-import { createNewLife, doActivity, setClock, setFlag, payCash, submitQuizAnswer, finishActions, chooseOption, continueAfterEvent, advanceYear, setLifestyle, applyDashResult, type ActivityArgs, type MiniGameResult } from '@engine/api'
+import { createNewLife, doActivity, setClock, setFlag, payCash, submitQuizAnswer, finishActions, chooseOption, continueAfterEvent, advanceYear, setLifestyle, applyDashResult, relocate, type ActivityArgs, type MiniGameResult } from '@engine/api'
 import { ACHIEVEMENT_BY_ID } from '@content/achievements'
 import { defaultMeta, mergeEnding, UNLOCKABLES, type MetaProfile, type Settings } from '@platform/meta'
 import { loadLife, loadMeta, saveLife, saveMeta, importSave, exportSave } from '@platform/storage'
@@ -92,6 +92,7 @@ interface Store {
   setLang: (l: 'en' | 'pcm' | 'both') => void
   setGuideTrack: (t: { place: PlaceId; say: Say; act?: string; voice?: string } | null) => void
   setConsent: (granted: boolean) => void
+  moveHome: (homeId: string) => boolean
 }
 
 let toastId = 1
@@ -236,6 +237,14 @@ export const useGame = create<Store>((set, get) => {
     setLang: (l) => { const m = get().meta; setMeta({ ...m, langAsked: true, settings: { ...m.settings, lang: l } }) },
     setGuideTrack: (t) => set({ guideTrack: t, sheet: t ? null : get().sheet }),
     finishTutorial: () => { if (!get().meta.seenTutorial) track('tutorial_completed'); setMeta({ ...get().meta, seenTutorial: true }) },
+    moveHome: (homeId) => {
+      const life = get().life; if (!life) return false
+      const r = relocate(life, homeId)
+      if (!r.ok) { get().toast(r.reason ?? 'You cannot move right now.'); return false }
+      commit(r.state); set({ sheet: null, hour: get().hour })
+      get().toast('You moved. New streets, new neighbours.')
+      return true
+    },
     setConsent: (granted) => { setMeta({ ...get().meta, consentAnalytics: granted, consentAsked: true }); setAnalyticsConsent(granted) },
   }
 })

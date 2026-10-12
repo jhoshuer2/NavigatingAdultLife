@@ -1,5 +1,6 @@
 // Walkable district layout. Pure data + helpers: no Three.js, no DOM. Units are metres; x east, z south.
 import { makeRng } from '@engine/core/rng'
+import { CITIES, type CityId } from '@content/cities'
 
 export interface Rect { x0: number; x1: number; z0: number; z1: number }
 export type PlaceId = 'home' | 'school' | 'market' | 'mamaput' | 'pitch' | 'worship' | 'busstop' | 'office' | 'jobcentre'
@@ -20,7 +21,7 @@ export interface Place {
 export const WORLD = { half: 50, roadHalf: 3 }
 
 export interface DistrictTheme {
-  id: string; name: string; tagline: string
+  id: string; city: CityId; name: string; tagline: string
   wall: number[]; roof: number; ground: number; roadColor: number; sidewalk: number
   trees: number; density: number; tall: number
   names: Record<PlaceId, string>
@@ -28,25 +29,46 @@ export interface DistrictTheme {
 
 export const DISTRICTS: Record<string, DistrictTheme> = {
   surulere: {
-    id: 'surulere', name: 'Surulere', tagline: 'Football on every street, neighbours who know your business.',
+    id: 'surulere', city: 'lagos', name: 'Surulere', tagline: 'Football on every street, neighbours who know your business.',
     wall: [0xe8c9a0, 0xd9a05b, 0xf0d9a8, 0xcf8a5a, 0xdcae92], roof: 0xa8452a, ground: 0x8aa84a, roadColor: 0x3d3d46, sidewalk: 0xd8cfc0, trees: 26, density: 1, tall: 0.2,
     names: { home: 'Your home', school: 'Surulere School', market: 'Aguda Market', mamaput: "Mama Chidi's Buka", pitch: 'Street Football Pitch', worship: 'Place of Worship', busstop: 'Danfo Bus Stop', office: 'Your Workplace', jobcentre: 'Cyber Café & Job Centre' },
   },
   ikorodu: {
-    id: 'ikorodu', name: 'Ikorodu', tagline: 'Long commutes, big yards, fresh pepper soup and strong community.',
+    id: 'ikorodu', city: 'lagos', name: 'Ikorodu', tagline: 'Long commutes, big yards, fresh pepper soup and strong community.',
     wall: [0xd6b58a, 0xc9a06a, 0xe2c8a0, 0xb88a56, 0xa8d0a0], roof: 0x7a4a2a, ground: 0x7fae4e, roadColor: 0x4a4540, sidewalk: 0xcdbf9f, trees: 40, density: 0.8, tall: 0.1,
     names: { home: 'Your home', school: 'Ikorodu Community School', market: 'Garage Market', mamaput: "Iya Ibeji's Buka", pitch: 'Compound Pitch', worship: 'Place of Worship', busstop: 'Ikorodu Garage Stop', office: 'Your Workplace', jobcentre: 'Business Centre & Job Desk' },
   },
   yaba: {
-    id: 'yaba', name: 'Yaba', tagline: 'Campuses, tech hubs and rent that talks loudly.',
+    id: 'yaba', city: 'lagos', name: 'Yaba', tagline: 'Campuses, tech hubs and rent that talks loudly.',
     wall: [0xc9d3dd, 0xe6c58a, 0x9fb7c9, 0xd8a7a0, 0xf0d9a8], roof: 0x44505a, ground: 0x88a063, roadColor: 0x3a3c45, sidewalk: 0xd0d4d8, trees: 22, density: 1.2, tall: 0.45,
     names: { home: 'Your home', school: 'Yaba College Area School', market: 'Yaba Market', mamaput: 'Tech Bro Buka', pitch: 'Campus Field', worship: 'Place of Worship', busstop: 'Yaba Bus Stop', office: 'Your Workplace', jobcentre: 'Co-working & Job Hub' },
   },
   lekki: {
-    id: 'lekki', name: 'Lekki', tagline: 'Gated estates, generators that never sleep, traffic to the Island.',
+    id: 'lekki', city: 'lagos', name: 'Lekki', tagline: 'Gated estates, generators that never sleep, traffic to the Island.',
     wall: [0xf2efe6, 0xe9e2d0, 0xcfd9e6, 0xe6d9c4, 0xdde6dc], roof: 0x5a6a7a, ground: 0x78b05a, roadColor: 0x33353d, sidewalk: 0xe3e0d8, trees: 34, density: 0.9, tall: 0.3,
     names: { home: 'Your home', school: 'Lekki Premier School', market: 'Lekki Mall & Market', mamaput: 'Skyline Kitchen', pitch: 'Estate Court', worship: 'Place of Worship', busstop: 'Lekki Bus Stop', office: 'Your Workplace', jobcentre: 'Recruitment Lounge' },
   },
+}
+
+DISTRICTS.kubwa = {
+  id: 'kubwa', city: 'abuja', name: 'Kubwa', tagline: 'A busy satellite town: red earth, long rides to the city and everyone knows everyone.',
+  wall: [0xe9d3b0, 0xd8b48a, 0xf0e2c6, 0xc99b72, 0xe3c1a0], roof: 0x8a3b2a, ground: 0x9aa957, roadColor: 0x4a4540, sidewalk: 0xd9cbb0, trees: 34, density: 0.95, tall: 0.12,
+  names: { home: 'Your home', school: 'Kubwa Community School', market: 'Kubwa Market', mamaput: "Mama Agnes' Buka", pitch: 'Estate Field', worship: 'Place of Worship', busstop: 'Kubwa Cab Park', office: 'Your Workplace', jobcentre: 'Business Centre & Job Desk' },
+}
+DISTRICTS.garki = {
+  id: 'garki', city: 'abuja', name: 'Garki', tagline: 'Secretariats, big markets and neat avenues. The civil service heartland.',
+  wall: [0xf2ead8, 0xe6dcc3, 0xd9e2d0, 0xefe0c2, 0xcfdcd6], roof: 0x6b7d5a, ground: 0x7fb25a, roadColor: 0x3d3f45, sidewalk: 0xdad6c8, trees: 44, density: 0.9, tall: 0.25,
+  names: { home: 'Your home', school: 'Garki Model School', market: 'Garki Market', mamaput: "Auntie Ify's Buka", pitch: 'Area 10 Field', worship: 'Place of Worship', busstop: 'Garki Cab Rank', office: 'Your Workplace', jobcentre: 'Secretariat Job Desk' },
+}
+DISTRICTS.wuse = {
+  id: 'wuse', city: 'abuja', name: 'Wuse II', tagline: 'Cafés, offices and nightlife in the middle of the city.',
+  wall: [0xe8edf2, 0xf2e6c8, 0xc9d8e2, 0xe6d3c0, 0xdfe7dc], roof: 0x4f6272, ground: 0x84b862, roadColor: 0x35373f, sidewalk: 0xdfe0dc, trees: 38, density: 1.1, tall: 0.5,
+  names: { home: 'Your home', school: 'Wuse II School', market: 'Wuse Market', mamaput: 'Zone 4 Buka', pitch: 'Wuse Sports Field', worship: 'Place of Worship', busstop: 'Wuse Cab Rank', office: 'Your Workplace', jobcentre: 'Co-working & Job Hub' },
+}
+DISTRICTS.maitama = {
+  id: 'maitama', city: 'abuja', name: 'Maitama', tagline: 'Quiet streets, embassies and security gates. Everything costs more.',
+  wall: [0xf6f3ea, 0xece6d6, 0xdfe8ef, 0xefe2cf, 0xe3ece0], roof: 0x5a6f7f, ground: 0x6fb55a, roadColor: 0x30323a, sidewalk: 0xe8e6de, trees: 52, density: 0.75, tall: 0.3,
+  names: { home: 'Your home', school: 'Maitama Premier School', market: 'Maitama Farmers Market', mamaput: 'Garden Kitchen', pitch: 'Estate Court', worship: 'Place of Worship', busstop: 'Maitama Cab Rank', office: 'Your Workplace', jobcentre: 'Recruitment Lounge' },
 }
 
 export function placesFor(theme: DistrictTheme): Place[] {
@@ -58,7 +80,7 @@ export function placesFor(theme: DistrictTheme): Place[] {
     { id: 'mamaput', name: n.mamaput, icon: '🍲', blurb: 'Rice, gist and doing nothing together.', rect: { x0: 33, x1: 43, z0: 11, z1: 19 }, door: { x: 38, z: 8.5 }, zoneR: 3, activities: ['socialise', 'treat'], color: 0xc4562a },
     { id: 'pitch', name: n.pitch, icon: '⚽', blurb: 'Football, ludo and shouting until Mama calls.', rect: { x0: -45, x1: -31, z0: -35, z1: -21 }, door: { x: -38, z: -28 }, zoneR: 7.5, activities: ['play', 'exercise'], color: 0x2fa84f, open: true },
     { id: 'worship', name: n.worship, icon: '🕊️', blurb: 'Service, fellowship, town meetings and food.', rect: { x0: 33, x1: 44, z0: -24, z1: -13 }, door: { x: 38.5, z: -10.5 }, zoneR: 3, activities: ['community'], color: 0x7a3b9a },
-    { id: 'busstop', name: n.busstop, icon: '🚌', blurb: 'Catch the danfo and run Lagos in Go-Slow Dash.', rect: { x0: 4, x1: 8, z0: 21, z1: 26 }, door: { x: 2.2, z: 23 }, zoneR: 3.2, activities: ['dash'], color: 0xffd23f },
+    { id: 'busstop', name: n.busstop, icon: theme.city === 'abuja' ? '🚕' : '🚌', blurb: `Catch the ${CITIES[theme.city].vehicle.name} and run ${CITIES[theme.city].name} in Go-Slow Dash.`, rect: { x0: 4, x1: 8, z0: 21, z1: 26 }, door: { x: 2.2, z: 23 }, zoneR: 3.2, activities: ['dash'], color: 0xffd23f },
     { id: 'office', name: n.office, icon: '🏢', blurb: 'Where the salary comes from. And the stress.', rect: { x0: -27, x1: -12, z0: 13, z1: 27 }, door: { x: -19.5, z: 10.5 }, zoneR: 3, activities: ['overtime', 'quitJob'], color: 0x4a5a8a },
     { id: 'jobcentre', name: n.jobcentre, icon: '📝', blurb: 'CVs, aptitude tests and "who do you know?"', rect: { x0: -45, x1: -33, z0: 11, z1: 21 }, door: { x: -39, z: 8.5 }, zoneR: 3, activities: ['applyJob'], color: 0x0f7a4a },
   ]
@@ -144,7 +166,7 @@ export function buildDistrict(districtId: string): District {
     props.push({ kind: 'tree', rect: q, color: 0x2f7a3a, h: rng.int(3, 5), blocks: true }); blockers.push(q)
   }
   for (let x = -44; x <= 44; x += 11) for (const z of [-5.6, 5.6]) props.push({ kind: 'lamp', rect: r(x - 0.1, x + 0.1, z - 0.1, z + 0.1), color: 0x44444e, h: 5.4, blocks: false })
-  // parked danfo and kiosks near the bus stop and along the road
+  // parked danfo (Lagos) or taxi (Abuja) and kiosks near the bus stop and along the road
   const bus = r(6, 8.6, 12, 17.5)
   props.push({ kind: 'bus', rect: bus, color: 0xffd23f, h: 2.6, blocks: true }); blockers.push(bus)
   for (const [kx, kz] of [[-8, 6.5], [9.5, -6.5], [-30, -6.5], [30, 6.5]]) { const k = r(kx, kx + 2, kz, kz + 1.6); if (!avoid(k, 0)) { props.push({ kind: 'kiosk', rect: k, color: 0xe0457b, h: 2.4, blocks: true }); blockers.push(k) } }

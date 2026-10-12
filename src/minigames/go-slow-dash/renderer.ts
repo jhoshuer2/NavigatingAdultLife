@@ -2,7 +2,8 @@
 import * as THREE from 'three'
 import type { Appearance, Gender } from '@engine/core/types'
 import { LANE_W, OBSTACLE_RESPONSE, segmentAt, type DashObj, type DashState, type ObstacleKind, type RouteSegment } from './sim'
-import { SKIN_TONES } from '../../ui/Avatar'
+import { buildHuman } from '../../world/characters'
+import type { Wear } from '@content/items'
 
 const THEMES: Record<RouteSegment['theme'], { wall: number[]; roof: number; ground: number }> = {
   market: { wall: [0xd9a05b, 0xc4562a, 0xe8c27a, 0xb5763a, 0xe2a27f], roof: 0x7a3b1d, ground: 0xb8864f },
@@ -43,7 +44,10 @@ export class DashRenderer {
   private speedStreaks: THREE.InstancedMesh
   private ctxLost = false
 
-  constructor(private container: HTMLElement, opts: { mode: 'foot' | 'danfo'; look: Appearance; gender: Gender; age: number }) {
+  private city: 'lagos' | 'abuja' = 'lagos'
+
+  constructor(private container: HTMLElement, opts: { mode: 'foot' | 'danfo'; look: Appearance; gender: Gender; age: number; wear?: Wear[]; city?: 'lagos' | 'abuja' }) {
+    this.city = opts.city ?? 'lagos'
     this.mode = opts.mode
     const dpr = window.devicePixelRatio || 1
     this.renderer = new THREE.WebGLRenderer({ antialias: dpr <= 1.5, powerPreference: 'high-performance', alpha: false })
@@ -94,31 +98,21 @@ export class DashRenderer {
   }
 
   // ---------- characters ----------
-  private buildPlayer(o: { mode: 'foot' | 'danfo'; look: Appearance; gender: Gender; age: number }) {
+  private buildPlayer(o: { mode: 'foot' | 'danfo'; look: Appearance; gender: Gender; age: number; wear?: Wear[] }) {
     if (o.mode === 'danfo') return this.buildBus(this.player, true)
-    const skin = new THREE.Color(SKIN_TONES[o.look.skinTone] ?? SKIN_TONES[4])
-    const top = new THREE.Color(o.age < 18 ? '#ffffff' : o.look.topColor); const bot = new THREE.Color(o.age < 18 ? '#1f3a7a' : o.look.bottomColor)
-    const hair = new THREE.Color(o.age >= 60 ? '#cccccc' : o.look.hairColor)
-    const body = new THREE.Group()
-    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.0, 0.5), mat(top.getHex())); torso.position.y = 1.55; body.add(torso)
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.34, 10, 8), mat(skin.getHex())); head.position.y = 2.35; body.add(head)
-    const hs = o.look.hairStyle
-    if (hs === 'afro') { const h = new THREE.Mesh(new THREE.SphereGeometry(0.5, 10, 8), mat(hair.getHex())); h.position.set(0, 2.45, -0.02); body.add(h) }
-    else if (hs !== 'bald') { const h = new THREE.Mesh(new THREE.SphereGeometry(0.37, 10, 6, 0, Math.PI * 2, 0, Math.PI * 0.55), mat(hair.getHex())); h.position.y = 2.38; body.add(h)
-      if (hs === 'braids' || hs === 'locs') for (const x of [-0.3, 0.3]) { const b = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.7, 0.1), mat(hair.getHex())); b.position.set(x, 2.05, 0.05); body.add(b) }
-      if (hs === 'bun') { const b = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), mat(hair.getHex())); b.position.set(0, 2.78, 0); body.add(b) }
-      if (hs === 'gele') { const w = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.4, 0.6), mat(new THREE.Color(o.look.topColor).getHex())); w.position.set(0, 2.72, 0); body.add(w) } }
-    const mk = (x: number, w: number, c: THREE.Color, y: number, h: number) => { const p = new THREE.Group(); p.position.set(x, y, 0); const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, w), mat(c.getHex())); m.position.y = -h / 2; p.add(m); body.add(p); return p }
-    this.playerParts.legL = mk(-0.2, 0.3, bot, 1.05, 1.0); this.playerParts.legR = mk(0.2, 0.3, bot, 1.05, 1.0)
-    this.playerParts.armL = mk(-0.58, 0.22, skin, 1.95, 0.9); this.playerParts.armR = mk(0.58, 0.22, skin, 1.95, 0.9)
-    body.rotation.y = Math.PI // face away from camera (running toward -z)
+    const parts = buildHuman({ look: o.look, age: o.age, gender: o.gender, wear: o.wear, uniform: o.age < 18, scale: 1.1 })
+    parts.body.rotation.y = Math.PI // face away from camera (running toward -z)
+    this.playerParts.legL = parts.legL; this.playerParts.legR = parts.legR; this.playerParts.armL = parts.armL; this.playerParts.armR = parts.armR
+    const body = parts.group
     this.playerParts.body = body
     this.player.add(body)
   }
 
   private buildBus(g: THREE.Group, withHeads = false) {
-    const body = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.9, 5.2), mat(0xffd23f)); body.position.y = 1.55; g.add(body)
-    const stripe = new THREE.Mesh(new THREE.BoxGeometry(2.24, 0.34, 5.24), mat(0x1c1b22)); stripe.position.y = 1.35; g.add(stripe)
+    const abuja = this.city === 'abuja' // green and white taxi livery instead of the yellow danfo with a black stripe
+    const body = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.9, 5.2), mat(abuja ? 0x1f9d55 : 0xffd23f)); body.position.y = 1.55; g.add(body)
+    const stripe = new THREE.Mesh(new THREE.BoxGeometry(2.24, 0.34, 5.24), mat(abuja ? 0xffffff : 0x1c1b22)); stripe.position.y = 1.35; g.add(stripe)
+    if (abuja) { const sign = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.25, 0.5), mat(0xffd23f)); sign.position.set(0, 2.62, 0.4); g.add(sign) }
     for (const s of [-1, 1]) for (let i = 0; i < 3; i++) { const w = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.6, 1.1), mat(0x9fd1ff)); w.position.set(s * 1.12, 1.95, -1.6 + i * 1.5); g.add(w) }
     const wind = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.7, 0.06), mat(0x9fd1ff)); wind.position.set(0, 1.95, 2.62); g.add(wind)
     const rear = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.7, 0.06), mat(0x9fd1ff)); rear.position.set(0, 1.95, -2.62); g.add(rear)

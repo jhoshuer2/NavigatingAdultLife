@@ -3,6 +3,7 @@
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import type { Appearance, Gender } from '@engine/core/types'
+import type { Wear } from '@content/items'
 import { WORLD, type District, type PlaceId, type Rect } from './layout'
 import { buildNav, findPath, moveWithCollision, type Nav } from './nav'
 import { animateHuman, buildHuman, hashLook, type HumanParts } from './characters'
@@ -102,7 +103,7 @@ export class WorldRenderer {
   private stallGroup?: THREE.Group
   private marks = new Map<string, THREE.Sprite>()
 
-  constructor(private container: HTMLElement, private district: District, opts: { look: Appearance; age: number; uniform: boolean; month: number; hour: number; spawn: { x: number; z: number } }) {
+  constructor(private container: HTMLElement, private district: District, opts: { look: Appearance; age: number; gender: Gender; wear: Wear[]; uniform: boolean; month: number; hour: number; spawn: { x: number; z: number } }) {
     const dpr = window.devicePixelRatio || 1
     this.renderer = new THREE.WebGLRenderer({ antialias: dpr <= 1.5, powerPreference: 'high-performance' })
     this.renderer.setPixelRatio(Math.min(dpr, 1.5))
@@ -117,7 +118,8 @@ export class WorldRenderer {
     this.ground = new THREE.Mesh(new THREE.PlaneGeometry(WORLD.half * 2 + 60, WORLD.half * 2 + 60), new THREE.MeshLambertMaterial({ color: district.theme.ground }))
     this.ground.rotation.x = -Math.PI / 2; this.ground.position.y = -0.02; this.scene.add(this.ground)
     this.buildStatic()
-    this.player = buildHuman({ look: opts.look, age: opts.age, uniform: opts.uniform, scale: 1.1 })
+    if (district.theme.city === 'abuja') this.addRocks()
+    this.player = buildHuman({ look: opts.look, age: opts.age, gender: opts.gender, wear: opts.wear, uniform: opts.uniform, scale: 1.1 })
     this.scene.add(this.player.group)
     this.player.group.position.set(this.px, 0, this.pz)
     this.shadow = new THREE.Mesh(new THREE.CircleGeometry(0.7, 12), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.28 })); this.shadow.rotation.x = -Math.PI / 2; this.shadow.position.y = 0.04; this.player.group.add(this.shadow)
@@ -125,6 +127,14 @@ export class WorldRenderer {
     this.makeHighlight()
     this.applyLighting()
     this.resize()
+  }
+
+  /** Abuja's skyline: big granite inselbergs (think Aso Rock and Zuma Rock) standing behind the district. */
+  private addRocks() {
+    const mat = new THREE.MeshLambertMaterial({ color: 0x8c7d6c, flatShading: true })
+    for (const [x, z, sx, sy, sz] of [[-62, -118, 46, 26, 30], [10, -135, 62, 38, 40], [78, -112, 34, 18, 26], [-110, 40, 30, 20, 34]] as const) {
+      const m = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 1), mat); m.scale.set(sx, sy, sz); m.position.set(x, sy * 0.35, z); m.rotation.y = x; this.scene.add(m)
+    }
   }
 
   // ---------- lighting ----------
@@ -186,6 +196,16 @@ export class WorldRenderer {
       else if (p.kind === 'lamp') { b.box(cx, 2.7, cz, 0.14, 5.4, 0.14, p.color); lamps.box(cx, 5.4, cz + (cz < 0 ? 0.4 : -0.4), 0.5, 0.2, 1.0, 0xffffff) }
       else if (p.kind === 'stall') { b.box(cx, 0.55, cz, w, 1.1, dd, 0x6a3b1d); b.cyl(cx, 1.6, cz, 0.04, 0.04, 2.1, 0x4a3320); b.cone(cx, 2.55, cz, 2.0, 0.7, p.color, 8); b.box(cx, 1.2, cz, w * 0.7, 0.18, dd * 0.7, [0xd9534f, 0xf0ad4e, 0x5cb85c][Math.floor(cx + cz) % 3]) }
       else if (p.kind === 'kiosk') { b.box(cx, 1.2, cz, w, 2.4, dd, p.color); b.box(cx, 2.55, cz, w + 0.4, 0.3, dd + 0.4, 0xffd23f) }
+      else if (p.kind === 'bus' && d.theme.city === 'abuja') {
+        // Abuja: green and white taxis (two parked nose to tail)
+        for (const oz of [-dd / 4, dd / 4]) {
+          const z0 = cz + oz
+          b.box(cx, 0.75, z0, w * 0.82, 0.8, dd * 0.46, 0x1f9d55); b.box(cx, 1.05, z0, w * 0.84, 0.2, dd * 0.47, 0xffffff)
+          b.box(cx, 1.45, z0 - 0.1, w * 0.66, 0.7, dd * 0.24, 0x1f9d55); b.box(cx, 1.5, z0 - 0.1, w * 0.68, 0.45, dd * 0.2, 0x9fd1ff)
+          b.box(cx, 1.92, z0 - 0.1, w * 0.3, 0.16, 0.5, 0xffffff)
+          for (const sx of [-0.4, 0.4]) for (const sz of [-0.28, 0.28]) b.cyl(cx + sx * w, 0.3, z0 + sz * dd * 0.46, 0.3, 0.3, 0.22, 0x1c1b22, 10)
+        }
+      }
       else if (p.kind === 'bus') {
         b.box(cx, 1.4, cz, w, 1.8, dd, 0xffd23f); b.box(cx, 1.15, cz, w + 0.04, 0.34, dd + 0.04, 0x1c1b22); b.box(cx, 2.35, cz, w - 0.2, 0.12, dd - 0.6, 0x3a3a44)
         for (let i = 0; i < 3; i++) b.box(cx, 1.85, cz - dd / 2 + 1 + i * (dd / 3.3), w + 0.06, 0.5, 1.0, 0x9fd1ff)
@@ -193,7 +213,7 @@ export class WorldRenderer {
       }
     }
     const bs = d.places.find((p) => p.id === 'busstop')!
-    b.box((bs.rect.x0 + bs.rect.x1) / 2, 3.0, (bs.rect.z0 + bs.rect.z1) / 2, 4, 0.3, 5, 0xffd23f)
+    b.box((bs.rect.x0 + bs.rect.x1) / 2, 3.0, (bs.rect.z0 + bs.rect.z1) / 2, 4, 0.3, 5, d.theme.city === 'abuja' ? 0x1f9d55 : 0xffd23f)
     for (const [sx, sz] of [[bs.rect.x0 + 0.3, bs.rect.z0 + 0.3], [bs.rect.x1 - 0.3, bs.rect.z0 + 0.3], [bs.rect.x0 + 0.3, bs.rect.z1 - 0.3], [bs.rect.x1 - 0.3, bs.rect.z1 - 0.3]]) b.box(sx, 1.5, sz, 0.2, 3, 0.2, 0x555566)
     for (const bl of d.buildings.slice(0, 18)) if (!bl.place) b.box(bl.rect.x1 + 0.7, 0.45, bl.rect.z1 - 1, 0.9, 0.9, 0.9, 0xc4262e)
     const mesh = b.build(); if (mesh) this.scene.add(mesh)
@@ -246,7 +266,7 @@ export class WorldRenderer {
     const names = ['Tola', 'Emeka', 'Aisha', 'Bayo', 'Chioma', 'Musa', 'Kemi', 'Obi', 'Zainab']
     for (let i = 0; i < 9; i++) {
       const g: Gender = i % 2 ? 'male' : 'female'
-      const parts = buildHuman({ look: hashLook(names[i] + i, g), age: 20 + (i % 5) * 8, scale: 1.1 })
+      const parts = buildHuman({ look: hashLook(names[i] + i, g), gender: g, age: 20 + (i % 5) * 8, scale: 1.1 })
       let x = 0, z = 0, ok = false
       for (let k = 0; k < 40 && !ok; k++) { x = rng(-40, 40); z = Math.random() < 0.5 ? rng(-5, 5) : rng(-40, 40); ok = this.free(x, z) }
       parts.group.position.set(x, 0, z); this.scene.add(parts.group)
@@ -261,7 +281,7 @@ export class WorldRenderer {
     for (const n of list) {
       const ex = this.npcs.get(n.id)
       if (ex) { const keep = n.wander && ex.npc.wander; ex.npc = { ...n, x: keep ? ex.npc.x : n.x, z: keep ? ex.npc.z : n.z }; if (!keep) { ex.parts.group.position.set(n.x, 0, n.z); ex.label.position.set(n.x, 3.7, n.z); ex.tx = n.x; ex.tz = n.z } continue }
-      const parts = buildHuman({ look: hashLook(n.name, n.gender), age: n.role === 'child' ? 6 : 22, scale: 1.15 })
+      const parts = buildHuman({ look: hashLook(n.name, n.gender), gender: n.gender, age: n.role === 'child' ? 6 : 22, scale: 1.15 })
       parts.group.position.set(n.x, 0, n.z); this.scene.add(parts.group)
       const label = this.textSprite(n.name, { bg: 'rgba(255,210,63,0.92)', fg: '#1c1b22', size: 3.4 }); label.position.set(n.x, 3.7, n.z); this.scene.add(label)
       this.npcs.set(n.id, { parts, npc: n, label, tx: n.x, tz: n.z, wt: 1 + Math.random() * 3, moving: false })
@@ -328,7 +348,7 @@ export class WorldRenderer {
   addActor(id: string, spec: { name: string; gender: Gender; age?: number; x: number; z: number; heading?: number; label?: boolean; top?: string }) {
     this.removeActor(id)
     const look = hashLook(spec.name, spec.gender)
-    const parts = buildHuman({ look: spec.top ? { ...look, topColor: spec.top } : look, age: spec.age ?? 22, scale: 1.12 })
+    const parts = buildHuman({ look: spec.top ? { ...look, topColor: spec.top } : look, gender: spec.gender, age: spec.age ?? 22, scale: 1.12 })
     parts.group.position.set(spec.x, 0, spec.z); parts.group.rotation.y = spec.heading ?? 0
     const sc = this.root(); sc.add(parts.group)
     this.actors.set(id, { parts, x: spec.x, z: spec.z, tx: spec.x, tz: spec.z, follow: false, moving: false, locked: false, scene: sc })

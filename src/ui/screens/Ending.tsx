@@ -6,6 +6,7 @@ import { ACHIEVEMENT_BY_ID } from '@content/achievements'
 import { DREAM_BY_ID } from '@content/dreams'
 import { shareCard } from '@platform/share'
 import { audio } from '@platform/audio'
+import { wearOf } from '@content/items'
 import { useEffect } from 'react'
 
 export function Ending() {
@@ -24,7 +25,7 @@ export function Ending() {
       <Confetti n={34} />
       <header className="px-4 pt-6 text-center">
         <Ribbon>Final whistle</Ribbon>
-        <div className="flex justify-center mt-4"><div className="rounded-3xl p-1 pattern-ankara" style={{ boxShadow: '0 0 0 3px rgba(255,255,255,.3), 0 0 40px rgba(255,199,44,.4)' }}><Avatar look={c.appearance} gender={c.gender} age={c.age} size={110} /></div></div>
+        <div className="flex justify-center mt-4"><div className="rounded-3xl p-1 pattern-ankara" style={{ boxShadow: '0 0 0 3px rgba(255,255,255,.3), 0 0 40px rgba(255,199,44,.4)' }}><Avatar look={c.appearance} gender={c.gender} age={c.age} wear={wearOf(c.items)} size={110} /></div></div>
         <h1 className="font-display text-[34px] text-white leading-tight mt-3" style={{ textShadow: '0 3px 0 rgba(0,0,0,.45)' }}>{e.title}</h1>
       </header>
       <main className="px-4 py-3 flex-1 scroll-y">

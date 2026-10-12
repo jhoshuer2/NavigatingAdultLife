@@ -139,3 +139,12 @@ Players said they were not sure where to begin, so the game now tells them, GTA 
 
 ## Voice re-recording (done)
 - All 94 clips are now recorded with `eleven_multilingual_v2` in the owner's "Joshua Jumbo" cloned voice (the model the owner chose as sounding most like them). The earlier `eleven_v4` takes were replaced. Total ElevenLabs use for the whole voice work was roughly 20,000 credits including tests.
+
+## Cities, character look and the luck scroll (latest)
+- **Sound:** audio now unlocks on every finished tap, resumes when the browser suspends it, nudges iPhones off the silent switch, runs a hotter master level, and Settings has a "Test sound" button plus a build id (bottom of Settings) so we can tell which version a player is on. Saved settings are merged with defaults (an old save with no `volume` could break the audio config).
+- **Character carries over:** the 3D world and the Dash now build the player from the creation choices (`buildHuman` takes gender, hair, facial hair, outfit, fabric and what you wear). Women get a slimmer frame, earrings and wrappers/skirts; men get beards, caps, kaftan/agbada. The school uniform is no longer forced on children, so the outfit chosen is the outfit seen.
+- **Cities:** `src/content/cities.ts`. Create has a new first step (Lagos or Abuja); homes are filtered by city. Abuja districts: Kubwa, Garki, Wuse II, Maitama (`DISTRICTS` in `world/layout.ts`). Abuja shows green and white taxis (parked at the Cab Rank, in the Dash), a cab-rank name, rock hills on the horizon, its own Dash route, and Abuja events (`city` condition). Event text and Dash how-to text are localised (danfo → cab, Lagos → Abuja). Old saves with a Lagos home are unchanged.
+- **Switch city in game:** Map sheet → "Move to another place" (`relocate` in `engine/api.ts`): ₦100,000 + 25 energy, friends drift if you change city.
+- **Luck scroll heirloom:** each scroll result hands down an item (`heirloom: true` in `content/items.ts`) that is worn by the character (portrait and 3D), has a passive effect, shows in the profile and is never sold in the market.
+- **"Other" tribe** replaces "Naija Mix" (Akwa Ibom, Cross River, Delta, Edo, Rivers, Benue names by gender); includes a Carnival event.
+- Known follow-ups: the Dash how-to voice clips still say "danfo", so Abuja uses the phone voice for the cab version; Abuja place and event wording is a first draft for native review.

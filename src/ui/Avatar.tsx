@@ -1,5 +1,6 @@
 import { useId } from 'react'
 import type { Appearance, Gender } from '@engine/core/types'
+import type { Wear } from '@content/items'
 
 export const SKIN_TONES = ['#f3cfb0', '#e6b48c', '#cf9569', '#b57a50', '#9a6339', '#80502d', '#684023', '#553219', '#42250f', '#2f1a09']
 export const HAIR_COLORS = ['#141414', '#2b1a10', '#4a2c17', '#7a4a1e', '#a37a2c', '#6d2a8f', '#8a1c1c']
@@ -13,9 +14,10 @@ interface Props {
   size?: number
   className?: string
   title?: string
+  wear?: Wear[]
 }
 
-export function Avatar({ look, gender, age = 25, uniform = false, size = 160, className, title }: Props) {
+export function Avatar({ look, gender, age = 25, uniform = false, size = 160, className, title, wear = [] }: Props) {
   const uid = useId().replace(/:/g, '')
   const skin = SKIN_TONES[look.skinTone] ?? SKIN_TONES[4]
   const skinShade = shade(skin, -0.14)
@@ -54,6 +56,11 @@ export function Avatar({ look, gender, age = 25, uniform = false, size = 160, cl
         {/* neck + body */}
         <rect x="88" y="104" width="24" height="30" rx="8" fill={skinShade} />
         {renderBody(outfit, fill, top, bottom, male, skin)}
+        {wear.includes('chain') && <g><path d="M78 132 Q100 176 122 132" fill="none" stroke="#f5c518" strokeWidth="5" strokeLinecap="round" /><circle cx="100" cy="168" r="8" fill="#f5c518" stroke="#b8860b" strokeWidth="2" /></g>}
+        {wear.includes('badge') && <g><path d="M84 128 L100 172 L116 128" fill="none" stroke="#1c7ea6" strokeWidth="5" /><rect x="88" y="170" width="24" height="30" rx="3" fill="#fff" stroke="#1c7ea6" strokeWidth="2" /><rect x="88" y="170" width="24" height="8" fill="#0f7a4a" /></g>}
+        {wear.includes('scarf') && <g><path d="M72 132 Q100 156 128 132 L130 146 Q100 170 70 146 Z" fill="#c4562a" /><path d="M112 150 L128 196 L114 198 L104 160 Z" fill="#e6a817" /></g>}
+        {wear.includes('pouch') && <g><path d="M138 196 Q166 196 168 222 L140 224 Z" fill="#7a4a2a" /><path d="M138 196 Q152 186 166 198" fill="none" stroke="#e6a817" strokeWidth="4" /></g>}
+        {wear.includes('backpack') && <g fill="#14587a"><path d="M52 150 Q40 190 48 230 L62 230 L68 140 Z" /><path d="M148 150 Q160 190 152 230 L138 230 L132 140 Z" /></g>}
         {/* head */}
         <ellipse cx="100" cy="68" rx={headR + face} ry={headR + 4} fill={skin} />
         <ellipse cx="64" cy="72" rx="6" ry="9" fill={skin} /><ellipse cx="136" cy="72" rx="6" ry="9" fill={skin} />
@@ -77,6 +84,8 @@ export function Avatar({ look, gender, age = 25, uniform = false, size = 160, cl
         {male && look.facialHair === 'stubble' && <path d="M74 84 Q100 112 126 84 Q120 98 100 100 Q80 98 74 84 Z" fill={hair} opacity=".35" />}
         {!male && <><circle cx="64" cy="80" r="3" fill="#f5b91c" /><circle cx="136" cy="80" r="3" fill="#f5b91c" /></>}
         {(outfit === 'traditional' && male) && <path d="M70 46 Q100 26 130 46 L130 54 Q100 44 70 54 Z" fill={top} stroke={shade(top, -0.3)} strokeWidth="1.5" />}
+        {wear.includes('cap') && <g><path d="M62 56 Q100 8 138 56 Q100 44 62 56 Z" fill="#c4262e" /><path d="M120 54 Q160 52 164 62 Q140 66 118 60 Z" fill="#8f1b21" /><circle cx="100" cy="18" r="4" fill="#8f1b21" /></g>}
+        {wear.includes('glasses') && <g fill="none" stroke="#111" strokeWidth="3"><circle cx="86" cy="68" r="11" /><circle cx="114" cy="68" r="11" /><path d="M97 68 L103 68" /><path d="M75 66 L64 62" /><path d="M125 66 L136 62" /></g>}
         {old && <g stroke={skinShade} strokeWidth="1.2" fill="none" opacity=".7"><path d="M80 52 Q86 49 92 52" /><path d="M108 52 Q114 49 120 52" /><path d="M88 96 Q86 100 87 104" /><path d="M112 96 Q114 100 113 104" /></g>}
       </g>
     </svg>

@@ -27,7 +27,7 @@ export function newState(config: NewLifeConfig, seed: number): GameState {
     id: `life_${seed}`, name: config.name, nickname: config.nickname, gender: config.gender, heritage: config.heritage, familyTier: arch.tier,
     archetypeId: arch.id, dreamId: config.dreamId, traits: [...config.traits], appearance: config.appearance, age: START_AGE, stats,
     edu: { level: 'primary', yearsInLevel: 0, schoolType: arch.schoolType, credential: 'none', studyPoints: 0, gpa: 0 },
-    lifestyle: 'normal', housing: { type: 'family', tier: 0, districtId: home.id }, items: [], childrenIds: [], hustleIncome: 0, dashCashouts: 0,
+    lifestyle: 'normal', housing: { type: 'family', tier: 0, districtId: home.id }, items: [arch.heirloom], childrenIds: [], hustleIncome: 0, dashCashouts: 0,
     perkIds: config.perkId ? [config.perkId] : [],
   }
   return {

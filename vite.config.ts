@@ -5,7 +5,10 @@ import { fileURLToPath } from 'node:url'
 
 const r = (p: string) => fileURLToPath(new URL(p, import.meta.url))
 
+const BUILD = (process.env.VERCEL_GIT_COMMIT_SHA ?? 'dev').slice(0, 7)
+
 export default defineConfig({
+  define: { __BUILD__: JSON.stringify(BUILD) },
   plugins: [
     react(),
     VitePWA({

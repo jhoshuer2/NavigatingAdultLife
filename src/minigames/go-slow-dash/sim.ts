@@ -37,6 +37,10 @@ export const ROUTES: Record<string, RouteSegment[]> = {
     { name: 'Oshodi', length: 320, theme: 'market' }, { name: 'Mushin', length: 300, theme: 'market' }, { name: 'Ojuelegba', length: 320, theme: 'flyover' },
     { name: 'Surulere', length: 300, theme: 'estate' }, { name: 'Yaba', length: 320, theme: 'brt' }, { name: 'Third Mainland Bridge', length: 360, theme: 'bridge' },
   ],
+  abuja: [
+    { name: 'Nyanya', length: 320, theme: 'market' }, { name: 'Wuse Market', length: 300, theme: 'market' }, { name: 'Area 1 Flyover', length: 320, theme: 'flyover' },
+    { name: 'Garki', length: 300, theme: 'estate' }, { name: 'Wuse II', length: 320, theme: 'brt' }, { name: 'Jabi Lake', length: 360, theme: 'bridge' },
+  ],
 }
 
 export const MISSION_POOL: MissionDef[] = [

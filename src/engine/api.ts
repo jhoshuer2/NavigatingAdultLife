@@ -4,7 +4,10 @@ import { withCtx, type Ctx } from './systems/ctx'
 import { newState, setupLife, endActions, acknowledgeEvent, nextYear } from './systems/lifecycle'
 import { listActivities, performActivity, answerQuiz, shopItems, jobOptions, type ActivityArgs } from './systems/activities'
 import { resolveChoice, choiceAvailable } from './systems/events'
-import { addStat } from './systems/effects'
+import { addStat, moment } from './systems/effects'
+import { HOMES } from '@content/archetypes'
+import { CITIES, cityOfHome } from '@content/cities'
+import { npcByRole } from './core/helpers'
 import { dreamProgress, evaluateProgress } from './systems/progress'
 import { EVENT_BY_ID } from '@content/events'
 import { fillText } from './systems/text'
@@ -28,6 +31,34 @@ export function setFlag(state: GameState, key: string, val: boolean | number | s
 export function payCash(state: GameState, amount: number, label: string): GameState {
   return withCtx(state, (ctx) => { addStat(ctx, 'cash', -amount, label) }).state
 }
+export const MOVE_COST = 100000
+export const MOVE_ENERGY = 25
+
+/** Move to a home in another district or city. Costs cash and energy, and old friends drift a little. */
+export function relocate(state: GameState, homeId: string): { state: GameState; ok: boolean; reason?: string } {
+  const home = HOMES.find((h) => h.id === homeId)
+  const c0 = state.character
+  if (!home || home.id === c0.housing.districtId) return { state, ok: false, reason: 'Pick a different place.' }
+  if (state.phase !== 'action') return { state, ok: false, reason: 'Finish what you are doing first.' }
+  if (c0.stats.cash < MOVE_COST) return { state, ok: false, reason: `Moving costs ₦${MOVE_COST.toLocaleString('en-NG')}.` }
+  if (c0.stats.energy < MOVE_ENERGY) return { state, ok: false, reason: 'You are too tired to pack. Rest first.' }
+  const newCity = cityOfHome(home.id) !== cityOfHome(c0.housing.districtId)
+  const out = withCtx(state, (ctx) => {
+    const c = ctx.s.character
+    addStat(ctx, 'cash', -MOVE_COST, 'Moving')
+    c.stats.energy -= MOVE_ENERGY
+    c.housing = { ...c.housing, type: c.housing.type === 'own' ? 'rent' : c.housing.type, districtId: home.id }
+    ctx.s.flags.cityMoves = (Number(ctx.s.flags.cityMoves) || 0) + (newCity ? 1 : 0)
+    if (newCity) {
+      for (const role of ['friend', 'friend2'] as const) { const n = npcByRole(ctx.s, role); if (n) n.closeness = Math.max(0, n.closeness - 10) }
+      addStat(ctx, 'stress', 4, 'New city')
+      addStat(ctx, 'happiness', 3, 'Fresh start')
+      moment(ctx.s, `Moved to ${home.district}, ${CITIES[cityOfHome(home.id)].name}.`, 3)
+    } else moment(ctx.s, `Moved to ${home.district}.`, 1)
+  })
+  return { state: out.state, ok: true }
+}
+
 export function setClock(state: GameState, hour: number, day: number): GameState {
   const s = structuredClone(state); s.clock = { hour, day }; return s
 }

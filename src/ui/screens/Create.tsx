@@ -5,23 +5,27 @@ import { Icon } from '../icons'
 import { Avatar, SKIN_TONES, HAIR_COLORS, OUTFIT_COLORS } from '../Avatar'
 import { TRAITS } from '@content/traits'
 import { DREAMS } from '@content/dreams'
-import { ARCHETYPES, HOMES, tierRank } from '@content/archetypes'
+import { ARCHETYPES, HOMES, taglineFor, tierRank } from '@content/archetypes'
 import { NAME_POOLS, HERITAGE_LABEL, HERITAGE_HINT } from '@content/names'
 import { FREE_FABRICS, FREE_HAIR, FREE_OUTFITS, UNLOCKABLES } from '@platform/meta'
 import type { Appearance, DreamId, Gender, Heritage, NewLifeConfig, TraitId } from '@engine/core/types'
 import { audio } from '@platform/audio'
+import { CITY_LIST, type CityId } from '@content/cities'
+import { ITEM_BY_ID } from '@content/items'
+import { CityArt } from '../CityArt'
 
 const HAIRS = [['afro', 'Afro'], ['lowcut', 'Low cut'], ['braids', 'Braids'], ['bald', 'Bald'], ['locs', 'Locs'], ['cornrows', 'Cornrows'], ['bun', 'Bun'], ['ponytail', 'Ponytail'], ['gele', 'Gele']] as const
 const OUTFITS = [['casual', 'Casual'], ['hoodie', 'Hoodie'], ['office', 'Office'], ['chill', 'Chill'], ['siteWork', 'Site work'], ['owambe', 'Owambe'], ['traditional', 'Traditional']] as const
 const FABRICS = [['plain', 'Plain'], ['ankara', 'Ankara'], ['adire', 'Adire'], ['asoOke', 'Aso-oke']] as const
 const BAD = ['fuck', 'shit', 'bitch', 'nigga', 'rape', 'dick', 'pussy', 'whore']
-const STEPS = ['Look', 'Vibe', 'Dream', 'Luck', 'Home', 'Name']
-const SAY = ['Make it yours!', 'Pick two traits that fit you.', 'What is the big dream?', 'Let luck decide!', 'Where do you call home?', 'And what do they call you?']
+const STEPS = ['City', 'Look', 'Vibe', 'Dream', 'Luck', 'Home', 'Name']
+const SAY = ['Where are we starting this journey?', 'Make it yours!', 'Pick two traits that fit you.', 'What is the big dream?', 'Let luck decide!', 'Where do you call home?', 'And what do they call you?']
 type Tab = 'you' | 'skin' | 'hair' | 'face' | 'fit'
 
 export function Create() {
   const { go, newLife, meta } = useGame()
   const [step, setStep] = useState(0)
+  const [city, setCity] = useState<CityId | null>(null)
   const [gender, setGender] = useState<Gender>('female')
   const [look, setLook] = useState<Appearance>({ skinTone: 5, faceShape: 1, hairStyle: 'braids', hairColor: HAIR_COLORS[0], outfitType: 'casual', fabric: 'plain', topColor: OUTFIT_COLORS[0], bottomColor: OUTFIT_COLORS[6] })
   const [traits, setTraits] = useState<TraitId[]>([])
@@ -44,6 +48,8 @@ export function Create() {
   const outfitOk = (o: string) => FREE_OUTFITS.includes(o) || unlocked(`outfit:${o}`)
   const fabricOk = (f: string) => FREE_FABRICS.includes(f) || unlocked(`fabric:${f}`)
   const arch = ARCHETYPES.find((a) => a.id === archetype)
+  const heirloom = arch ? ITEM_BY_ID[arch.heirloom] : undefined
+  const wear = heirloom?.wear ?? []
   const pool = NAME_POOLS[heritage][gender]
   const suggestions = useMemo(() => [...pool].sort(() => Math.random() - 0.5).slice(0, 6), [pool])
   const nameOk = name.trim().length >= 2 && !BAD.some((b) => name.toLowerCase().includes(b))
@@ -63,14 +69,14 @@ export function Create() {
     }, 1300)
   }
 
-  const canNext = [true, traits.length === 2, !!dream, !!archetype && !spinning, !!home, nameOk][step]
+  const canNext = [!!city, true, traits.length === 2, !!dream, !!archetype && !spinning, !!home, nameOk][step]
 
   const surprise = () => {
     const g: Gender = Math.random() < 0.5 ? 'male' : 'female'
     const h = (['yoruba', 'igbo', 'hausa', 'mix'] as Heritage[])[Math.floor(Math.random() * 4)]
     const t = [...TRAITS].sort(() => Math.random() - 0.5).slice(0, 2).map((x) => x.id) as [TraitId, TraitId]
     const a = ARCHETYPES[Math.floor(Math.random() * ARCHETYPES.length)]
-    const homes = HOMES.filter((x) => tierRank(a.tier) >= tierRank(x.minTier))
+    const homes = HOMES.filter((x) => (!city || x.city === city) && tierRank(a.tier) >= tierRank(x.minTier))
     const hair = HAIRS.filter(([id]) => hairOk(id)).map(([id]) => id)
     const outf = OUTFITS.filter(([id]) => outfitOk(id)).map(([id]) => id)
     const pick = <T,>(arr: readonly T[]) => arr[Math.floor(Math.random() * arr.length)]
@@ -88,9 +94,9 @@ export function Create() {
   }
 
   const tabs: { id: Tab; label: string; icon: 'user' | 'smile' | 'star' | 'heart' | 'bag' }[] = [{ id: 'you', label: 'You', icon: 'user' }, { id: 'skin', label: 'Skin', icon: 'smile' }, { id: 'hair', label: 'Hair', icon: 'star' }, { id: 'face', label: 'Face', icon: 'heart' }, { id: 'fit', label: 'Outfit', icon: 'bag' }]
-  const mini = (over: Partial<Appearance>, size = 58) => <div className="overflow-hidden rounded-xl" style={{ height: size * 0.82 }}><Avatar look={{ ...appearance, ...over }} gender={gender} size={size} /></div>
+  const mini = (over: Partial<Appearance>, size = 58) => <div className="overflow-hidden rounded-xl" style={{ height: size * 0.82 }}><Avatar look={{ ...appearance, ...over }} gender={gender} wear={wear} size={size} /></div>
   const avatarStage = (size: number) => (
-    <div className="stage flex justify-center pt-1 pb-2"><div className="float" style={{ animationDuration: '5s' }}><Avatar look={appearance} gender={gender} size={size} /></div></div>
+    <div className="stage flex justify-center pt-1 pb-2"><div className="float" style={{ animationDuration: '5s' }}><Avatar look={appearance} gender={gender} wear={wear} size={size} /></div></div>
   )
   const detail = (text: string | null) => text ? <div className="card mt-2 px-3 py-2 text-[13px] font-bold leading-snug pop">{text}</div> : null
 
@@ -113,6 +119,22 @@ export function Create() {
 
       <main className="flex-1 px-4 pt-2 pb-2 flex flex-col min-h-0">
         {step === 0 && (
+          <div className="grid gap-3 stagger">
+            {CITY_LIST.map((c) => (
+              <button key={c.id} className={`card-btn text-left !p-0 overflow-hidden ${city === c.id ? 'is-on' : ''}`} aria-pressed={city === c.id} onClick={() => { audio.sfx('pop'); setCity(c.id); setHome(null) }}>
+                <CityArt city={c.id} />
+                <div className="p-3">
+                  <div className="font-display text-[26px] uppercase leading-none">{c.name}</div>
+                  <div className="text-[13px] opacity-85 mt-1 leading-snug">{c.tagline}</div>
+                  <div className="flex flex-wrap gap-1.5 mt-2">{c.vibe.map((v) => <span key={v} className="chip">{v}</span>)}</div>
+                </div>
+              </button>
+            ))}
+            <div className="text-center text-[12px] font-bold opacity-70">You can move to the other city later, in the game.</div>
+          </div>
+        )}
+
+        {step === 1 && (
           <>
             {avatarStage(188)}
             <div className="flex justify-center gap-1.5 mb-1" role="tablist">
@@ -127,7 +149,7 @@ export function Create() {
                 <div className="grid grid-cols-2 gap-2">
                   {(['female', 'male'] as Gender[]).map((g) => (
                     <button key={g} className={`tile ${gender === g ? 'is-on' : ''}`} onClick={() => { audio.sfx('click'); setGender(g) }} aria-pressed={gender === g}>
-                      <div className="overflow-hidden rounded-xl" style={{ height: 52 }}><Avatar look={{ ...appearance, facialHair: undefined }} gender={g} size={64} /></div>
+                      <div className="overflow-hidden rounded-xl" style={{ height: 52 }}><Avatar look={{ ...appearance, facialHair: undefined }} gender={g} wear={wear} size={64} /></div>
                       <span className="font-display uppercase tracking-wide">{g === 'female' ? 'Girl' : 'Boy'}</span>
                     </button>
                   ))}
@@ -154,7 +176,7 @@ export function Create() {
           </>
         )}
 
-        {step === 1 && (
+        {step === 2 && (
           <>
             <div className="grid grid-cols-3 gap-2 stagger">
               {TRAITS.map((t) => {
@@ -174,7 +196,7 @@ export function Create() {
           </>
         )}
 
-        {step === 2 && (
+        {step === 3 && (
           <div className="grid gap-2.5 stagger">
             {DREAMS.map((d) => (
               <button key={d.id} className={`card-btn flex items-center gap-3 ${dream === d.id ? 'is-on' : ''}`} onClick={() => { audio.sfx('pop'); setDream(d.id) }} aria-pressed={dream === d.id}>
@@ -190,7 +212,7 @@ export function Create() {
           </div>
         )}
 
-        {step === 3 && (
+        {step === 4 && (
           <div className="flex-1 flex flex-col items-center justify-center text-center">
             {!arch && !spinning && (
               <div className="w-full max-w-xs">
@@ -199,14 +221,21 @@ export function Create() {
               </div>
             )}
             {spinning && <div className="card w-full max-w-xs py-10 overflow-hidden" style={{ borderRadius: 28 }}><div className="reel font-display text-[34px] uppercase leading-tight px-3">{spinName || '…'}</div></div>}
+            {arch && !spinning && avatarStage(96)}
             {arch && !spinning && (
               <div className="card w-full max-w-sm p-4 text-left flip" style={{ borderRadius: 26, background: 'linear-gradient(170deg, rgba(120,90,255,.6), rgba(24,16,80,.9))' }} key={arch.id}>
                 <div className="flex items-center gap-3">
                   <span className="grid place-items-center w-20 h-20 rounded-3xl text-[44px]" style={{ background: 'radial-gradient(circle at 30% 25%, rgba(255,226,122,.7), rgba(106,61,245,.3))', boxShadow: 'inset 0 0 0 2px rgba(255,255,255,.3)' }}>{arch.icon}</span>
-                  <div className="min-w-0"><div className="font-display text-[27px] uppercase leading-none">{arch.title}</div><div className="text-[13px] opacity-80 mt-1 leading-snug">{arch.tagline}</div></div>
+                  <div className="min-w-0"><div className="font-display text-[27px] uppercase leading-none">{arch.title}</div><div className="text-[13px] opacity-80 mt-1 leading-snug">{taglineFor(arch, city ?? 'lagos')}</div></div>
                 </div>
                 <div className="flex flex-wrap gap-1.5 mt-3">{arch.perks.map((p) => <span key={p} className="chip chip-green"><Icon name="up" size={11} />{p}</span>)}</div>
                 <div className="flex flex-wrap gap-1.5 mt-1.5">{arch.constraints.map((p) => <span key={p} className="chip chip-red"><Icon name="down" size={11} />{p}</span>)}</div>
+                {heirloom && (
+                  <div className="mt-3 rounded-2xl p-2.5 flex items-center gap-3" style={{ background: 'rgba(255,210,63,.14)', boxShadow: 'inset 0 0 0 1.5px rgba(255,210,63,.55)' }}>
+                    <span className="text-[34px] leading-none">{heirloom.icon}</span>
+                    <div className="min-w-0"><div className="text-[10px] font-extrabold uppercase tracking-wider text-yellow-300">Handed down to you</div><div className="font-display text-[17px] leading-tight">{heirloom.name}</div><div className="text-[12px] opacity-80 leading-snug">{heirloom.desc}</div></div>
+                  </div>
+                )}
                 <div className="flex items-center justify-between mt-3">
                   <div className="flex gap-1.5"><span className="chip chip-gold"><Icon name="coin" size={14} />{nairaShort(arch.startCash)}</span><span className="chip"><Icon name="book" size={13} />{arch.schoolType}</span></div>
                   <button className="chip !py-1.5 !px-3" style={{ opacity: rerolled ? 0.4 : 1 }} disabled={rerolled} onClick={() => spin(false)}><Icon name="swap" size={14} />{rerolled ? 'Used' : 'Re-roll'}</button>
@@ -216,9 +245,9 @@ export function Create() {
           </div>
         )}
 
-        {step === 4 && arch && (
+        {step === 5 && arch && (
           <div className="grid grid-cols-2 gap-2.5 stagger">
-            {HOMES.map((h, i) => {
+            {HOMES.filter((h) => h.city === city).map((h, i) => {
               const locked = tierRank(arch.tier) < tierRank(h.minTier)
               const hue = [24, 150, 215, 290][i % 4]
               return (
@@ -234,9 +263,9 @@ export function Create() {
             })}
           </div>
         )}
-        {step === 4 && !arch && <div className="text-center opacity-70">Spin the lottery first.</div>}
+        {step === 5 && !arch && <div className="text-center opacity-70">Spin the lottery first.</div>}
 
-        {step === 5 && (
+        {step === 6 && (
           <>
             {avatarStage(118)}
             <div className="grid grid-cols-4 gap-2 mb-2">{(['yoruba', 'igbo', 'hausa', 'mix'] as Heritage[]).map((h) => <button key={h} className={`tile !min-h-[52px] !py-1 ${heritage === h ? 'is-on' : ''}`} onClick={() => { audio.sfx('tap'); setHeritage(h); setName('') }}><span className="text-[12px] font-extrabold">{HERITAGE_LABEL[h]}</span></button>)}</div>

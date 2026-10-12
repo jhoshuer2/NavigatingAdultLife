@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useGame } from '../../store'
 import { Btn, naira } from '../components'
 import { HowToBody } from '../Guide'
+import { cityOfHome, localise } from '@content/cities'
+import { wearOf } from '@content/items'
 import { HOWTO } from '@content/taskGuide'
 import { plain, vlang } from '@content/lang'
 import { speakLine, stopSpeaking } from '@platform/voice'
@@ -16,13 +18,18 @@ type Phase = 'ready' | 'run' | 'paused' | 'over'
 export default function Dash() {
   const { life, dashMode, meta, finishDash } = useGame()
   const host = useRef<HTMLDivElement>(null)
-  const how = HOWTO[dashMode === 'foot' ? 'dash' : 'dashDanfo']
+  const city = cityOfHome(life?.character.housing.districtId ?? 'surulere')
+  const how0 = HOWTO[dashMode === 'foot' ? 'dash' : 'dashDanfo']
+  const lz = (x: { en: string; pcm: string }) => ({ en: localise(city, x.en), pcm: localise(city, x.pcm) })
+  const how = city === 'lagos' ? how0 : { ...how0, title: lz(how0.title), steps: how0.steps.map((x) => ({ ...x, say: lz(x.say) })), goal: lz(how0.goal) }
+  const howVoice = city === 'lagos' || dashMode === 'foot' ? `how_${dashMode === 'foot' ? 'dash' : 'dashDanfo'}` : undefined // the recorded clips say "danfo"
+
   const dashLine = [plain(meta.settings.lang, how.title), ...how.steps.map((x) => plain(meta.settings.lang, x.say)), plain(meta.settings.lang, how.goal)].join('. ')
   const simRef = useRef<DashState | null>(null)
   const rendRef = useRef<DashRenderer | null>(null)
   const phaseRef = useRef<Phase>('ready')
   const [phase, setPhaseState] = useState<Phase>('ready')
-  useEffect(() => { if (phase === 'ready' && meta.settings.guide !== false && meta.settings.sound && meta.settings.voice !== false) void speakLine({ id: `how_${dashMode === 'foot' ? 'dash' : 'dashDanfo'}`, lang: vlang(meta.settings.lang), text: dashLine, key: 'howto:dash', gapMs: 20000 }) }, [phase]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (phase === 'ready' && meta.settings.guide !== false && meta.settings.sound && meta.settings.voice !== false) void speakLine({ id: howVoice, lang: vlang(meta.settings.lang), text: dashLine, key: 'howto:dash', gapMs: 20000 }) }, [phase]) // eslint-disable-line react-hooks/exhaustive-deps
   const [hud, setHud] = useState<Hud | null>(null)
   const [pops, setPops] = useState<{ id: number; text: string }[]>([])
   const [result, setResult] = useState<DashResult | null>(null)
@@ -34,7 +41,7 @@ export default function Dash() {
   const config = useMemo(() => {
     const c = life!.character
     const hearts = 3 + (traitSum(c, 'dashHearts') > 0 ? 1 : 0)
-    return { seed: (Math.random() * 2 ** 31) >>> 0, mode: dashMode, hearts, assist: meta.settings.assist, routeId: 'oshodi' }
+    return { seed: (Math.random() * 2 ** 31) >>> 0, mode: dashMode, hearts, assist: meta.settings.assist, routeId: city === 'abuja' ? 'abuja' : 'oshodi' }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -69,7 +76,7 @@ export default function Dash() {
     const st = createDash(config)
     simRef.current = st
     let r: DashRenderer
-    try { r = new DashRenderer(el, { mode: dashMode, look: c.appearance, gender: c.gender, age: c.age }) } catch { setWebglFail(true); return }
+    try { r = new DashRenderer(el, { mode: dashMode, look: c.appearance, gender: c.gender, age: c.age, wear: wearOf(c.items), city }) } catch { setWebglFail(true); return }
     rendRef.current = r
     audio.playMusic('dash')
     const ro = new ResizeObserver(() => r.resize()); ro.observe(el)
@@ -166,7 +173,7 @@ export default function Dash() {
           </div>
           <div className="absolute left-2 bottom-24 pointer-events-none flex flex-col gap-1">
             <div className="chip" style={{ background: '#1c1b22cc' }}>{hud.speed} km/h · {hud.dist} m</div>
-            {dashMode === 'danfo' && <div className="chip" style={{ background: '#1c1b22cc' }}>🚌 {hud.aboard} on board · fares {naira(hud.fares)}</div>}
+            {dashMode === 'danfo' && <div className="chip" style={{ background: '#1c1b22cc' }}>{city === 'abuja' ? '🚕' : '🚌'} {hud.aboard} on board · fares {naira(hud.fares)}</div>}
             {(['magnet', 'hop', 'suya'] as const).map((k) => hud.powers[k] > 0 && <div key={k} className="chip pop" style={{ background: '#2fd27bcc', color: '#06241a' }}>{k === 'magnet' ? '🧲' : k === 'hop' ? '🦘' : '🍢'} {hud.powers[k].toFixed(0)}s</div>)}
           </div>
           <div className="absolute right-2 top-28 pointer-events-none w-40 text-[11px] font-bold space-y-1">
@@ -190,7 +197,7 @@ export default function Dash() {
           <div className="card p-5 text-center max-w-sm pop" style={{ background: '#1e1a30' }}>
             <h2 className="font-display text-4xl text-danfo">Go-Slow Dash</h2>
             <div className="text-left"><HowToBody h={how} lang={meta.settings.lang} /></div>
-            <div className="flex gap-2 mt-4"><button className="btn btn-ghost !min-h-[52px] !px-4" aria-label="Hear it again" onClick={() => void speakLine({ id: `how_${dashMode === 'foot' ? 'dash' : 'dashDanfo'}`, lang: vlang(meta.settings.lang), text: dashLine })}>🔊</button><Btn variant="green" className="flex-1 !text-xl" onClick={() => { stopSpeaking(); start() }}>▶ Tap to start</Btn></div>
+            <div className="flex gap-2 mt-4"><button className="btn btn-ghost !min-h-[52px] !px-4" aria-label="Hear it again" onClick={() => void speakLine({ id: howVoice, lang: vlang(meta.settings.lang), text: dashLine })}>🔊</button><Btn variant="green" className="flex-1 !text-xl" onClick={() => { stopSpeaking(); start() }}>▶ Tap to start</Btn></div>
             <p className="text-[11px] opacity-60 mt-2">Keyboard: ← → lanes · ↑/Space jump · ↓ slide/brake · P pause</p>
           </div>
         </div>
@@ -214,7 +221,7 @@ export default function Dash() {
             <div className="grid grid-cols-2 gap-2 mt-3 text-sm">
               <div className="card p-2">🪙 Coins <b className="block text-lg">{result.coins}</b></div>
               <div className="card p-2">🛣 Distance <b className="block text-lg">{(result.distance / 1000).toFixed(2)} km</b></div>
-              <div className="card p-2">{dashMode === 'danfo' ? '🚌 Passengers' : '😮 Close calls'} <b className="block text-lg">{dashMode === 'danfo' ? result.passengers : result.closeCalls}</b></div>
+              <div className="card p-2">{dashMode === 'danfo' ? `${city === 'abuja' ? '🚕' : '🚌'} Passengers` : '😮 Close calls'} <b className="block text-lg">{dashMode === 'danfo' ? result.passengers : result.closeCalls}</b></div>
               <div className="card p-2">🎯 Missions <b className="block text-lg">{result.missionsDone}/3</b></div>
             </div>
             <p className="text-xs opacity-70 mt-2">Coins and fares become cash when you return to your life.</p>

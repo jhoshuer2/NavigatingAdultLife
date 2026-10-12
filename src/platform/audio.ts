@@ -22,10 +22,24 @@ class AudioEngine {
   private lastSfx: Partial<Record<SfxName, number>> = {}
 
   configure(c: Cfg) {
-    this.cfg = c
-    if (this.master) this.master.gain.value = c.sound ? c.volume : 0
+    const vol = Number.isFinite(c.volume) ? Math.min(1, Math.max(0, c.volume)) : 0.6
+    this.cfg = { ...c, volume: vol }
+    // The synthesised sounds are quiet on phone speakers, so the master level runs hotter than the slider value.
+    if (this.master) this.master.gain.value = c.sound ? Math.min(1.6, vol * 1.6) : 0
     if (this.musicGain) this.musicGain.gain.value = c.music ? 0.5 : 0
-    if (this.fileAudio) this.fileAudio.volume = c.music && c.sound ? c.volume * 0.6 : 0
+    if (this.fileAudio) this.fileAudio.volume = c.music && c.sound ? vol * 0.6 : 0
+  }
+
+  /** For the Settings sound check: what the browser is doing with audio right now. */
+  status(): 'off' | 'waiting' | 'suspended' | 'running' {
+    if (!this.cfg.sound) return 'off'
+    if (!this.ctx) return 'waiting'
+    return this.ctx.state === 'running' ? 'running' : 'suspended'
+  }
+  async check(): Promise<'off' | 'waiting' | 'suspended' | 'running'> {
+    this.unlock(); try { await this.ctx?.resume() } catch { /* ignore */ }
+    this.lastSfx = {}; this.sfx('level'); this.sfx('good')
+    return this.status()
   }
 
   /** Must be called from a user gesture. */

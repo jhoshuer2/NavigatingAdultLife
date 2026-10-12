@@ -10,6 +10,7 @@ import { fmtTime, remainingSec } from '@platform/tokens'
 import { audio } from '@platform/audio'
 import { EventModal, QuizModal, SummaryModal, ShopModal, JobsModal, PickModal, QuestsModal, ProfileModal, LifestyleModal, PaywallModal, TutorialModal } from '../modals'
 import { NpcModal, PlaceModal, PlacesModal } from '../placeUi'
+import { wearOf } from '@content/items'
 const World = lazy(() => import('./World'))
 
 function webglOk(): boolean { try { const c = document.createElement('canvas'); return !!(c.getContext('webgl2') || c.getContext('webgl')) } catch { return false } }
@@ -51,7 +52,7 @@ function PlayMenu({ onWorld }: { onWorld?: () => void }) {
     <div className="min-h-full flex flex-col">
       {/* Header */}
       <header className="px-3 pt-3 flex items-center gap-3">
-        <button className="card p-1 shrink-0" onClick={() => g.openSheet('profile')} aria-label="Open profile"><Avatar look={c.appearance} gender={c.gender} age={c.age} uniform={inSchool && c.age < 18} size={52} /></button>
+        <button className="card p-1 shrink-0" onClick={() => g.openSheet('profile')} aria-label="Open profile"><Avatar look={c.appearance} gender={c.gender} age={c.age} wear={wearOf(c.items)} size={52} /></button>
         <div className="min-w-0 flex-1">
           <div className="font-display text-2xl leading-none text-danfo truncate">{c.nickname || c.name}, {c.age}</div>
           <div className="text-xs opacity-75 truncate">{STAGE_LABEL[stage]} · {life.year}{inSchool ? ` · ${{ primary: 'Primary school', jss: 'Junior secondary', sss: 'Senior secondary', university: 'University', polytechnic: 'Polytechnic', apprentice: 'Apprenticeship', none: '' }[c.edu.level]}` : c.job ? ` · ${c.job.title}` : ''}</div>
