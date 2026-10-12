@@ -236,7 +236,7 @@ export function QuestsModal() {
                 <div className="font-display uppercase text-[15px] leading-tight">{q.title}</div>
                 <div className="text-xs opacity-75 mt-0.5 leading-snug">{st.done ? q.rewardText : q.stages[stage].text}</div>
                 {!st.done && hint && <div className="text-[12px] font-bold mt-1 leading-snug text-gold">📍 <Lines lang={lang} s={hint.say} /></div>}
-                {!st.done && hint?.place && <button className="chip chip-green mt-1.5" onClick={() => { audio.sfx('click'); setGuideTrack({ place: hint.place!, say: hint.say, act: hint.act }) }}><Icon name="pin" size={12} />Show me</button>}
+                {!st.done && hint?.place && <button className="chip chip-green mt-1.5" onClick={() => { audio.sfx('click'); setGuideTrack({ place: hint.place!, say: hint.say, act: hint.act, voice: `quest_${q.id}_${stage}` }) }}><Icon name="pin" size={12} />Show me</button>}
                 {!st.done && <div className="flex gap-1 mt-1.5">{q.stages.map((_, i) => <span key={i} className="h-1.5 flex-1 rounded-full" style={{ background: i < st.stage ? 'var(--green)' : 'rgba(255,255,255,.18)' }} />)}</div>}
               </div>
               <span className="chip chip-gold shrink-0"><Icon name="shell" size={13} color="#3b2300" />{q.cowries}</span>

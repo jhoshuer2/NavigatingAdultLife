@@ -4,27 +4,52 @@ import type { District, PlaceId } from './layout'
 import { INTERIORS } from './interiors'
 import { say, type Say } from '@content/lang'
 
-export interface Suggestion { place: PlaceId; text: string; icon: string; say: Say; act?: string }
-const S = (place: PlaceId, icon: string, en: string, pcm: string, act?: string): Suggestion => ({ place, icon, text: en, say: say(en, pcm), act })
+export interface Suggestion { id: string; place: PlaceId; text: string; icon: string; say: Say; act?: string }
+const S = (id: string, place: PlaceId, icon: string, en: string, pcm: string, act?: string): Suggestion => ({ id, place, text: en, icon, say: say(en, pcm), act })
+/** Every thing the guide can suggest. Each has a recorded voice clip named `sug_<id>` (see src/content/voiceLines.ts). */
+export const SUGS = {
+  sleepTired: S('sleepTired', 'home', '🌙', 'Sleep at home', 'Go house sleep, you don tire', 'sleep'),
+  restSick: S('restSick', 'home', '❤️', 'Rest at home', 'Go house rest, make your body cool', 'sleep'),
+  cheer: S('cheer', 'mamaput', '🍲', 'Cheer up at the buka', 'Go the buka chop, make your mind rest', 'treat'),
+  stress: S('stress', 'pitch', '⚽', 'Burn stress at the pitch', 'Go the pitch play ball, comot stress', 'play'),
+  study: S('study', 'school', '📚', 'Study at school', 'Go school read your book', 'study'),
+  job: S('job', 'jobcentre', '📝', 'Find a job', 'Go Job Centre find work', 'applyJob'),
+  boss: S('boss', 'office', '⏰', 'Impress the boss', 'Go office show Oga say you sabi work', 'overtime'),
+  hustle: S('hustle', 'market', '🛍️', 'Hustle at the market', 'Go market hustle small money', 'hustle'),
+  playKid: S('playKid', 'pitch', '⚽', 'Play outside', 'Go outside play', 'play'),
+  friend: S('friend', 'mamaput', '🧑‍🤝‍🧑', 'Catch up with a friend', 'Go gist with your padi', 'socialise'),
+  family: S('family', 'home', '👪', 'Family time at home', 'Go sit with your people for house', 'familyTime'),
+  endYear: S('endYear', 'home', '🌙', 'Sleep to end the year', 'Go house sleep, make new year start', 'sleep'),
+} as const
 
 export function suggest(life: GameState): Suggestion | null {
   if (life.phase !== 'action' || life.quiz) return null
   const c = life.character
   const used = (id: string) => Number(life.activityCounts[id] ?? 0)
   const inSchool = c.edu.level !== 'none'
-  if (c.stats.energy < 12) return S('home', '🌙', 'Sleep at home', 'Go house sleep, you don tire', 'sleep')
-  if (c.stats.health < 40) return S('home', '❤️', 'Rest at home', 'Go house rest, make your body cool', 'sleep')
-  if (c.stats.happiness < 35) return S('mamaput', '🍲', 'Cheer up at the buka', 'Go the buka chop, make your mind rest', 'treat')
-  if (c.stats.stress > 70) return S('pitch', '⚽', 'Burn stress at the pitch', 'Go the pitch play ball, comot stress', 'play')
-  if (inSchool && used('study') < 2) return S('school', '📚', 'Study at school', 'Go school read your book', 'study')
-  if (!c.job && !inSchool && c.age >= 18 && c.age < 62) return S('jobcentre', '📝', 'Find a job', 'Go Job Centre find work', 'applyJob')
-  if (c.job && used('overtime') < 1 && c.age < 60) return S('office', '⏰', 'Impress the boss', 'Go office show Oga say you sabi work', 'overtime')
-  if (c.age >= 14 && used('hustle') < 1 && c.stats.energy >= 22) return S('market', '🛍️', 'Hustle at the market', 'Go market hustle small money', 'hustle')
-  if (c.age < 14 && used('play') < 1) return S('pitch', '⚽', 'Play outside', 'Go outside play', 'play')
-  if (used('socialise') < 1 && c.stats.energy >= 15) return S('mamaput', '🧑‍🤝‍🧑', 'Catch up with a friend', 'Go gist with your padi', 'socialise')
-  if (used('familyTime') < 1) return S('home', '👪', 'Family time at home', 'Go sit with your people for house', 'familyTime')
-  return S('home', '🌙', 'Sleep to end the year', 'Go house sleep, make new year start', 'sleep')
+  if (c.stats.energy < 12) return SUGS.sleepTired
+  if (c.stats.health < 40) return SUGS.restSick
+  if (c.stats.happiness < 35) return SUGS.cheer
+  if (c.stats.stress > 70) return SUGS.stress
+  if (inSchool && used('study') < 2) return SUGS.study
+  if (!c.job && !inSchool && c.age >= 18 && c.age < 62) return SUGS.job
+  if (c.job && used('overtime') < 1 && c.age < 60) return SUGS.boss
+  if (c.age >= 14 && used('hustle') < 1 && c.stats.energy >= 22) return SUGS.hustle
+  if (c.age < 14 && used('play') < 1) return SUGS.playKid
+  if (used('socialise') < 1 && c.stats.energy >= 15) return SUGS.friend
+  if (used('familyTime') < 1) return SUGS.family
+  return SUGS.endYear
 }
+
+/** The fixed guide lines that are not tied to a place name. Each has a recorded voice clip named `g_<id>`. */
+export const GEN = {
+  stuckQ: say('Not sure what to do? Open your Quests. They tell you where to go.', 'You no sure wetin to do? Open your Quests. E go tell you where to go.'),
+  stuckM: say('Open the Map. Your next stop is lit up. Tap Go and you will walk there.', 'Open the Map. Your next place dey shine. Press Go, you go waka reach.'),
+  enter: say('You are here. Tap the big green button.', 'You don reach. Press the big green button.'),
+  exit: say('Go outside first. Tap the door button.', 'Comot outside first. Press the door button.'),
+  look: say('Walk around. Tap the green button when a spot or a person shows up.', 'Waka around. Press the green button when person or place show.'),
+  spot: say('Walk to the glowing spot. Then tap the green button.', 'Waka go the shining place. Then press the green button.'),
+} as const
 
 // Which spot inside each building does the suggested thing. Missing = no single spot (people walk around, so just look around).
 const SPOT: Partial<Record<PlaceId, Partial<Record<string, string>>>> = {
@@ -56,7 +81,7 @@ export type GuideTarget =
   | { t: 'exit' }
   | { t: 'ui'; el: 'quests' | 'map' | 'places' | 'home' }
   | { t: 'none' }
-export interface GuideStep { key: string; icon: string; say: Say; target: GuideTarget; /** where the compass should point (world x,z) */ aim?: { x: number; z: number } }
+export interface GuideStep { key: string; icon: string; say: Say; /** id of the recorded voice clip for this line, if any */ voice?: string; target: GuideTarget; /** where the compass should point (world x,z) */ aim?: { x: number; z: number } }
 
 export interface GuideCtx {
   life: GameState
@@ -68,7 +93,7 @@ export interface GuideCtx {
   /** 0 = fine, 1 and 2 = the player has not done anything for a while */
   stuck: 0 | 1 | 2
   /** a task the player chose to follow (quest "show me") */
-  track: { place: PlaceId; say: Say; act?: string } | null
+  track: { place: PlaceId; say: Say; act?: string; voice?: string } | null
 }
 
 const DIR = [['north', 'north'], ['north-east', 'north-east'], ['east', 'east'], ['south-east', 'south-east'], ['south', 'south'], ['south-west', 'south-west'], ['west', 'west'], ['north-west', 'north-west']]
@@ -90,23 +115,23 @@ export function guideStep(ctx: GuideCtx): GuideStep | null {
   const pl = district.places.find((p) => p.id === sug.place)
   const placeName = pl?.name ?? 'the place'
   const icon = 'icon' in sug ? (sug as Suggestion).icon : '📍'
-  if (stuck === 1) return { key: 'stuck-q', icon: '🎯', say: say('Not sure what to do? Open your Quests. They tell you where to go.', 'You no sure wetin to do? Open your Quests. E go tell you where to go.'), target: { t: 'ui', el: 'quests' } }
-  if (stuck === 2) return { key: 'stuck-m', icon: '🗺️', say: say(`Open the Map. ${placeName} is lit up. Tap Go and you will walk there.`, `Open the Map. ${placeName} dey shine. Press Go, you go waka reach.`), target: { t: 'ui', el: 'map' } }
+  if (stuck === 1) return { key: 'stuck-q', icon: '🎯', say: GEN.stuckQ, voice: 'g_stuckQ', target: { t: 'ui', el: 'quests' } }
+  if (stuck === 2) return { key: 'stuck-m', icon: '🗺️', say: GEN.stuckM, voice: 'g_stuckM', target: { t: 'ui', el: 'map' } }
   const act = sug.act
   if (inside) {
     if (inside === sug.place) {
       const spot = act ? SPOT[inside]?.[act] : undefined
       const h = spot ? INTERIORS[inside]?.hotspots.find((x) => x.id === spot) : undefined
-      if (h) return { key: `spot-${h.id}`, icon: h.icon, say: say(`Walk to: ${h.name}. Then tap the green button.`, `Waka go: ${h.name}. Then press the green button.`), target: { t: 'hotspot', id: h.id }, aim: { x: h.x, z: h.z } }
-      return { key: `look-${inside}`, icon, say: say('Walk around. Tap the green button when a spot or a person shows up.', 'Waka around. Press the green button when person or place show.'), target: { t: 'none' } }
+      if (h) return { key: `spot-${h.id}`, icon: h.icon, say: say(`Walk to: ${h.name}. Then tap the green button.`, `Waka go: ${h.name}. Then press the green button.`), voice: 'g_spot', target: { t: 'hotspot', id: h.id }, aim: { x: h.x, z: h.z } }
+      return { key: `look-${inside}`, icon, say: GEN.look, voice: 'g_look', target: { t: 'none' } }
     }
     const door = INTERIORS[inside]?.door
-    return { key: 'exit', icon: '🚪', say: say(`Go outside first, then to ${placeName}.`, `Comot outside first, then go ${placeName}.`), target: { t: 'exit' }, aim: door }
+    return { key: 'exit', icon: '🚪', say: say(`Go outside first, then to ${placeName}.`, `Comot outside first, then go ${placeName}.`), voice: 'g_exit', target: { t: 'exit' }, aim: door }
   }
   if (!pl) return null
-  if (near === sug.place) return { key: `enter-${sug.place}`, icon, say: say(`You are at ${placeName}. Tap the big green button.`, `You don reach ${placeName}. Press the big green button.`), target: { t: 'enter', place: sug.place } }
+  if (near === sug.place) return { key: `enter-${sug.place}`, icon, say: say(`You are at ${placeName}. Tap the big green button.`, `You don reach ${placeName}. Press the big green button.`), voice: 'g_enter', target: { t: 'enter', place: sug.place } }
   const b = bearing(pos, pl.door)
-  return { key: `go-${sug.place}`, icon, say: say(`${dot(sug.say.en)}. Walk ${b.dir}, about ${b.steps} steps.`, `${dot(sug.say.pcm)}. Waka go ${b.dir}, about ${b.steps} steps.`), target: { t: 'place', place: sug.place }, aim: pl.door }
+  return { key: `go-${sug.place}`, icon, say: say(`${dot(sug.say.en)}. Walk ${b.dir}, about ${b.steps} steps.`, `${dot(sug.say.pcm)}. Waka go ${b.dir}, about ${b.steps} steps.`), voice: 'id' in sug ? `sug_${sug.id}` : sug.voice, target: { t: 'place', place: sug.place }, aim: pl.door }
 }
 
 export function placeActive(life: GameState, id: PlaceId): boolean {

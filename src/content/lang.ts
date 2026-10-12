@@ -16,3 +16,6 @@ export function pick(lang: Lang | undefined, s: Say): { main: string; sub?: stri
   return { main: s.en }
 }
 export const plain = (lang: Lang | undefined, s: Say) => (lang === 'pcm' || lang === 'both' ? s.pcm : s.en)
+
+/** Which recorded language to play: Pidgin for Pidgin and Both, English otherwise. */
+export const vlang = (lang: Lang | undefined): 'en' | 'pcm' => (lang === 'pcm' || lang === 'both' ? 'pcm' : 'en')

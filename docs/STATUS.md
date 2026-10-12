@@ -122,3 +122,12 @@ Players said they were not sure where to begin, so the game now tells them, GTA 
 - **How-to cards:** every task (study, talk, penalty, market, chores, overtime, service, shop, jog, match, cook, dine) and the Dash (on foot and danfo) show a card first: steps with icons, the goal, a speaker button and Start. The task only begins after Start. Shown the first two times per task; Settings > "Show the how-to tips again" resets them. Test links skip them (add `&asklang=1` to see them).
 - Content: `src/content/taskGuide.ts`. 🚩 Pidgin lines need a native-speaker review.
 - `tests/e2e/dash.mjs` is out of date (it clicks "Skip creation", removed in the redesign) and needs updating.
+
+## Recorded guide voice (ElevenLabs, Joshua's cloned voice)
+- 94 clips (47 lines x English and Pidgin) were generated with ElevenLabs model `eleven_v4` in the workspace voice "Joshua Jumbo" (cloned, Nigerian English accent), about 6,900 credits. They live in `public/voice/<id>.<en|pcm>.mp3` (24 kHz mono, 2.7 MB in total) with `public/voice/manifest.json`.
+- Covered: the 12 "what to do next" suggestions, the generic guide lines (stuck, at the door, go outside, look around, go to the glowing spot), the 3 first-run tips, a how-to clip for every task and the Dash (both modes), and every quest hint.
+- Not recorded (so spoken by the phone voice instead): lines that contain a place name, step count or spot name, such as "Walk east, about 48 steps". Their recorded part (the suggestion) plays; the exact numbers are on screen.
+- Playback: `speakLine` in `src/platform/voice.ts` plays the clip for the player's language (Pidgin for Pidgin and Both) and falls back to the phone voice if a clip is missing.
+- Regenerate or change a line: edit the text (`guide.ts`, `taskGuide.ts`, `voiceLines.ts`), run `npx tsx scripts/voice-lines.ts`, generate the changed lines, and add the file to `public/voice` and the manifest. Old clips for edited lines must be replaced or they will say the old words.
+- The Pidgin wording is still a first draft; re-record after a native-speaker review.
+- Test: `tests/e2e/voice.mjs`.

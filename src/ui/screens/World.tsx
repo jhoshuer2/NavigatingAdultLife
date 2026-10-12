@@ -27,8 +27,9 @@ import type { Exchange, Setting } from '@content/dialogue'
 import { bearing, guideStep, placeActive, suggest } from '../../world/guide'
 import { GuideCard, GuideCompass, LangPicker, Lines, TaskCoach } from '../Guide'
 import { HOWTO } from '@content/taskGuide'
-import { speak } from '@platform/voice'
-import { plain, say, type Lang } from '@content/lang'
+import { speakLine } from '@platform/voice'
+import { COACH } from '@content/voiceLines'
+import { plain, say, vlang, type Lang } from '@content/lang'
 import { installedSet } from '@content/appliances'
 import { ITEM_BY_ID } from '@content/items'
 import { outdoorAnchor, presenceAt, type Activity } from '../../world/residents'
@@ -235,8 +236,8 @@ export default function World() {
   const holdTask = needCoach && coached !== task
   useEffect(() => {
     if (!coachOn || !meta.langAsked || !voiceOn) return
-    const line = coach === 0 ? say('Drag the stick to walk. Tap the ground works too!', 'Drag the stick to waka. You fit tap the ground too!') : coach === 1 ? say('Walk to the glowing ring, then tap the green button.', 'Waka go the shining ring, then press the green button.') : say('Actions cost energy. Done for the year? Go home and end it.', 'Everything dey cost energy. You don finish the year? Go house end am.')
-    speak(plain(lang, line), `coach${coach}`, 60000)
+    const line = COACH[coach]
+    void speakLine({ id: `coach_${coach}`, lang: vlang(lang), text: plain(lang, line), key: `coach${coach}`, gapMs: 60000 })
   }, [coachOn, coach, meta.langAsked, voiceOn, lang]) // eslint-disable-line react-hooks/exhaustive-deps
   const ping = (el: 'quests' | 'map' | 'places' | 'home') => tgt?.t === 'ui' && tgt.el === el || (el === 'home' && tgt?.t === 'exit')
 

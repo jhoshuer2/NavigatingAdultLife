@@ -86,11 +86,11 @@ interface Store {
   importJson: (t: string) => boolean
   setLife: (s: GameState) => void
   finishTutorial: () => void
-  guideTrack: { place: PlaceId; say: Say; act?: string } | null
+  guideTrack: { place: PlaceId; say: Say; act?: string; voice?: string } | null
   seeTip: (k: string) => void
   resetTips: () => void
   setLang: (l: 'en' | 'pcm' | 'both') => void
-  setGuideTrack: (t: { place: PlaceId; say: Say; act?: string } | null) => void
+  setGuideTrack: (t: { place: PlaceId; say: Say; act?: string; voice?: string } | null) => void
   setConsent: (granted: boolean) => void
 }
 
@@ -163,7 +163,7 @@ export const useGame = create<Store>((set, get) => {
     init: () => {
       const meta = refreshTokens(loadMeta())
       const qs = new URLSearchParams(location.search)
-      if (qs.get('unlimited') === '1') { meta.tokens.unlimited = true; if (!qs.get('asklang')) { meta.langAsked = true; meta.tips = Object.fromEntries(Object.keys(HOWTO).map((k) => [k, 9])) } } // playtest/test mode skips the language question
+      if (qs.get('unlimited') === '1') { meta.tokens.unlimited = true; if (!qs.get('asklang')) { meta.langAsked = true; if (!qs.get('howto')) meta.tips = Object.fromEntries(Object.keys(HOWTO).map((k) => [k, 9])) } } // playtest/test mode skips the language question
       saveMeta(meta)
       audio.configure(meta.settings)
       configureVoice({ on: meta.settings.sound && meta.settings.voice !== false, volume: meta.settings.volume })

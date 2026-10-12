@@ -6,7 +6,8 @@ import { Icon } from './icons'
 import { useGame } from '../store'
 import { LANGS, pick, plain, say, type Lang } from '@content/lang'
 import { HOWTO } from '@content/taskGuide'
-import { speak, stopSpeaking } from '@platform/voice'
+import { speakLine, stopSpeaking } from '@platform/voice'
+import { vlang } from '@content/lang'
 import type { GuideStep } from '../world/guide'
 import type { WorldRenderer } from '../world/WorldRenderer'
 
@@ -17,7 +18,7 @@ export function Lines({ lang, s }: { lang?: Lang; s: { en: string; pcm: string }
 
 export function GuideCard({ step, lang, voice, onTap }: { step: GuideStep; lang?: Lang; voice: boolean; onTap: () => void }) {
   const stuck = step.key.startsWith('stuck')
-  useEffect(() => { if (voice) speak(plain(lang, step.say), `g:${step.key}`) }, [step.key, lang, voice]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (voice) void speakLine({ id: step.voice, lang: vlang(lang), text: plain(lang, step.say), key: `g:${step.key}` }) }, [step.key, lang, voice]) // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div key={step.key} className="pointer-events-auto mt-2 mx-2 flex items-center gap-1.5 rounded-2xl pl-1.5 pr-2 py-1.5 hud-glass pop" style={stuck ? { boxShadow: '0 0 0 2px var(--gold), 0 8px 24px rgba(0,0,0,.5)' } : undefined}>
       <button className="flex items-center gap-2.5 flex-1 min-w-0 text-left active:scale-[.99] transition-transform" onClick={onTap} aria-label="Guide">
@@ -25,7 +26,7 @@ export function GuideCard({ step, lang, voice, onTap }: { step: GuideStep; lang?
         <span className="flex-1 min-w-0 text-[14px] font-bold leading-snug"><Lines lang={lang} s={step.say} /></span>
         <span className="grid place-items-center w-9 h-9 rounded-full text-[19px] shrink-0 guide-nudge" style={{ background: 'linear-gradient(180deg,#ffe27a,#f59e0b)' }}>{step.icon}</span>
       </button>
-      <button className="grid place-items-center w-9 h-9 rounded-full bg-white/10 shrink-0 text-[16px]" aria-label="Hear it again" onClick={() => speak(plain(lang, step.say))}>🔊</button>
+      <button className="grid place-items-center w-9 h-9 rounded-full bg-white/10 shrink-0 text-[16px]" aria-label="Hear it again" onClick={() => void speakLine({ id: step.voice, lang: vlang(lang), text: plain(lang, step.say) })}>🔊</button>
     </div>
   )
 }
@@ -71,7 +72,7 @@ export function LangPicker() {
 export function TaskCoach({ kind, lang, onStart }: { kind: string; lang?: Lang; onStart: () => void }) {
   const h = HOWTO[kind]
   const voiceLines = h ? [plain(lang, h.title), ...h.steps.map((s) => plain(lang, s.say)), plain(lang, h.goal)].join('. ') : ''
-  useEffect(() => { if (h) speak(voiceLines, `howto:${kind}`, 20000) }, [kind]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (h) void speakLine({ id: `how_${kind}`, lang: vlang(lang), text: voiceLines, key: `howto:${kind}`, gapMs: 20000 }) }, [kind]) // eslint-disable-line react-hooks/exhaustive-deps
   if (!h) return null
   return (
     <div className="absolute inset-0 z-40 grid place-items-end sm:place-items-center p-3 pb-6" style={{ background: 'rgba(5,3,20,.72)', backdropFilter: 'blur(3px)' }} role="dialog" aria-label="How to play">
@@ -82,7 +83,7 @@ export function TaskCoach({ kind, lang, onStart }: { kind: string; lang?: Lang; 
         </div>
         <HowToBody h={h} lang={lang} />
         <div className="flex gap-2 mt-4">
-          <button className="btn btn-ghost !min-h-[52px] !px-4" onClick={() => speak(voiceLines)} aria-label="Hear it again">🔊</button>
+          <button className="btn btn-ghost !min-h-[52px] !px-4" onClick={() => void speakLine({ id: `how_${kind}`, lang: vlang(lang), text: voiceLines })} aria-label="Hear it again">🔊</button>
           <button className="btn btn-green btn-shine flex-1 !text-xl" onClick={() => { stopSpeaking(); onStart() }}>Start <Icon name="chevron" size={20} /></button>
         </div>
       </div>
