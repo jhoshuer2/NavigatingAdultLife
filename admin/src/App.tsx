@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api, defaultFilters, rangeFor, type Admin, type FilterState } from './api'
-import { useApi } from './hooks'
+import { RefreshContext, useApi } from './hooks'
 import { Overview } from './pages/Overview'
 import { Players } from './pages/Players'
 import { Geography } from './pages/Geography'
@@ -70,6 +70,9 @@ export default function App() {
   const [admin, setAdmin] = useState<Admin | null | undefined>(undefined)
   const [filters, setFilters] = useState<FilterState>(defaultFilters)
   const hash = useHash()
+  const [tick, setTick] = useState(0); const [updated, setUpdated] = useState(() => new Date())
+  const refresh = () => { setTick((t) => t + 1); setUpdated(new Date()) }
+  useEffect(() => { const id = setInterval(() => { if (document.visibilityState === 'visible') { setTick((t) => t + 1); setUpdated(new Date()) } }, 30000); return () => clearInterval(id) }, [])
   useEffect(() => { api('me').then((r) => setAdmin(r.admin)).catch(() => setAdmin(null)) }, [])
   if (admin === undefined) return <p className="muted" style={{ padding: 24 }}>Loading…</p>
   if (!admin) return <Login onDone={setAdmin} />
@@ -87,9 +90,12 @@ export default function App() {
         <div className="who">{admin.email}<br />{admin.role} · <a href="#" onClick={async (e) => { e.preventDefault(); await api('logout', { method: 'POST' }); setAdmin(null) }}>Sign out</a></div>
       </nav>
       <main>
-        <h2>{page.label}</h2>
+        <div className="bar" style={{ justifyContent: 'space-between' }}>
+          <h2 style={{ margin: 0 }}>{page.label}</h2>
+          <span className="muted small" role="status">Updates every 30 seconds · last at {updated.toLocaleTimeString()} <button className="btn" onClick={refresh} aria-label="Refresh now">↻ Refresh</button></span>
+        </div>
         {page.filters && <FilterBar f={filters} set={setFilters} />}
-        {body}
+        <RefreshContext.Provider value={tick}>{body}</RefreshContext.Provider>
       </main>
     </div>
   )

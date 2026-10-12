@@ -4,7 +4,7 @@ import { getDb, type Db } from './db'
 import * as Q from './queries'
 import * as Q2 from './queries2'
 import { eraseDevice } from './ingest'
-import { json } from './http'
+import { allowedOrigins, json } from './http'
 import { EVENT_PROPS } from '../../shared/events'
 import { RETENTION, purge } from './retention'
 
@@ -78,7 +78,7 @@ async function get(db: Db, me: Admin, parts: string[], url: URL, req: Request, n
     case 'players': case 'players.csv': {
       const csvOut = parts[0] === 'players.csv'
       if (!can(me, csvOut ? 'export' : 'playersList')) return forbidden()
-      const pq: Q.PlayerQuery = { ...f, from: url.searchParams.get('from') ? f.from : undefined as never, to: url.searchParams.get('to') ? f.to : undefined as never, search: url.searchParams.get('q') ?? undefined, sort: url.searchParams.get('sort') ?? undefined, dir: url.searchParams.get('dir') === 'asc' ? 'asc' : 'desc', page: Number(url.searchParams.get('page') ?? 1), size: Number(url.searchParams.get('size') ?? 25) }
+      const pq: Q.PlayerQuery = { ...f, from: url.searchParams.get('from') ? f.from : undefined as never, to: url.searchParams.get('to') ? f.to : undefined as never, search: url.searchParams.get('q') ?? undefined, includeTest: me.role === 'owner' && url.searchParams.get('include_test') === '1', sort: url.searchParams.get('sort') ?? undefined, dir: url.searchParams.get('dir') === 'asc' ? 'asc' : 'desc', page: Number(url.searchParams.get('page') ?? 1), size: Number(url.searchParams.get('size') ?? 25) }
       const label = (r: any) => idFor(me, r.device_id)
       if (csvOut) {
         const rows = (await Q.playersForExport(db, pq)).map((r: any) => ({ player: label(r), first_seen: r.first_seen, last_seen: r.last_seen, country: r.country, region: r.region, city: r.city, device: r.device_type, os: r.os, browser: r.browser, sessions: r.sessions_count, active_seconds: r.active_seconds, lives: r.lives_count, last_feature: r.last_feature, status: r.status }))
@@ -101,7 +101,7 @@ async function get(db: Db, me: Admin, parts: string[], url: URL, req: Request, n
       if (parts[1] === 'users') return json({ users: (await db.query('SELECT admin_id, email, role, disabled, created_at FROM admin_users ORDER BY created_at')).rows })
       if (parts[1] === 'audit') return json({ rows: (await db.query('SELECT id, admin_email, action, target, detail, at, ip_hash FROM audit_log ORDER BY id DESC LIMIT 200')).rows })
       if (parts[1] === 'summary') return json(await Q2.weeklySummary(db, now))
-      if (parts[1] === 'schema') return json({ events: EVENT_PROPS, retention: RETENTION, definitions: Q.DEFINITIONS, ingest: (await db.query('SELECT day::text, accepted, duplicate, invalid, rate_limited FROM ingest_stats ORDER BY day DESC LIMIT 14')).rows })
+      if (parts[1] === 'schema') return json({ events: EVENT_PROPS, retention: RETENTION, definitions: Q.DEFINITIONS, ingest: await collectorHealth(db), blocked_origins: (await db.query('SELECT day::text, origin, n FROM blocked_origins WHERE day >= current_date - 13 ORDER BY day DESC, n DESC LIMIT 60')).rows, allowed_origins: allowedOrigins() })
       return json({ error: 'Not found' }, 404)
     }
     default: return json({ error: 'Not found' }, 404)
@@ -128,6 +128,14 @@ async function write(db: Db, me: Admin, parts: string[], method: string, req: Re
     catch { return json({ error: 'That email already exists.' }, 409) }
   }
   return json({ error: 'Not found' }, 404)
+}
+
+/** Per day: events accepted/rejected plus how many different devices sent them (test traffic counted separately). */
+async function collectorHealth(db: Db) {
+  const stats = (await db.query<any>('SELECT day::text, accepted, duplicate, invalid, rate_limited FROM ingest_stats ORDER BY day DESC LIMIT 14')).rows
+  const dev = (await db.query<any>(`SELECT received_at::date::text AS day, count(DISTINCT device_id)::int AS devices, count(DISTINCT device_id) FILTER (WHERE is_test)::int AS test_devices
+    FROM raw_events WHERE received_at >= current_date - 13 GROUP BY 1`)).rows
+  return stats.map((s: any) => ({ ...s, devices: dev.find((d: any) => d.day === s.day)?.devices ?? 0, test_devices: dev.find((d: any) => d.day === s.day)?.test_devices ?? 0 }))
 }
 
 /** Daily maintenance (Vercel Cron): retention purge. Authorised by CRON_SECRET. */

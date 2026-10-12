@@ -1,13 +1,17 @@
-import { useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
 import { api } from './api'
 
+/** Bumped by the app every 30 seconds (and by the Refresh button) so every page re-reads fresh numbers. */
+export const RefreshContext = createContext(0)
+
 export function useApi<T = any>(path: string | null): { data: T | null; error: string | null; loading: boolean } {
+  const tick = useContext(RefreshContext)
   const [s, setS] = useState<{ data: T | null; error: string | null; loading: boolean }>({ data: null, error: null, loading: !!path })
   useEffect(() => {
     if (!path) return
     let live = true; setS((x) => ({ ...x, loading: true, error: null }))
     api<T>(path).then((data) => live && setS({ data, error: null, loading: false })).catch((e: Error) => live && setS({ data: null, error: e.message, loading: false }))
     return () => { live = false }
-  }, [path])
+  }, [path, tick])
   return s
 }

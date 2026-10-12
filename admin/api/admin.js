@@ -9126,6 +9126,135 @@ var hashedId = (id) => createHmac("sha256", process.env.ID_HASH_SECRET ?? "dev-i
 var shortId = (id) => id.slice(0, 8);
 var idFor = (a, id) => a.role === "analyst" ? hashedId(id) : shortId(id);
 
+// server/schema.ts
+var MIGRATIONS = [
+  {
+    id: 1,
+    sql: `
+CREATE TABLE devices (
+  device_id uuid PRIMARY KEY,
+  first_seen timestamptz NOT NULL, last_seen timestamptz NOT NULL,
+  country text, region text, city text,
+  os text, browser text, browser_version text, device_type text,
+  language text, tz text, screen_band text, app_version text,
+  player_id uuid, consent_version text, consent_at timestamptz,
+  sessions_count int NOT NULL DEFAULT 0, active_seconds int NOT NULL DEFAULT 0, lives_count int NOT NULL DEFAULT 0,
+  countries text[] NOT NULL DEFAULT '{}',
+  last_feature text, is_test boolean NOT NULL DEFAULT false
+);
+CREATE INDEX devices_last_seen ON devices (last_seen);
+CREATE INDEX devices_country ON devices (country);
+
+CREATE TABLE sessions (
+  session_id uuid PRIMARY KEY, device_id uuid NOT NULL,
+  started_at timestamptz NOT NULL, ended_at timestamptz, last_event_at timestamptz NOT NULL,
+  active_seconds int NOT NULL DEFAULT 0, screens jsonb NOT NULL DEFAULT '{}',
+  entry_referrer text, utm jsonb, is_test boolean NOT NULL DEFAULT false
+);
+CREATE INDEX sessions_device ON sessions (device_id, started_at);
+CREATE INDEX sessions_started ON sessions (started_at);
+
+CREATE TABLE lives (
+  life_id uuid PRIMARY KEY, device_id uuid NOT NULL,
+  started_at timestamptz NOT NULL, ended_at timestamptz,
+  age_reached int, ending_id text, archetype text, gender text, district text, is_test boolean NOT NULL DEFAULT false
+);
+CREATE INDEX lives_device ON lives (device_id);
+
+CREATE TABLE raw_events (
+  event_id uuid PRIMARY KEY, received_at timestamptz NOT NULL, ts timestamptz NOT NULL,
+  device_id uuid NOT NULL, session_id uuid NOT NULL, life_id uuid,
+  name text NOT NULL, props jsonb NOT NULL DEFAULT '{}',
+  country text, region text, city text, is_test boolean NOT NULL DEFAULT false
+);
+CREATE INDEX raw_events_received ON raw_events (received_at);
+CREATE INDEX raw_events_device ON raw_events (device_id, ts);
+CREATE INDEX raw_events_name ON raw_events (name, ts);
+
+-- One row per device per day: the base for DAU/WAU/MAU, new vs returning, retention and geography.
+CREATE TABLE device_days (
+  day date NOT NULL, device_id uuid NOT NULL,
+  active_seconds int NOT NULL DEFAULT 0, sessions int NOT NULL DEFAULT 0,
+  country text, region text, city text, device_type text, app_version text,
+  is_new boolean NOT NULL DEFAULT false, is_test boolean NOT NULL DEFAULT false,
+  PRIMARY KEY (day, device_id)
+);
+CREATE INDEX device_days_device ON device_days (device_id);
+
+CREATE TABLE feature_days (
+  day date NOT NULL, feature text NOT NULL, device_id uuid NOT NULL,
+  uses int NOT NULL DEFAULT 0, score_sum double precision NOT NULL DEFAULT 0, score_n int NOT NULL DEFAULT 0,
+  is_test boolean NOT NULL DEFAULT false,
+  PRIMARY KEY (day, feature, device_id)
+);
+CREATE INDEX feature_days_feature ON feature_days (feature, day);
+
+-- Playtime by where it was spent, and a local-time heatmap (dow 0=Sunday). Keyed by device so erasure can remove a player's share.
+CREATE TABLE playtime_split (day date NOT NULL, device_id uuid NOT NULL, bucket text NOT NULL, seconds bigint NOT NULL DEFAULT 0, PRIMARY KEY (day, device_id, bucket));
+CREATE TABLE activity_heat (day date NOT NULL, device_id uuid NOT NULL, dow int NOT NULL, hour int NOT NULL, seconds bigint NOT NULL DEFAULT 0, PRIMARY KEY (day, device_id, dow, hour));
+
+CREATE TABLE rate_limits (key text NOT NULL, window_start bigint NOT NULL, n int NOT NULL DEFAULT 0, PRIMARY KEY (key, window_start));
+CREATE TABLE erased_devices (hash text PRIMARY KEY, at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE ingest_stats (day date NOT NULL, accepted bigint NOT NULL DEFAULT 0, duplicate bigint NOT NULL DEFAULT 0, invalid bigint NOT NULL DEFAULT 0, rate_limited bigint NOT NULL DEFAULT 0, PRIMARY KEY (day));
+
+CREATE TABLE admin_users (
+  admin_id uuid PRIMARY KEY, email text NOT NULL UNIQUE, role text NOT NULL CHECK (role IN ('owner','analyst','support','engineer')),
+  password_hash text NOT NULL, totp_secret text, disabled boolean NOT NULL DEFAULT false, created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE admin_sessions (token_hash text PRIMARY KEY, admin_id uuid NOT NULL REFERENCES admin_users(admin_id), created_at timestamptz NOT NULL DEFAULT now(), last_seen timestamptz NOT NULL DEFAULT now());
+CREATE TABLE login_attempts (key text NOT NULL, at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX login_attempts_key ON login_attempts (key, at);
+
+CREATE TABLE audit_log (id bigserial PRIMARY KEY, admin_id uuid, admin_email text, action text NOT NULL, target text, detail jsonb, at timestamptz NOT NULL DEFAULT now(), ip_hash text);
+-- append-only, except for the retention job, which sets nal.purge for its own transaction
+CREATE FUNCTION audit_log_immutable() RETURNS trigger AS $$ BEGIN IF TG_OP = 'DELETE' AND current_setting('nal.purge', true) = 'on' THEN RETURN OLD; END IF; RAISE EXCEPTION 'audit_log is append-only'; END; $$ LANGUAGE plpgsql;
+CREATE TRIGGER audit_log_no_update BEFORE UPDATE OR DELETE ON audit_log FOR EACH ROW EXECUTE FUNCTION audit_log_immutable();
+`
+  },
+  {
+    id: 2,
+    sql: `
+-- Phase C: funnels, content, quality and live view
+ALTER TABLE devices ADD COLUMN last_screen text, ADD COLUMN last_heartbeat_at timestamptz;
+ALTER TABLE lives ADD COLUMN last_age int;
+
+-- First time each device reached each funnel step (survives the 90 day raw-event purge)
+CREATE TABLE device_milestones (device_id uuid NOT NULL, step text NOT NULL, first_at timestamptz NOT NULL, is_test boolean NOT NULL DEFAULT false, PRIMARY KEY (device_id, step));
+
+-- Story events, choices, flags, conversation tones and task starts/abandons. Keyed by device so erasure removes a player's share.
+CREATE TABLE content_days (day date NOT NULL, device_id uuid NOT NULL, kind text NOT NULL, item_id text NOT NULL, choice_id text NOT NULL DEFAULT '', n int NOT NULL DEFAULT 0, is_test boolean NOT NULL DEFAULT false, PRIMARY KEY (day, device_id, kind, item_id, choice_id));
+CREATE INDEX content_days_kind ON content_days (kind, day);
+
+CREATE TABLE quality_days (day date NOT NULL, device_id uuid NOT NULL, device_type text, os text, app_version text, slow int NOT NULL DEFAULT 0, webgl_fail int NOT NULL DEFAULT 0, errors int NOT NULL DEFAULT 0, load_ms int, is_test boolean NOT NULL DEFAULT false, PRIMARY KEY (day, device_id));
+CREATE TABLE error_days (day date NOT NULL, device_id uuid NOT NULL, message text NOT NULL, app_version text NOT NULL DEFAULT '', device_type text, n int NOT NULL DEFAULT 0, is_test boolean NOT NULL DEFAULT false, PRIMARY KEY (day, device_id, message, app_version));
+`
+  },
+  {
+    id: 3,
+    sql: `
+-- Multiplayer accounts (docs/PRD-multiplayer.md): anonymous accounts with an age band, guardian PIN and recovery code. No email or phone.
+CREATE TABLE accounts (
+  account_id uuid PRIMARY KEY, name text NOT NULL, tag int NOT NULL, friend_code text NOT NULL UNIQUE,
+  age_band text NOT NULL CHECK (age_band IN ('under13','13to17','18plus')),
+  mp_enabled boolean NOT NULL DEFAULT false, chat_level text NOT NULL DEFAULT 'none',
+  guardian_pin_hash text, recovery_hash text NOT NULL UNIQUE, token_ver int NOT NULL DEFAULT 1,
+  country text, created_at timestamptz NOT NULL DEFAULT now(), last_seen timestamptz NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX accounts_name_tag ON accounts (lower(name), tag);
+CREATE INDEX accounts_last_seen ON accounts (last_seen);
+CREATE TABLE account_attempts (key text NOT NULL, kind text NOT NULL, at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX account_attempts_key ON account_attempts (key, kind, at);
+`
+  },
+  {
+    id: 4,
+    sql: `
+-- Web addresses that tried to call the collector but are not in GAME_ORIGINS (so the owner can see what to add)
+CREATE TABLE blocked_origins (day date NOT NULL, origin text NOT NULL, n int NOT NULL DEFAULT 0, PRIMARY KEY (day, origin));
+`
+  }
+];
+
 // server/db.ts
 var current = null;
 async function getDb() {
@@ -9147,7 +9276,7 @@ async function getDb() {
       throw new Error("nested tx");
     }
   });
-  current = {
+  const db = {
     ...wrap(pool),
     tx: async (fn) => {
       const c = await pool.connect();
@@ -9164,7 +9293,21 @@ async function getDb() {
       }
     }
   };
+  await migrate(db);
+  current = db;
   return current;
+}
+async function migrate(db) {
+  await db.tx(async (t) => {
+    await t.query("SELECT pg_advisory_xact_lock(727001)");
+    await t.query("CREATE TABLE IF NOT EXISTS schema_migrations (id int PRIMARY KEY, at timestamptz NOT NULL DEFAULT now())");
+    const done = new Set((await t.query("SELECT id FROM schema_migrations")).rows.map((r) => r.id));
+    for (const m of MIGRATIONS) {
+      if (done.has(m.id)) continue;
+      await t.exec(m.sql);
+      await t.query("INSERT INTO schema_migrations (id) VALUES ($1)", [m.id]);
+    }
+  });
 }
 
 // server/queries.ts
@@ -9256,7 +9399,7 @@ async function overview(db, f) {
 var SORTS = { first_seen: "d.first_seen", last_seen: "d.last_seen", sessions: "d.sessions_count", active: "d.active_seconds", lives: "d.lives_count", country: "d.country" };
 function playerWhere(f) {
   const p = [];
-  const c = ["NOT d.is_test"];
+  const c = [f.includeTest ? "true" : "NOT d.is_test"];
   const add = (v) => {
     p.push(v);
     return `$${p.length}`;
@@ -9274,7 +9417,7 @@ async function players(db, f, now = /* @__PURE__ */ new Date()) {
   const size = Math.min(Math.max(f.size ?? 25, 1), 100), page = Math.max(f.page ?? 1, 1);
   const sort = SORTS[f.sort ?? "last_seen"] ?? SORTS.last_seen, dir = f.dir === "asc" ? "ASC" : "DESC";
   const total = n((await db.query(`SELECT count(*)::int c FROM devices d WHERE ${w.where}`, w.p)).rows[0].c);
-  const rows = (await db.query(`SELECT d.device_id, d.first_seen, d.last_seen, d.country, d.region, d.city, d.os, d.browser, d.device_type, d.sessions_count, d.active_seconds, d.lives_count, d.last_feature
+  const rows = (await db.query(`SELECT d.device_id, d.first_seen, d.last_seen, d.country, d.region, d.city, d.os, d.browser, d.device_type, d.sessions_count, d.active_seconds, d.lives_count, d.last_feature, d.is_test
     FROM devices d WHERE ${w.where} ORDER BY ${sort} ${dir}, d.device_id LIMIT ${size} OFFSET ${(page - 1) * size}`, w.p)).rows;
   const status = (last) => {
     const age = now.getTime() - new Date(last).getTime();
@@ -9600,6 +9743,9 @@ async function weeklySummary(db, now) {
 
 // server/http.ts
 var MAX_BODY = 128 * 1024;
+function allowedOrigins() {
+  return (process.env.GAME_ORIGINS ?? "").split(",").map((s) => s.trim().replace(/\/+$/, "")).filter(Boolean);
+}
 var json = (data, status = 200, headers = {}) => new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json", "cache-control": "no-store", ...headers } });
 
 // ../shared/account.ts
@@ -9723,7 +9869,7 @@ async function get(db, me, parts, url, req, now) {
     case "players.csv": {
       const csvOut = parts[0] === "players.csv";
       if (!can(me, csvOut ? "export" : "playersList")) return forbidden();
-      const pq = { ...f, from: url.searchParams.get("from") ? f.from : void 0, to: url.searchParams.get("to") ? f.to : void 0, search: url.searchParams.get("q") ?? void 0, sort: url.searchParams.get("sort") ?? void 0, dir: url.searchParams.get("dir") === "asc" ? "asc" : "desc", page: Number(url.searchParams.get("page") ?? 1), size: Number(url.searchParams.get("size") ?? 25) };
+      const pq = { ...f, from: url.searchParams.get("from") ? f.from : void 0, to: url.searchParams.get("to") ? f.to : void 0, search: url.searchParams.get("q") ?? void 0, includeTest: me.role === "owner" && url.searchParams.get("include_test") === "1", sort: url.searchParams.get("sort") ?? void 0, dir: url.searchParams.get("dir") === "asc" ? "asc" : "desc", page: Number(url.searchParams.get("page") ?? 1), size: Number(url.searchParams.get("size") ?? 25) };
       const label = (r2) => idFor(me, r2.device_id);
       if (csvOut) {
         const rows = (await playersForExport(db, pq)).map((r2) => ({ player: label(r2), first_seen: r2.first_seen, last_seen: r2.last_seen, country: r2.country, region: r2.region, city: r2.city, device: r2.device_type, os: r2.os, browser: r2.browser, sessions: r2.sessions_count, active_seconds: r2.active_seconds, lives: r2.lives_count, last_feature: r2.last_feature, status: r2.status }));
@@ -9749,7 +9895,7 @@ async function get(db, me, parts, url, req, now) {
       if (parts[1] === "users") return json({ users: (await db.query("SELECT admin_id, email, role, disabled, created_at FROM admin_users ORDER BY created_at")).rows });
       if (parts[1] === "audit") return json({ rows: (await db.query("SELECT id, admin_email, action, target, detail, at, ip_hash FROM audit_log ORDER BY id DESC LIMIT 200")).rows });
       if (parts[1] === "summary") return json(await weeklySummary(db, now));
-      if (parts[1] === "schema") return json({ events: EVENT_PROPS, retention: RETENTION, definitions: DEFINITIONS, ingest: (await db.query("SELECT day::text, accepted, duplicate, invalid, rate_limited FROM ingest_stats ORDER BY day DESC LIMIT 14")).rows });
+      if (parts[1] === "schema") return json({ events: EVENT_PROPS, retention: RETENTION, definitions: DEFINITIONS, ingest: await collectorHealth(db), blocked_origins: (await db.query("SELECT day::text, origin, n FROM blocked_origins WHERE day >= current_date - 13 ORDER BY day DESC, n DESC LIMIT 60")).rows, allowed_origins: allowedOrigins() });
       return json({ error: "Not found" }, 404);
     }
     default:
@@ -9785,6 +9931,12 @@ async function write(db, me, parts, method, req) {
     }
   }
   return json({ error: "Not found" }, 404);
+}
+async function collectorHealth(db) {
+  const stats = (await db.query("SELECT day::text, accepted, duplicate, invalid, rate_limited FROM ingest_stats ORDER BY day DESC LIMIT 14")).rows;
+  const dev = (await db.query(`SELECT received_at::date::text AS day, count(DISTINCT device_id)::int AS devices, count(DISTINCT device_id) FILTER (WHERE is_test)::int AS test_devices
+    FROM raw_events WHERE received_at >= current_date - 13 GROUP BY 1`)).rows;
+  return stats.map((s) => ({ ...s, devices: dev.find((d) => d.day === s.day)?.devices ?? 0, test_devices: dev.find((d) => d.day === s.day)?.test_devices ?? 0 }));
 }
 
 // api-src/admin.ts

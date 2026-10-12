@@ -10,7 +10,8 @@ export function Players({ f, admin, id }: { f: FilterState; admin: Admin; id?: s
 
 function List({ f, admin }: { f: FilterState; admin: Admin }) {
   const [q, setQ] = useState(''); const [sort, setSort] = useState('last_seen'); const [dir, setDir] = useState<'asc' | 'desc'>('desc'); const [page, setPage] = useState(1)
-  const query = qs(f, { q, sort, dir, page, size: 25 })
+  const [withTest, setWithTest] = useState(false)
+  const query = qs(f, { q, sort, dir, page, size: 25, include_test: withTest ? 1 : undefined })
   const { data, error } = useApi<any>(`players?${query}`)
   const sortBtn = (key: string, label: string) => <button onClick={() => { if (sort === key) setDir(dir === 'asc' ? 'desc' : 'asc'); else { setSort(key); setDir('desc') } setPage(1) }} aria-label={`Sort by ${label}`}>{label}{sort === key ? (dir === 'asc' ? ' ▲' : ' ▼') : ''}</button>
   return (
@@ -18,6 +19,7 @@ function List({ f, admin }: { f: FilterState; admin: Admin }) {
       <div className="bar">
         <input type="search" placeholder="Search by start of ID" aria-label="Search players" value={q} onChange={(e) => { setQ(e.target.value); setPage(1) }} disabled={admin.role === 'analyst'} title={admin.role === 'analyst' ? 'Analysts see hashed IDs only' : ''} />
         {(admin.role === 'owner' || admin.role === 'analyst') && <a className="btn" href={`/api/admin/players.csv?${qs(f, { q, sort, dir })}`}>⬇ Export CSV{admin.role === 'analyst' ? ' (hashed IDs)' : ''}</a>}
+        {admin.role === 'owner' && <label className="small"><input type="checkbox" checked={withTest} onChange={(e) => { setWithTest(e.target.checked); setPage(1) }} /> Include test devices (debug links, bots)</label>}
         <span className="muted small">Players are device IDs until accounts exist. A new browser or cleared data counts as a new player.</span>
       </div>
       <Card>
@@ -36,7 +38,7 @@ function List({ f, admin }: { f: FilterState; admin: Admin }) {
                   <td>{[r.device_type, r.os, r.browser].filter(Boolean).join(' · ')}</td>
                   <td className="num">{r.sessions_count}</td><td className="num">{fmtDur(r.active_seconds)}</td><td className="num">{r.lives_count}</td>
                   <td>{r.last_feature ?? '–'}</td><td className="muted" title="Needs the server token ledger (accounts milestone)">–</td>
-                  <td><span className={`chip ${r.status}`}>{r.status}</span></td>
+                  <td><span className={`chip ${r.status}`}>{r.status}</span>{r.is_test && <span className="chip" style={{ marginLeft: 4 }}>test</span>}</td>
                 </tr>))}</tbody>
             </table></div>
             {!data.rows.length && <p className="muted">No players match.</p>}
