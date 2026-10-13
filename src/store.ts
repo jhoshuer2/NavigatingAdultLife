@@ -46,6 +46,8 @@ interface Store {
   matchReq: { n: number } | null
   startMatch: () => void
   jogReq: { n: number } | null
+  tripReq: { n: number } | null
+  startTrip: () => void
   startJog: () => void
   startShopReq: { n: number } | null
   startShop: () => void
@@ -134,8 +136,9 @@ export const useGame = create<Store>((set, get) => {
   }
   const setMeta = (meta: MetaProfile) => { saveMeta(meta); set({ meta }); audio.configure(meta.settings); configureVoice({ on: meta.settings.sound && meta.settings.voice !== false, volume: meta.settings.volume }) }
   return {
-    screen: 'title', life: null, meta: defaultMeta(), sheet: null, toasts: [], quizFeedback: null, dashMode: 'foot', lastDash: null, endingRecorded: false, placeId: null, npcId: null, walkReq: null, hour: 8, day: 0, enterReq: null, taskActive: false, deliveredNow: null, talkReq: null, penaltyReq: null, marketReq: null, startChoresReq: null, startShopReq: null, jogReq: null, matchReq: null,
+    screen: 'title', life: null, meta: defaultMeta(), sheet: null, toasts: [], quizFeedback: null, dashMode: 'foot', lastDash: null, endingRecorded: false, placeId: null, npcId: null, walkReq: null, hour: 8, day: 0, enterReq: null, taskActive: false, deliveredNow: null, talkReq: null, penaltyReq: null, marketReq: null, startChoresReq: null, startShopReq: null, jogReq: null, tripReq: null, matchReq: null,
     startMatch: () => set((st) => ({ matchReq: { n: (st.matchReq?.n ?? 0) + 1 }, sheet: null })),
+    startTrip: () => set((st) => ({ tripReq: { n: (st.tripReq?.n ?? 0) + 1 }, sheet: null })),
     startJog: () => set((st) => ({ jogReq: { n: (st.jogReq?.n ?? 0) + 1 }, sheet: null })),
     startShop: () => set((st) => ({ startShopReq: { n: (st.startShopReq?.n ?? 0) + 1 }, sheet: null })),
     startChores: () => set((st) => ({ startChoresReq: { n: (st.startChoresReq?.n ?? 0) + 1 }, sheet: null })),

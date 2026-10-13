@@ -1,9 +1,10 @@
 // Walkable district layout. Pure data + helpers: no Three.js, no DOM. Units are metres; x east, z south.
 import { makeRng } from '@engine/core/rng'
 import { CITIES, type CityId } from '@content/cities'
+import { flavourOf, type Flavour } from './flavour'
 
 export interface Rect { x0: number; x1: number; z0: number; z1: number }
-export type PlaceId = 'home' | 'school' | 'market' | 'mamaput' | 'pitch' | 'worship' | 'busstop' | 'office' | 'jobcentre'
+export type PlaceId = 'home' | 'school' | 'market' | 'mamaput' | 'pitch' | 'worship' | 'busstop' | 'office' | 'jobcentre' | 'outing'
 
 export interface Place {
   id: PlaceId
@@ -31,44 +32,44 @@ export const DISTRICTS: Record<string, DistrictTheme> = {
   surulere: {
     id: 'surulere', city: 'lagos', name: 'Surulere', tagline: 'Football on every street, neighbours who know your business.',
     wall: [0xe8c9a0, 0xd9a05b, 0xf0d9a8, 0xcf8a5a, 0xdcae92], roof: 0xa8452a, ground: 0x8aa84a, roadColor: 0x3d3d46, sidewalk: 0xd8cfc0, trees: 26, density: 1, tall: 0.2,
-    names: { home: 'Your home', school: 'Surulere School', market: 'Aguda Market', mamaput: "Mama Chidi's Buka", pitch: 'Street Football Pitch', worship: 'Place of Worship', busstop: 'Danfo Bus Stop', office: 'Your Workplace', jobcentre: 'Cyber Café & Job Centre' },
+    names: { home: 'Your home', school: 'Surulere School', market: 'Aguda Market', mamaput: "Mama Chidi's Buka", pitch: 'Street Football Pitch', worship: 'Place of Worship', busstop: 'Danfo Bus Stop', office: 'Your Workplace', jobcentre: 'Cyber Café & Job Centre', outing: 'Landmark Beach (Group Trip)' },
   },
   ikorodu: {
     id: 'ikorodu', city: 'lagos', name: 'Ikorodu', tagline: 'Long commutes, big yards, fresh pepper soup and strong community.',
     wall: [0xd6b58a, 0xc9a06a, 0xe2c8a0, 0xb88a56, 0xa8d0a0], roof: 0x7a4a2a, ground: 0x7fae4e, roadColor: 0x4a4540, sidewalk: 0xcdbf9f, trees: 40, density: 0.8, tall: 0.1,
-    names: { home: 'Your home', school: 'Ikorodu Community School', market: 'Garage Market', mamaput: "Iya Ibeji's Buka", pitch: 'Compound Pitch', worship: 'Place of Worship', busstop: 'Ikorodu Garage Stop', office: 'Your Workplace', jobcentre: 'Business Centre & Job Desk' },
+    names: { home: 'Your home', school: 'Ikorodu Community School', market: 'Garage Market', mamaput: "Iya Ibeji's Buka", pitch: 'Compound Pitch', worship: 'Place of Worship', busstop: 'Ikorodu Garage Stop', office: 'Your Workplace', jobcentre: 'Business Centre & Job Desk', outing: 'Lagoon Beach (Group Trip)' },
   },
   yaba: {
     id: 'yaba', city: 'lagos', name: 'Yaba', tagline: 'Campuses, tech hubs and rent that talks loudly.',
     wall: [0xc9d3dd, 0xe6c58a, 0x9fb7c9, 0xd8a7a0, 0xf0d9a8], roof: 0x44505a, ground: 0x88a063, roadColor: 0x3a3c45, sidewalk: 0xd0d4d8, trees: 22, density: 1.2, tall: 0.45,
-    names: { home: 'Your home', school: 'Yaba College Area School', market: 'Yaba Market', mamaput: 'Tech Bro Buka', pitch: 'Campus Field', worship: 'Place of Worship', busstop: 'Yaba Bus Stop', office: 'Your Workplace', jobcentre: 'Co-working & Job Hub' },
+    names: { home: 'Your home', school: 'Yaba College Area School', market: 'Yaba Market', mamaput: 'Tech Bro Buka', pitch: 'Campus Field', worship: 'Place of Worship', busstop: 'Yaba Bus Stop', office: 'Your Workplace', jobcentre: 'Co-working & Job Hub', outing: 'Tarkwa Bay Beach (Group Trip)' },
   },
   lekki: {
     id: 'lekki', city: 'lagos', name: 'Lekki', tagline: 'Gated estates, generators that never sleep, traffic to the Island.',
     wall: [0xf2efe6, 0xe9e2d0, 0xcfd9e6, 0xe6d9c4, 0xdde6dc], roof: 0x5a6a7a, ground: 0x78b05a, roadColor: 0x33353d, sidewalk: 0xe3e0d8, trees: 34, density: 0.9, tall: 0.3,
-    names: { home: 'Your home', school: 'Lekki Premier School', market: 'Lekki Mall & Market', mamaput: 'Skyline Kitchen', pitch: 'Estate Court', worship: 'Place of Worship', busstop: 'Lekki Bus Stop', office: 'Your Workplace', jobcentre: 'Recruitment Lounge' },
+    names: { home: 'Your home', school: 'Lekki Premier School', market: 'Lekki Mall & Market', mamaput: 'Skyline Kitchen', pitch: 'Estate Court', worship: 'Place of Worship', busstop: 'Lekki Bus Stop', office: 'Your Workplace', jobcentre: 'Recruitment Lounge', outing: 'Elegushi Beach (Group Trip)' },
   },
 }
 
 DISTRICTS.kubwa = {
   id: 'kubwa', city: 'abuja', name: 'Kubwa', tagline: 'A busy satellite town: red earth, long rides to the city and everyone knows everyone.',
   wall: [0xe9d3b0, 0xd8b48a, 0xf0e2c6, 0xc99b72, 0xe3c1a0], roof: 0x8a3b2a, ground: 0x9aa957, roadColor: 0x4a4540, sidewalk: 0xd9cbb0, trees: 34, density: 0.95, tall: 0.12,
-  names: { home: 'Your home', school: 'Kubwa Community School', market: 'Kubwa Market', mamaput: "Mama Agnes' Buka", pitch: 'Estate Field', worship: 'Place of Worship', busstop: 'Kubwa Cab Park', office: 'Your Workplace', jobcentre: 'Business Centre & Job Desk' },
+  names: { home: 'Your home', school: 'Kubwa Community School', market: 'Kubwa Market', mamaput: "Mama Agnes' Buka", pitch: 'Estate Field', worship: 'Place of Worship', busstop: 'Kubwa Cab Park', office: 'Your Workplace', jobcentre: 'Business Centre & Job Desk', outing: 'Kubwa Hills (Group Hike)' },
 }
 DISTRICTS.garki = {
   id: 'garki', city: 'abuja', name: 'Garki', tagline: 'Secretariats, big markets and neat avenues. The civil service heartland.',
   wall: [0xf2ead8, 0xe6dcc3, 0xd9e2d0, 0xefe0c2, 0xcfdcd6], roof: 0x6b7d5a, ground: 0x7fb25a, roadColor: 0x3d3f45, sidewalk: 0xdad6c8, trees: 44, density: 0.9, tall: 0.25,
-  names: { home: 'Your home', school: 'Garki Model School', market: 'Garki Market', mamaput: "Auntie Ify's Buka", pitch: 'Area 10 Field', worship: 'Place of Worship', busstop: 'Garki Cab Rank', office: 'Your Workplace', jobcentre: 'Secretariat Job Desk' },
+  names: { home: 'Your home', school: 'Garki Model School', market: 'Garki Market', mamaput: "Auntie Ify's Buka", pitch: 'Area 10 Field', worship: 'Place of Worship', busstop: 'Garki Cab Rank', office: 'Your Workplace', jobcentre: 'Secretariat Job Desk', outing: 'Idu Hills (Group Hike)' },
 }
 DISTRICTS.wuse = {
   id: 'wuse', city: 'abuja', name: 'Wuse II', tagline: 'Cafés, offices and nightlife in the middle of the city.',
   wall: [0xe8edf2, 0xf2e6c8, 0xc9d8e2, 0xe6d3c0, 0xdfe7dc], roof: 0x4f6272, ground: 0x84b862, roadColor: 0x35373f, sidewalk: 0xdfe0dc, trees: 38, density: 1.1, tall: 0.5,
-  names: { home: 'Your home', school: 'Wuse II School', market: 'Wuse Market', mamaput: 'Zone 4 Buka', pitch: 'Wuse Sports Field', worship: 'Place of Worship', busstop: 'Wuse Cab Rank', office: 'Your Workplace', jobcentre: 'Co-working & Job Hub' },
+  names: { home: 'Your home', school: 'Wuse II School', market: 'Wuse Market', mamaput: 'Zone 4 Buka', pitch: 'Wuse Sports Field', worship: 'Place of Worship', busstop: 'Wuse Cab Rank', office: 'Your Workplace', jobcentre: 'Co-working & Job Hub', outing: 'Jabi Lake Hills (Group Hike)' },
 }
 DISTRICTS.maitama = {
   id: 'maitama', city: 'abuja', name: 'Maitama', tagline: 'Quiet streets, embassies and security gates. Everything costs more.',
   wall: [0xf6f3ea, 0xece6d6, 0xdfe8ef, 0xefe2cf, 0xe3ece0], roof: 0x5a6f7f, ground: 0x6fb55a, roadColor: 0x30323a, sidewalk: 0xe8e6de, trees: 52, density: 0.75, tall: 0.3,
-  names: { home: 'Your home', school: 'Maitama Premier School', market: 'Maitama Farmers Market', mamaput: 'Garden Kitchen', pitch: 'Estate Court', worship: 'Place of Worship', busstop: 'Maitama Cab Rank', office: 'Your Workplace', jobcentre: 'Recruitment Lounge' },
+  names: { home: 'Your home', school: 'Maitama Premier School', market: 'Maitama Farmers Market', mamaput: 'Garden Kitchen', pitch: 'Estate Court', worship: 'Place of Worship', busstop: 'Maitama Cab Rank', office: 'Your Workplace', jobcentre: 'Recruitment Lounge', outing: 'Aso Rock View (Group Hike)' },
 }
 
 export function placesFor(theme: DistrictTheme): Place[] {
@@ -82,16 +83,18 @@ export function placesFor(theme: DistrictTheme): Place[] {
     { id: 'worship', name: n.worship, icon: '🕊️', blurb: 'Service, fellowship, town meetings and food.', rect: { x0: 33, x1: 44, z0: -24, z1: -13 }, door: { x: 38.5, z: -10.5 }, zoneR: 3, activities: ['community'], color: 0x7a3b9a },
     { id: 'busstop', name: n.busstop, icon: theme.city === 'abuja' ? '🚕' : '🚌', blurb: `Catch the ${CITIES[theme.city].vehicle.name} and run ${CITIES[theme.city].name} in Go-Slow Dash.`, rect: { x0: 4, x1: 8, z0: 21, z1: 26 }, door: { x: 2.2, z: 23 }, zoneR: 3.2, activities: ['dash'], color: 0xffd23f },
     { id: 'office', name: n.office, icon: '🏢', blurb: 'Where the salary comes from. And the stress.', rect: { x0: -27, x1: -12, z0: 13, z1: 27 }, door: { x: -19.5, z: 10.5 }, zoneR: 3, activities: ['overtime', 'quitJob'], color: 0x4a5a8a },
+    { id: 'outing', name: n.outing, icon: theme.city === 'abuja' ? '⛰️' : '🏖️', blurb: theme.city === 'abuja' ? 'Hike up the hills with your friends. Abuja is built around them.' : 'Take your friends to the beach. This is Lagos weekend.', rect: { x0: 9, x1: 31, z0: -47, z1: -35 }, door: { x: 20, z: -32 }, zoneR: 6.5, activities: [theme.city === 'abuja' ? 'hike' : 'beach'], color: theme.city === 'abuja' ? 0x4a8a3a : 0x35b0d8, open: true },
     { id: 'jobcentre', name: n.jobcentre, icon: '📝', blurb: 'CVs, aptitude tests and "who do you know?"', rect: { x0: -45, x1: -33, z0: 11, z1: 21 }, door: { x: -39, z: 8.5 }, zoneR: 3, activities: ['applyJob'], color: 0x0f7a4a },
   ]
 }
 
 export const SPAWN = { x: -18.5, z: -6 }
 
-export interface Prop { kind: 'house' | 'tree' | 'lamp' | 'kiosk' | 'stall' | 'bus' | 'generator' | 'fence' | 'tall'; rect: Rect; color: number; h: number; blocks: boolean }
+export interface Prop { kind: 'house' | 'tree' | 'lamp' | 'kiosk' | 'stall' | 'bus' | 'generator' | 'fence' | 'tall' | 'palm' | 'billboard' | 'flag' | 'wall' | 'gate'; rect: Rect; color: number; h: number; blocks: boolean; text?: string }
 
 export interface District {
   theme: DistrictTheme
+  flavour: Flavour
   places: Place[]
   roads: Rect[]
   sidewalks: Rect[]
@@ -117,6 +120,7 @@ export function buildDistrict(districtId: string): District {
   const H = WORLD.half
   const roads = [r(-H, H, -3, 3), r(-3, 3, -H, H)]
   const sidewalks = [r(-H, H, -5, -3), r(-H, H, 3, 5), r(-5, -3, -H, H), r(3, 5, -H, H)]
+  const flv = flavourOf(districtId)
   const rng = makeRng(districtId.split('').reduce((a, c) => a * 31 + c.charCodeAt(0), 7))
   const buildings: District['buildings'] = []
   const blockers: Rect[] = []
@@ -124,13 +128,16 @@ export function buildDistrict(districtId: string): District {
 
   for (const p of places) {
     if (p.open) continue
-    const h = p.id === 'office' ? 13 : p.id === 'school' ? 5.5 : p.id === 'worship' ? 7 : p.id === 'busstop' ? 3.4 : 5
-    buildings.push({ place: p.id, rect: p.rect, h, color: p.id === 'home' ? theme.wall[0] : p.id === 'office' ? 0xcfd8f2 : p.id === 'school' ? 0xf7efe0 : p.id === 'worship' ? 0xf4ecff : p.id === 'jobcentre' ? 0xd9f0e2 : p.id === 'busstop' ? 0xdddddd : theme.wall[1], roof: p.color })
+    const fl = flv
+    const look = p.id === 'home' ? fl.home : p.id === 'office' ? fl.office : p.id === 'school' ? fl.school : p.id === 'worship' ? fl.worship : null
+    const h = look?.h ?? (p.id === 'busstop' ? 3.4 : 5)
+    buildings.push({ place: p.id, rect: p.rect, h, color: look?.color ?? (p.id === 'jobcentre' ? 0xd9f0e2 : p.id === 'busstop' ? 0xdddddd : theme.wall[1]), roof: look?.roof ?? p.color })
     blockers.push(p.rect)
   }
   const placeRects = places.map((p) => p.rect)
   const avoid = (q: Rect, pad = 2) => placeRects.some((pr) => overlaps(q, pr, pad)) || buildings.some((b) => overlaps(q, b.rect, pad)) || places.some((p) => inRect(p.door.x, p.door.z, q, 4))
   const openZones = places.filter((p) => p.open).map((p) => r(p.door.x - p.zoneR - 2, p.door.x + p.zoneR + 2, p.door.z - p.zoneR - 2, p.door.z + p.zoneR + 2))
+  openZones.push(places.find((p) => p.id === 'outing')!.rect) // keep houses out of the hills and the beach
 
   // filler houses along the frontage of each block, keeping 8+ m from the main roads
   const count = Math.round(34 * theme.density)
@@ -142,8 +149,8 @@ export function buildDistrict(districtId: string): District {
     if (overlaps(q, r(-H, H, -9, 9), 0) && !(Math.abs(z0) > 9)) { if (q.z1 > -9 && q.z0 < 9) continue }
     if (overlaps(q, r(-9, 9, -H, H), 0)) continue
     if (avoid(q, 3) || openZones.some((z) => overlaps(q, z, 1)) || buildings.some((b) => overlaps(q, b.rect, 2.5))) continue
-    const tall = rng.chance(theme.tall)
-    buildings.push({ rect: q, h: tall ? rng.int(9, 15) : rng.int(3, 6), color: rng.pick(theme.wall), roof: theme.roof })
+    const tall = rng.chance(theme.tall + (flv.extras.includes('towers') ? 0.2 : 0))
+    buildings.push({ rect: q, h: tall ? rng.int(9, 15) : rng.int(Math.max(3, Math.round(flv.home.h) - 2), Math.round(flv.home.h) + 1), color: rng.pick(theme.wall), roof: theme.roof })
     blockers.push(q)
   }
 
@@ -170,5 +177,34 @@ export function buildDistrict(districtId: string): District {
   const bus = r(6, 8.6, 12, 17.5)
   props.push({ kind: 'bus', rect: bus, color: 0xffd23f, h: 2.6, blocks: true }); blockers.push(bus)
   for (const [kx, kz] of [[-8, 6.5], [9.5, -6.5], [-30, -6.5], [30, 6.5]]) { const k = r(kx, kx + 2, kz, kz + 1.6); if (!avoid(k, 0)) { props.push({ kind: 'kiosk', rect: k, color: 0xe0457b, h: 2.4, blocks: true }); blockers.push(k) } }
-  return { theme, places, roads, sidewalks, props, blockers, buildings }
+  // ---- what makes this district itself ----
+  const free = (q: Rect, pad = 1.5) => !avoid(q, 2) && !buildings.some((b) => overlaps(q, b.rect, pad)) && !blockers.some((b) => overlaps(q, b, pad)) && !openZones.some((z2) => overlaps(q, z2, 0))
+  const scatter = (n: number, make: (x: number, z: number) => Prop | null, minAbs = 6) => {
+    let placed = 0, k = 0
+    while (placed < n && k++ < 500) {
+      const x = rng.int(-H + 3, H - 3), z = rng.int(-H + 3, H - 3)
+      if (Math.abs(x) < minAbs || Math.abs(z) < minAbs) continue
+      const pr = make(x, z); if (!pr || !free(pr.rect)) continue
+      props.push(pr); if (pr.blocks) blockers.push(pr.rect); placed++
+    }
+  }
+  const ex = (e: Flavour['extras'][number]) => flv.extras.includes(e)
+  if (ex('palms')) scatter(16, (x, z) => ({ kind: 'palm', rect: r(x - 0.4, x + 0.4, z - 0.4, z + 0.4), color: 0x2f8a3a, h: rng.int(5, 8), blocks: true }))
+  if (ex('generators')) scatter(7, (x, z) => ({ kind: 'generator', rect: r(x, x + 1.4, z, z + 1), color: 0x888890, h: 0.9, blocks: true }), 9)
+  if (ex('billboards') || ex('posters')) {
+    const slots: [number, number][] = [[-30, -9], [-14, 8.5], [16, -8.5], [34, 8.5], [-38, 8.5], [8, -45]]
+    slots.forEach(([bx, bz], i) => { const q = r(bx - 1.6, bx + 1.6, bz - 0.3, bz + 0.3); if (!avoid(q, 0) && !buildings.some((b) => overlaps(q, b.rect, 0.5))) props.push({ kind: 'billboard', rect: q, color: ex('posters') ? 0x1f9d55 : 0xffd23f, h: 5, blocks: false, text: flv.slogans[i % flv.slogans.length] }) })
+  }
+  if (ex('flags')) for (const p of places) if (['school', 'office', 'worship', 'home'].includes(p.id)) props.push({ kind: 'flag', rect: r(p.door.x + 2.4, p.door.x + 2.6, p.door.z + 0.6, p.door.z + 0.8), color: 0x1f9d55, h: 7, blocks: false })
+  if (ex('walls')) {
+    let n = 0
+    for (const b of buildings) {
+      if (n >= 18 && b.place !== 'home') break
+      const q = r(b.rect.x0 - 0.8, b.rect.x1 + 0.8, b.rect.z1 + 0.5, b.rect.z1 + 0.8)
+      props.push({ kind: 'wall', rect: q, color: b.color, h: b.place === 'home' ? 2.0 : 1.6, blocks: false })
+      if (b.place === 'home') { const gx = places.find((p) => p.id === 'home')!.door.x; props.push({ kind: 'gate', rect: r(gx - 1.4, gx + 1.4, b.rect.z1 + 0.45, b.rect.z1 + 0.85), color: 0x2a2a34, h: 2.2, blocks: false }) }
+      n++
+    }
+  }
+  return { theme, flavour: flv, places, roads, sidewalks, props, blockers, buildings }
 }

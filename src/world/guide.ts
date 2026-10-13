@@ -2,6 +2,7 @@
 import type { GameState } from '@engine/core/types'
 import type { District, PlaceId } from './layout'
 import { INTERIORS } from './interiors'
+import { flavourOf } from './flavour'
 import { errandSpot, type ErrandKind } from './errands'
 import { say, type Say } from '@content/lang'
 import { ACTIVITY_BY_ID } from '@content/activities'
@@ -73,6 +74,8 @@ const FUN = {
   pitch: S('pitchFun', 'pitch', '🏃', 'Exercise at the pitch', 'Go the pitch do exercise', 'exercise'),
   treat: S('treatFun', 'mamaput', '🍨', 'Treat yourself at the buka', 'Go the buka treat yourself', 'treat'),
   wait: S('waitEvening', 'home', '🛋️', 'Take it easy at home until evening', 'Rest for house till evening come', 'sleep'),
+  hike: S('hikeFun', 'outing', '⛰️', 'Go on a group hike with your friends', 'Go hike with your padis for hill', 'hike'),
+  beach: S('beachFun', 'outing', '🏖️', 'Go to the beach with your friends', 'Go beach with your padis', 'beach'),
   evening: S('eveningSleep', 'home', '🌙', 'It is evening. Go home and sleep to start a new year', 'Evening don reach. Go house sleep, make new year start', 'sleep'),
 }
 /** The kind of errand and where it is, for the guide, the map pin and the arrival check. */
@@ -108,6 +111,7 @@ export function suggest(life: GameState, hour = 8): Suggestion | null {
   if (c.age < 14 && used('play') < 1) return SUGS.playKid
   if (c.age >= 8 && !life.flags[`d_visit_${c.age}`] && c.stats.energy >= 14) return FUN.visit
   if (c.age >= 8 && !life.flags[`d_explore_${c.age}`] && c.stats.energy >= 12) return FUN.explore
+  { const trip = flavourOf(c.housing.districtId).outing; if (hour >= 11 && c.age >= 13 && used(trip) < 1 && c.stats.energy >= 24 && (trip !== 'beach' || c.stats.cash >= 8000)) return FUN[trip] }
   if (used('socialise') < 1 && c.stats.energy >= 15) return SUGS.friend
   if (used('familyTime') < 1) return SUGS.family
   if (hour >= 14 && life.flags['inst:tv'] && used('tv') < 1) return FUN.tv

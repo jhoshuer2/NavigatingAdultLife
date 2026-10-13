@@ -155,3 +155,8 @@ Players said they were not sure where to begin, so the game now tells them, GTA 
 - **Finishing the dream** opens a "Dream achieved" sheet: finish this life (ending screen, legacy and cowries recorded, then roll a new life) or keep playing. Onile has a dedicated land-buying event.
 - Older saves keep their old dream and its old goal; they do not get a path.
 - `tools/dream-sim.ts` shows how far headless players get on each path (rough guide: most paths complete for 20 to 100% of naive bots, 9-5er, Business and I-don't-know are easiest).
+
+## District character and group trips (latest)
+- `src/world/flavour.ts` describes what makes each of the eight districts itself: building heights and paint for home, school, office and worship, props (palms, billboards and political posters, flags, compound walls and gates, generators), moving traffic (yellow-black danfos, okada and keke, red BRT, SUVs and motorcades in Lagos and Abuja; green taxis in Abuja), street characters (touts at the bus stop, politicians with fila and agbada, hawkers), the skyline (granite and green hills in Abuja, towers, lagoon and ocean in Lagos) and the paint inside your home.
+- New group trip place (`outing`): a hill with a trail and flag in Abuja ("Hike with friends"), a beach with sea, umbrellas, a boat and goal posts in Lagos ("Beach day with friends"). The task (`ui/tasks/TripTask.tsx`) has your friends follow you along five pins. The guide suggests it in the afternoon.
+- Drawn from general knowledge of the two cities, not from a web search. Names of landmarks and the wording of slogans are a first draft for locals to review.

@@ -12,7 +12,7 @@ import { audio } from '@platform/audio'
 
 /** Short, honest benefit text for each activity (shown as chips in place panels). */
 const BENEFIT: Record<string, string> = {
-  study: '📚 Knowledge', play: '😊 Happiness · ❤️ Health', chores: '⭐ Reputation · 👪 Mama', hustle: '💰 Side income', socialise: '🧑‍🤝‍🧑 Friendship · 😊', familyTime: '👪 Family bond',
+  study: '📚 Knowledge', play: '😊 Happiness · ❤️ Health', chores: '⭐ Reputation · 👪 Mama', hustle: '💰 Side income', hike: '😊 Happiness · ❤️ Health', beach: '😊 Happiness · 😌 less Stress', socialise: '🧑‍🤝‍🧑 Friendship · 😊', familyTime: '👪 Family bond',
   rest: '❤️ Health · 😌 less Stress', exercise: '❤️ Health · 😌 less Stress', community: '😊 Happiness · ⭐ Reputation', dash: '🪙 Coins · ❤️ Health', applyJob: '💼 A new job',
   overtime: '⭐ Reputation · promotion odds', treat: '😊 Happiness', shop: '🛒 Useful items', quitJob: 'Leave your job',
 }
@@ -39,7 +39,7 @@ function ActTile({ icon, label, energy, cash, reward, reason, left, disabled, ho
 }
 
 export function PlaceModal() {
-  const { life, placeId, meta, openSheet, endActions, enterPlace, hour, startPenalty, startMarket, startChores, startShop, startJog, startMatch } = useGame()
+  const { life, placeId, meta, openSheet, endActions, enterPlace, hour, startPenalty, startMarket, startChores, startShop, startJog, startMatch, startTrip } = useGame()
   const route = useActivityRouter()
   const acts = useMemo(() => (life ? getActivities(life) : []), [life])
   const guideOn = meta.settings.guide !== false
@@ -64,6 +64,7 @@ export function PlaceModal() {
     if (placeId === 'market' && def.id === 'shop') { startShop(); return }
     if (placeId === 'market' && def.id === 'hustle') { startMarket(); return }
     if (placeId === 'pitch' && def.id === 'exercise') { startJog(); return }
+    if (def.id === 'hike' || def.id === 'beach') { startTrip(); return }
     if (placeId === 'pitch' && def.id === 'play') { startPenalty(def.id); return }
     if (def.id !== 'applyJob' && def.id !== 'socialise' && def.id !== 'familyTime' && def.id !== 'shop') openSheet(null)
     route(def.id)

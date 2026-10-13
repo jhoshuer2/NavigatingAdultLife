@@ -57,6 +57,14 @@ export const ACTIVITIES: ActivityDef[] = [
     id: 'visit', label: "Visit a friend's house", blurb: 'Plantain, gist and a seat on a friend\'s sofa.', icon: '🏘️', stages: [...ALL], cost: { energy: 8 },
     effects: [{ stat: 'happiness', delta: 5 }, { stat: 'stress', delta: -3 }, { rel: 'friend', delta: 4 }], maxPerYear: 2, hidden: true, scene: 'home',
   },
+  {
+    id: 'hike', label: 'Hike with friends', blurb: 'Climb the hills with your padis, take photos at the top and share snacks.', icon: '⛰️', stages: ['teen', 'youngAdult', 'adult', 'elder'], cost: { energy: 16 },
+    effects: [{ stat: 'happiness', delta: 7 }, { stat: 'health', delta: 4 }, { stat: 'stress', delta: -6 }, { rel: 'friend', delta: 4 }], maxPerYear: 2, scene: 'compound',
+  },
+  {
+    id: 'beach', label: 'Beach day with friends', blurb: 'Sand, suya, football on the shore and a splash with your padis.', icon: '🏖️', stages: ['teen', 'youngAdult', 'adult', 'elder'], cost: { energy: 14, cash: 8000 },
+    effects: [{ stat: 'happiness', delta: 8 }, { stat: 'health', delta: 2 }, { stat: 'stress', delta: -7 }, { rel: 'friend', delta: 4 }], maxPerYear: 2, scene: 'compound',
+  },
   { id: 'quitJob', label: 'Resign', blurb: 'Walk away from your job. Bold. Possibly foolish.', icon: '🚪', stages: ['youngAdult', 'adult'], cost: { energy: 0 }, special: 'quitJob', requires: { all: [{ employed: true }] }, scene: 'office' },
 ]
 export const ACTIVITY_BY_ID = Object.fromEntries(ACTIVITIES.map((a) => [a.id, a]))

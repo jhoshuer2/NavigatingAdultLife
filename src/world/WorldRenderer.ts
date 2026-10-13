@@ -4,6 +4,8 @@ import * as THREE from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import type { Appearance, Gender } from '@engine/core/types'
 import type { Wear } from '@content/items'
+import { drawFlavourProp, drawOuting, skylineObjects, vehicleMesh } from './scenery'
+import type { VehicleKind, CrowdKind } from './flavour'
 import { WORLD, type District, type PlaceId, type Rect } from './layout'
 import { buildNav, findPath, moveWithCollision, walkable, type Nav } from './nav'
 import { animateHuman, buildHuman, hashLook, type HumanParts } from './characters'
@@ -64,7 +66,8 @@ export class WorldRenderer {
   private raycaster = new THREE.Raycaster()
   private ground: THREE.Mesh
   private npcs = new Map<string, { parts: HumanParts; npc: WorldNpc; label: THREE.Sprite; tx: number; tz: number; wt: number; moving: boolean }>()
-  private ambient: { parts: HumanParts; x: number; z: number; heading: number; timer: number; speed: number; bubble?: THREE.Sprite; bubbleT: number; sayT: number }[] = []
+  private ambient: { parts: HumanParts; x: number; z: number; heading: number; timer: number; speed: number; bubble?: THREE.Sprite; bubbleT: number; sayT: number; lines?: string[]; stay?: boolean; home?: { x: number; z: number; r: number } }[] = []
+  private traffic: { g: THREE.Group; axis: 'x' | 'z'; dir: 1 | -1; lane: number; pos: number; speed: number }[] = []
   private labelSprites = new Map<PlaceId, THREE.Sprite>()
   private textCache = new Map<string, THREE.SpriteMaterial>()
   private highlight: { place: PlaceId | null; ring: THREE.Mesh; arrow: THREE.Mesh } | null = null
@@ -118,23 +121,17 @@ export class WorldRenderer {
     this.ground = new THREE.Mesh(new THREE.PlaneGeometry(WORLD.half * 2 + 60, WORLD.half * 2 + 60), new THREE.MeshLambertMaterial({ color: district.theme.ground }))
     this.ground.rotation.x = -Math.PI / 2; this.ground.position.y = -0.02; this.scene.add(this.ground)
     this.buildStatic()
-    if (district.theme.city === 'abuja') this.addRocks()
+    for (const o of skylineObjects(district)) this.scene.add(o)
     this.player = buildHuman({ look: opts.look, age: opts.age, gender: opts.gender, wear: opts.wear, uniform: opts.uniform, scale: 1.1 })
     this.scene.add(this.player.group)
     this.player.group.position.set(this.px, 0, this.pz)
     this.shadow = new THREE.Mesh(new THREE.CircleGeometry(0.7, 12), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.28 })); this.shadow.rotation.x = -Math.PI / 2; this.shadow.position.y = 0.04; this.player.group.add(this.shadow)
     this.makeAmbient()
+    this.makeCrowd()
+    this.makeTraffic()
     this.makeHighlight()
     this.applyLighting()
     this.resize()
-  }
-
-  /** Abuja's skyline: big granite inselbergs (think Aso Rock and Zuma Rock) standing behind the district. */
-  private addRocks() {
-    const mat = new THREE.MeshLambertMaterial({ color: 0x8c7d6c, flatShading: true })
-    for (const [x, z, sx, sy, sz] of [[-62, -118, 46, 26, 30], [10, -135, 62, 38, 40], [78, -112, 34, 18, 26], [-110, 40, 30, 20, 34]] as const) {
-      const m = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 1), mat); m.scale.set(sx, sy, sz); m.position.set(x, sy * 0.35, z); m.rotation.y = x; this.scene.add(m)
-    }
   }
 
   // ---------- lighting ----------
@@ -192,7 +189,10 @@ export class WorldRenderer {
     b.box(home.door.x, 0.05, home.door.z + 1, 3, 0.05, 3, 0xfff1a8)
     for (const p of d.props) {
       const cx = (p.rect.x0 + p.rect.x1) / 2, cz = (p.rect.z0 + p.rect.z1) / 2, w = p.rect.x1 - p.rect.x0, dd = p.rect.z1 - p.rect.z0
-      if (p.kind === 'tree') { b.cyl(cx, p.h * 0.3, cz, 0.18, 0.28, p.h * 0.6, 0x6a4a2a); b.cone(cx, p.h * 0.75, cz, 1.4, p.h * 0.9, p.color); b.cone(cx, p.h * 1.1, cz, 1.0, p.h * 0.7, 0x3a9a4a) }
+      if (p.kind === 'palm' || p.kind === 'flag' || p.kind === 'wall' || p.kind === 'gate' || p.kind === 'generator' || p.kind === 'billboard') {
+        drawFlavourProp(b, p)
+        if (p.kind === 'billboard' && p.text) { const sp = this.textSprite(p.text, { bg: p.color === 0x1f9d55 ? 'rgba(31,157,85,0.96)' : 'rgba(255,210,63,0.96)', fg: p.color === 0x1f9d55 ? '#ffffff' : '#1c1b22', size: 6.2 }); sp.position.set(cx, 5.0, cz + 0.35); this.scene.add(sp) }
+      } else if (p.kind === 'tree') { b.cyl(cx, p.h * 0.3, cz, 0.18, 0.28, p.h * 0.6, 0x6a4a2a); b.cone(cx, p.h * 0.75, cz, 1.4, p.h * 0.9, p.color); b.cone(cx, p.h * 1.1, cz, 1.0, p.h * 0.7, 0x3a9a4a) }
       else if (p.kind === 'lamp') { b.box(cx, 2.7, cz, 0.14, 5.4, 0.14, p.color); lamps.box(cx, 5.4, cz + (cz < 0 ? 0.4 : -0.4), 0.5, 0.2, 1.0, 0xffffff) }
       else if (p.kind === 'stall') { b.box(cx, 0.55, cz, w, 1.1, dd, 0x6a3b1d); b.cyl(cx, 1.6, cz, 0.04, 0.04, 2.1, 0x4a3320); b.cone(cx, 2.55, cz, 2.0, 0.7, p.color, 8); b.box(cx, 1.2, cz, w * 0.7, 0.18, dd * 0.7, [0xd9534f, 0xf0ad4e, 0x5cb85c][Math.floor(cx + cz) % 3]) }
       else if (p.kind === 'kiosk') { b.box(cx, 1.2, cz, w, 2.4, dd, p.color); b.box(cx, 2.55, cz, w + 0.4, 0.3, dd + 0.4, 0xffd23f) }
@@ -216,6 +216,7 @@ export class WorldRenderer {
     b.box((bs.rect.x0 + bs.rect.x1) / 2, 3.0, (bs.rect.z0 + bs.rect.z1) / 2, 4, 0.3, 5, d.theme.city === 'abuja' ? 0x1f9d55 : 0xffd23f)
     for (const [sx, sz] of [[bs.rect.x0 + 0.3, bs.rect.z0 + 0.3], [bs.rect.x1 - 0.3, bs.rect.z0 + 0.3], [bs.rect.x0 + 0.3, bs.rect.z1 - 0.3], [bs.rect.x1 - 0.3, bs.rect.z1 - 0.3]]) b.box(sx, 1.5, sz, 0.2, 3, 0.2, 0x555566)
     for (const bl of d.buildings.slice(0, 18)) if (!bl.place) b.box(bl.rect.x1 + 0.7, 0.45, bl.rect.z1 - 1, 0.9, 0.9, 0.9, 0xc4262e)
+    drawOuting(b, d)
     const mesh = b.build(); if (mesh) this.scene.add(mesh)
     const litMesh = lit.build(this.winLitMat); if (litMesh) this.scene.add(litMesh)
     const lampMesh = lamps.build(this.lampMat); if (lampMesh) this.scene.add(lampMesh)
@@ -275,6 +276,65 @@ export class WorldRenderer {
   }
   private free(x: number, z: number) { return Math.abs(x) < WORLD.half - 2 && Math.abs(z) < WORLD.half - 2 && !this.district.blockers.some((b) => x > b.x0 - 0.6 && x < b.x1 + 0.6 && z > b.z0 - 0.6 && z < b.z1 + 0.6) }
 
+  /** Vehicles that drive up and down the two main roads: danfos and touts in Lagos, green taxis and motorcades in Abuja. */
+  private makeTraffic() {
+    const fl = this.district.flavour
+    const add = (kind: VehicleKind, axis: 'x' | 'z', dir: 1 | -1, pos: number, speed: number) => {
+      const g = vehicleMesh(kind); this.scene.add(g)
+      this.traffic.push({ g, axis, dir, lane: dir * 1.55, pos, speed })
+    }
+    for (let i = 0; i < fl.traffic.count; i++) {
+      const kind = fl.traffic.kinds[i % fl.traffic.kinds.length]
+      add(kind, i % 2 === 0 ? 'x' : 'z', i % 3 === 0 ? -1 : 1, -55 + ((i * 41) % 110), kind === 'okada' || kind === 'suv' ? 8.5 : kind === 'brt' ? 5.5 : 5 + (i % 3))
+    }
+    if (fl.traffic.convoy) { for (let k = 0; k < 3; k++) add('suv', 'x', 1, -50 - k * 7.5, 9) } // a politician's convoy with its escorts
+  }
+  private updateTraffic(dt: number) {
+    for (const v of this.traffic) {
+      v.pos += v.dir * v.speed * dt
+      if (v.pos > 58) v.pos = -58; else if (v.pos < -58) v.pos = 58
+      if (v.axis === 'x') { v.g.position.set(v.pos, 0, v.lane); v.g.rotation.y = v.dir > 0 ? 0 : Math.PI }
+      else { v.g.position.set(v.lane, 0, v.pos); v.g.rotation.y = v.dir > 0 ? -Math.PI / 2 : Math.PI / 2 }
+    }
+  }
+
+  /** The street characters of this district: touts at the bus stop, politicians and their aides, hawkers on the road. */
+  private makeCrowd() {
+    const d = this.district
+    const door = (id: PlaceId) => d.places.find((p) => p.id === id)!.door
+    const SAY: Record<CrowdKind, string[]> = {
+      tout: ['Oya! CMS CMS! Enter!', 'Oga, one chance!', 'Park well o! Pay me!', 'Madam, enter! Enter!', 'Conductor, vamoose!'],
+      politician: ['Vote for progress!', 'We will fix the roads!', 'Jobs for our youth!', 'I am a servant of the people!', 'Stakeholders, welcome!'],
+      hawker: ['Pure water! Cold!', 'Gala! Gala! Gala!', 'Plantain chips here!', 'Oranges, fresh fresh!', 'Buy bread, hot!'],
+    }
+    const names = { tout: ['Agba', 'Baba Ibeji', 'Chairman'], politician: ['Hon. Bello', 'Sen. Okafor', 'Chief Ade', 'Hon. Musa'], hawker: ['Iya Ngozi', 'Auntie Ify', 'Mama Bisi'] }
+    let id = 0
+    for (const c of d.flavour.crowd) {
+      for (let i = 0; i < c.n; i++) {
+        const female = c.kind === 'hawker'
+        const look = hashLook(`${c.kind}${id}${d.theme.id}`, female ? 'female' : 'male')
+        const parts = buildHuman({
+          look: c.kind === 'tout' ? { ...look, hairStyle: 'lowcut', outfitType: 'casual', topColor: ['#d62828', '#e6a817', '#1c7ea6'][i % 3], bottomColor: '#222222' }
+            : c.kind === 'politician' ? { ...look, hairStyle: 'bald', outfitType: 'traditional', fabric: i === 0 ? 'asoOke' : 'plain', topColor: i === 0 ? '#c4562a' : '#f2efe6', bottomColor: '#f2efe6' }
+            : { ...look, hairStyle: 'gele', outfitType: 'traditional', fabric: 'ankara', topColor: ['#c4562a', '#1c7ea6', '#8a1c6a'][i % 3] },
+          gender: female ? 'female' : 'male', age: c.kind === 'politician' ? 52 : 30, wear: c.kind === 'politician' ? ['fila'] : c.kind === 'tout' ? ['cap'] : [], scale: 1.1,
+        })
+        let x = 0, z = 0, r = 3
+        if (c.kind === 'tout') { const bs = door('busstop'); x = bs.x + 2.5 + i * 1.6; z = bs.z - 3 + (i % 2) * 2; r = 0 }
+        else if (c.kind === 'politician') { const o = door(i % 2 ? 'office' : 'worship'); x = o.x + 2 + i * 1.5; z = o.z + 2.5 + (i % 2); r = 5 }
+        else { x = -20 + i * 18; z = 5.2; r = 14 }
+        if (!this.free(x, z)) { const f = this.freeSpot(x, z); x = f.x; z = f.z }
+        parts.group.position.set(x, 0, z); this.scene.add(parts.group)
+        this.ambient.push({ parts, x, z, heading: Math.random() * Math.PI * 2, timer: 1, speed: 0, bubbleT: 0, sayT: 2 + i * 1.7, lines: SAY[c.kind], stay: c.kind === 'tout', home: { x, z, r } })
+        void names; id++
+      }
+    }
+  }
+  private freeSpot(x: number, z: number): { x: number; z: number } {
+    for (let rad = 0.8; rad < 8; rad += 0.8) for (let k = 0; k < 12; k++) { const a = (k / 12) * Math.PI * 2, px = x + Math.cos(a) * rad, pz = z + Math.sin(a) * rad; if (this.free(px, pz)) return { x: px, z: pz } }
+    return { x, z }
+  }
+
   setNpcs(list: WorldNpc[]) {
     const keep = new Set(list.map((n) => n.id))
     for (const [id, o] of this.npcs) if (!keep.has(id)) { this.scene.remove(o.parts.group); this.scene.remove(o.label); this.npcs.delete(id) }
@@ -292,7 +352,7 @@ export class WorldRenderer {
   get inside(): PlaceId | null { return this.interior?.def.id ?? null }
   enterInterior(place: PlaceId, people: { id: string; name: string; gender: Gender; role: string }[], state: InteriorState, outsideAt?: { x: number; z: number }, installed?: Set<string>): boolean {
     let view: InteriorView
-    try { view = new InteriorView(place, installed) } catch { return false }
+    try { view = new InteriorView(place, installed, place === 'home' ? this.district.flavour.homeInterior : undefined) } catch { return false }
     this.installedSet = installed ?? null
     this.interior?.dispose()
     this.outside = outsideAt ?? { x: this.px, z: this.pz }
@@ -597,9 +657,13 @@ export class WorldRenderer {
       }
     }
     // ambient wanderers (outdoors only)
+    this.updateTraffic(dt)
     for (const a of this.ambient) {
       a.timer -= dt
-      if (a.timer <= 0) { a.heading += (Math.random() - 0.5) * 2.6; a.timer = 2 + Math.random() * 4; a.speed = Math.random() < 0.25 ? 0 : 1.2 + Math.random() * 1.2 }
+      if (a.timer <= 0) {
+        a.heading += (Math.random() - 0.5) * 2.6; a.timer = 2 + Math.random() * 4; a.speed = a.stay || Math.random() < 0.25 ? 0 : 1.2 + Math.random() * 1.2
+        if (a.home && !a.stay && Math.hypot(a.x - a.home.x, a.z - a.home.z) > a.home.r) a.heading = Math.atan2(a.home.x - a.x, a.home.z - a.z) // stay near where you belong
+      }
       const mx = Math.sin(a.heading) * a.speed * dt, mz = Math.cos(a.heading) * a.speed * dt
       const p = moveWithCollision(this.district.blockers, a.x, a.z, mx, mz)
       if (a.speed > 0 && Math.abs(p.x - a.x) < 1e-5 && Math.abs(p.z - a.z) < 1e-5) a.heading += Math.PI * (0.5 + Math.random() * 0.5)
@@ -610,7 +674,7 @@ export class WorldRenderer {
       const near = Math.hypot(a.x - this.px, a.z - this.pz) < 13
       a.sayT -= dt
       if (a.bubble) { a.bubbleT -= dt; a.bubble.position.set(a.x, 3.2, a.z); if (a.bubbleT <= 0) { this.scene.remove(a.bubble); a.bubble = undefined } }
-      else if (near && a.sayT <= 0) { a.sayT = 9 + Math.random() * 12; a.bubbleT = 3.6; a.bubble = this.textSprite(BUBBLES[Math.floor(Math.random() * BUBBLES.length)], { bg: 'rgba(255,255,255,0.94)', fg: '#1c1b22', size: 5.2 }); this.scene.add(a.bubble) }
+      else if (near && a.sayT <= 0) { a.sayT = (a.lines ? 5 : 9) + Math.random() * (a.lines ? 8 : 12); a.bubbleT = 3.6; a.bubble = this.textSprite((a.lines ?? BUBBLES)[Math.floor(Math.random() * (a.lines ?? BUBBLES).length)], { bg: 'rgba(255,255,255,0.94)', fg: '#1c1b22', size: 5.2 }); this.scene.add(a.bubble) }
     }
     this.posT += dt
     if (this.posT > 0.12) {

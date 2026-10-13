@@ -59,9 +59,11 @@ export class InteriorView {
   private icons: { s: THREE.Sprite; needs?: string }[] = []
   private boardTex?: THREE.CanvasTexture
 
-  constructor(id: PlaceId, installed?: Set<string>) {
-    const def = INTERIORS[id]
-    if (!def) throw new Error(`no interior for ${id}`)
+  constructor(id: PlaceId, installed?: Set<string>, tint?: { wall: number; floor: number }) {
+    const base = INTERIORS[id]
+    if (!base) throw new Error(`no interior for ${id}`)
+    // the inside of your home takes on the look of your district (paint and flooring)
+    const def = tint ? { ...base, wallColor: tint.wall, floors: base.floors.map((f, i) => (i === 0 || i === 1 ? { ...f, color: tint.floor } : f)) } : base
     this.def = def
     this.installed = installed ?? new Set(def.objs.map((o) => o.appl).filter(Boolean) as string[])
     this.blockers = interiorBlockers(def, this.installed)
