@@ -180,3 +180,6 @@ Players said they were not sure where to begin, so the game now tells them, GTA 
 
 ## Quiet nights
 Street life follows the clock (`WorldRenderer.streetLife`): full from 6:30am to 9pm, thinning until midnight, empty from midnight to 5am, building up again until 6:30. Cars keep driving until they are out of sight and then stay off the road; people head to the nearest door and go indoors, except two who linger a minute or so and then go home as well. Commuters leave the bus stop. At 12:30am a headless run showed 0 cars and 2 people (14:00: 11 cars, 18 people).
+
+## Night animals
+From about 7:30pm to 6am (`WorldRenderer.nightLevel`) owls (on rooftops, glowing eyes, swivelling heads, "I be witch o!" with a hoot when you come near), rats and cockroaches (scurry about, scatter from you, rats squeak), bats flapping round, and street cats with glowing eyes (meow) come out. They gather around wherever you are and are hidden by day and indoors.

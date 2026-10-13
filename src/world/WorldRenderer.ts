@@ -47,6 +47,7 @@ export interface NearInside { hotspot: string | null; person: string | null; exi
 
 interface Veh { off?: boolean; g: THREE.Group; axis: 'x' | 'z'; dir: 1 | -1; lane: number; pos: number; speed: number; cur: number; kind: VehicleKind; pub: boolean; len: number; mode: 'drive' | 'approach' | 'dwell'; dwellT: number; served: boolean; honkT: number; wasBlocked: boolean; bub?: THREE.Sprite; bubT: number }
 interface Commuter { parts: HumanParts; x: number; z: number; home: { x: number; z: number }; state: 'wait' | 'board' | 'aboard' | 'alightPending' | 'alight'; tx: number; tz: number; delay: number }
+interface Critter { kind: 'owl' | 'rat' | 'roach' | 'bat' | 'cat'; g: THREE.Group; x: number; z: number; tx: number; tz: number; wait: number; phase: number; head?: THREE.Object3D; wings?: THREE.Object3D[]; say: number; bub?: THREE.Sprite; bubT: number; y: number; base: number; fled: boolean }
 const PUBLIC: VehicleKind[] = ['danfo', 'brt', 'cab']
 const VLEN: Record<VehicleKind, number> = { danfo: 5.2, brt: 7.4, keke: 2.4, okada: 1.8, cab: 4.1, suv: 4.6 }
 
@@ -76,6 +77,7 @@ export class WorldRenderer {
   private faith: 'church' | 'mosque' = 'church'
   private traffic: Veh[] = []
   private commuters: Commuter[] = []
+  private critters: Critter[] = []
   private rideActive = false
   private ride: { g: THREE.Group; leg: { from: [number, number]; to: [number, number]; dur: number; t: number; ease: 'in' | 'out'; face: number; res: () => void } | null; follow: boolean } | null = null
   private labelSprites = new Map<PlaceId, THREE.Sprite>()
@@ -376,6 +378,7 @@ export class WorldRenderer {
     const bus: VehicleKind = this.district.theme.city === 'abuja' ? 'cab' : 'danfo'
     add(bus, 'z', 1, -52, 5.4); add(bus, 'z', 1, -12, 5.4)
     this.makeCommuters()
+    this.makeCritters()
   }
 
   private get stopZ() { return this.district.places.find((p) => p.id === 'busstop')!.door.z }
@@ -495,8 +498,119 @@ export class WorldRenderer {
       if (v.bub) { v.bubT -= dt; v.bub.position.set(v.g.position.x, 4.2, v.g.position.z); if (v.bubT <= 0) { this.scene.remove(v.bub); v.bub = undefined } }
     }
     this.updateCommuters(dt)
+    this.updateCritters(dt)
     this.stepRide(dt)
   }
+
+  // ---------- night animals ----------
+  /** 0 by day, 1 at night: owls, rats, cockroaches, bats and cats come out once it gets dark. */
+  private nightLevel() {
+    const h = this.hour
+    if (h >= 20.5 || h < 5) return 1
+    if (h >= 19.5) return h - 19.5
+    if (h < 6) return 6 - h
+    return 0
+  }
+  private makeCritters() {
+    const M = (c: number) => new THREE.MeshLambertMaterial({ color: c }), B = (c: number) => new THREE.MeshBasicMaterial({ color: c })
+    const bx = (g: THREE.Object3D, w: number, h: number, d: number, m: THREE.Material, x: number, y: number, z: number) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); g.add(o); return o }
+    const add = (kind: Critter['kind'], g: THREE.Group, base: number, extra: Partial<Critter> = {}) => {
+      g.scale.setScalar(base); g.visible = false; this.scene.add(g)
+      this.critters.push({ kind, g, x: 999, z: 999, tx: 999, tz: 999, wait: Math.random() * 2, phase: Math.random() * 6, say: 4 + Math.random() * 6, bubT: 0, y: 0, base, fled: false, ...extra })
+    }
+    for (let i = 0; i < 3; i++) { // owls, perched on rooftops
+      const g = new THREE.Group(), head = new THREE.Group()
+      bx(g, 0.6, 0.85, 0.5, M(0x6a4a2a), 0, 0.45, 0); bx(g, 0.34, 0.5, 0.06, M(0xd9c29a), 0, 0.42, -0.26)
+      bx(head, 0.7, 0.5, 0.5, M(0x7a5a3a), 0, 0, 0); bx(head, 0.12, 0.2, 0.12, M(0x5a3a1e), -0.28, 0.32, 0); bx(head, 0.12, 0.2, 0.12, M(0x5a3a1e), 0.28, 0.32, 0)
+      for (const sx of [-0.17, 0.17]) { const e = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), B(0xffe14a)); e.position.set(sx, 0.05, -0.24); head.add(e); const pu = new THREE.Mesh(new THREE.SphereGeometry(0.07, 6, 6), B(0x111111)); pu.position.set(sx, 0.05, -0.37); head.add(pu) }
+      bx(head, 0.1, 0.12, 0.1, M(0xe08a1e), 0, -0.07, -0.3)
+      head.position.y = 1.15; g.add(head)
+      add('owl', g, 1.4, { head })
+    }
+    for (let i = 0; i < 6; i++) { // rats
+      const g = new THREE.Group(), m = M(0x5a5a62)
+      bx(g, 0.28, 0.2, 0.55, m, 0, 0.12, 0); bx(g, 0.2, 0.17, 0.24, m, 0, 0.12, 0.38); bx(g, 0.05, 0.05, 0.5, M(0xe0a0a0), 0, 0.08, -0.5)
+      for (const sx of [-0.1, 0.1]) { bx(g, 0.07, 0.07, 0.03, M(0xe0a0a0), sx, 0.24, 0.32); bx(g, 0.03, 0.03, 0.03, B(0xff3030), sx * 0.8, 0.16, 0.5) }
+      add('rat', g, 1.5)
+    }
+    for (let i = 0; i < 10; i++) { // cockroaches
+      const g = new THREE.Group(), m = M(0x4a2a14)
+      bx(g, 0.2, 0.08, 0.34, m, 0, 0.06, 0); bx(g, 0.12, 0.07, 0.1, M(0x3a1f0e), 0, 0.06, 0.2)
+      for (const sx of [-0.06, 0.06]) bx(g, 0.015, 0.015, 0.22, M(0x2a1608), sx, 0.1, 0.32)
+      add('roach', g, 1.7)
+    }
+    for (let i = 0; i < 3; i++) { // bats flapping round the street lamps
+      const g = new THREE.Group(), m = M(0x1c1a22)
+      bx(g, 0.2, 0.16, 0.3, m, 0, 0, 0)
+      const wl = new THREE.Group(), wr = new THREE.Group()
+      bx(wl, 0.6, 0.04, 0.3, m, -0.3, 0, 0); bx(wr, 0.6, 0.04, 0.3, m, 0.3, 0, 0); g.add(wl, wr)
+      add('bat', g, 1.4, { wings: [wl, wr] })
+    }
+    for (let i = 0; i < 2; i++) { // street cats with glowing eyes
+      const g = new THREE.Group(), m = M(i ? 0xb8864f : 0x34343c)
+      bx(g, 0.34, 0.34, 0.7, m, 0, 0.3, 0); bx(g, 0.3, 0.28, 0.3, m, 0, 0.46, 0.42); bx(g, 0.07, 0.4, 0.07, m, 0, 0.5, -0.4)
+      for (const sx of [-0.08, 0.08]) { bx(g, 0.07, 0.1, 0.05, m, sx * 1.6, 0.66, 0.4); bx(g, 0.06, 0.06, 0.03, B(0x7affc8), sx, 0.5, 0.58) }
+      add('cat', g, 1.3)
+    }
+  }
+  private placeCritter(c: Critter) {
+    const px = this.px, pz = this.pz
+    if (c.kind === 'owl') {
+      const cand = this.district.buildings.filter((b) => { const d = Math.hypot((b.rect.x0 + b.rect.x1) / 2 - px, (b.rect.z0 + b.rect.z1) / 2 - pz); return d > 5 && d < 18 })
+      const b = cand.length ? cand[Math.floor(Math.random() * cand.length)] : null
+      if (b) { c.x = b.rect.x0 + 0.8 + Math.random() * Math.max(0.1, b.rect.x1 - b.rect.x0 - 1.6); c.z = b.rect.z1 - 0.4; c.y = b.h + 0.55; c.g.position.set(c.x, c.y, c.z); c.g.rotation.y = Math.PI; return }
+      c.x = c.z = 999; c.g.visible = false; return
+    }
+    for (let k = 0; k < 14; k++) {
+      const a = Math.random() * Math.PI * 2, r = 5 + Math.random() * 11, x = px + Math.cos(a) * r, z = pz + Math.sin(a) * r
+      if (this.free(x, z)) { c.x = x; c.z = z; c.tx = x; c.tz = z; c.y = c.kind === 'bat' ? 4.6 : 0; c.g.position.set(x, c.y, z); return }
+    }
+  }
+  private updateCritters(dt: number) {
+    const n = this.nightLevel(), show = n > 0.02 && !this.interior
+    for (const c of this.critters) {
+      if (!show) { c.g.visible = false; continue }
+      const dp = Math.hypot(c.x - this.px, c.z - this.pz)
+      if (dp > 24) this.placeCritter(c)
+      if (c.x === 999) continue
+      c.g.visible = true; c.g.scale.setScalar(c.base * (0.4 + 0.6 * n))
+      c.phase += dt
+      const t = this.time
+      if (c.bub) { c.bubT -= dt; c.bub.position.set(c.x, c.y + 2.4, c.z); if (c.bubT <= 0) { this.scene.remove(c.bub); c.bub = undefined } }
+      const say = (text: string) => { if (c.bub) return; c.bub = this.textSprite(text, { bg: 'rgba(255,255,255,0.95)', fg: '#1c1b22', size: 5 }); c.bubT = 2.6; this.scene.add(c.bub) }
+      if (c.kind === 'owl') {
+        c.head!.rotation.y = Math.sin(c.phase * 0.7) * 1.1; c.head!.scale.y = Math.sin(c.phase * 1.3) > 0.97 ? 0.8 : 1
+        c.say -= dt
+        if (dp < 10 && c.say <= 0) { c.say = 9 + Math.random() * 8; say(Math.random() < 0.75 ? 'I be witch o!' : 'Hoo! Hoo!'); audio.hoot() }
+      } else if (c.kind === 'bat') {
+        if (c.tx === c.x && c.tz === c.z) { c.tx = c.x; c.tz = c.z }
+        const cx = c.tx, cz = c.tz, a = c.phase * 1.4
+        c.x = cx + Math.cos(a) * 3; c.z = cz + Math.sin(a) * 3; c.y = 4.6 + Math.sin(c.phase * 2) * 0.5
+        c.g.position.set(c.x, c.y, c.z); c.g.rotation.y = -a + Math.PI
+        c.wings![0].rotation.z = Math.sin(t * 20) * 0.7; c.wings![1].rotation.z = -Math.sin(t * 20) * 0.7
+      } else {
+        const rat = c.kind === 'rat', roach = c.kind === 'roach', cat = c.kind === 'cat'
+        let speed = rat ? 2.6 : roach ? 2.0 : 1.4
+        if (!cat && dp < 3.4) { // scatter from the player
+          if (!c.fled) { c.fled = true; if (rat) { audio.squeak(); say('Squeak!') } const a = Math.atan2(c.x - this.px, c.z - this.pz); c.tx = c.x + Math.sin(a) * 7; c.tz = c.z + Math.cos(a) * 7; c.wait = 0 }
+          speed *= 1.8
+        } else if (dp > 5) c.fled = false
+        if (cat && dp < 6 && !c.bub && c.say <= 0) { c.say = 10 + Math.random() * 10; say('Meow'); }
+        c.say -= dt
+        if (c.wait > 0) { c.wait -= dt } else {
+          const dx = c.tx - c.x, dz = c.tz - c.z, d = Math.hypot(dx, dz)
+          if (d < 0.3) { const a = Math.random() * Math.PI * 2, r = 2 + Math.random() * 4; c.tx = c.x + Math.cos(a) * r; c.tz = c.z + Math.sin(a) * r; c.wait = cat ? 6 + Math.random() * 8 : roach ? 0.2 + Math.random() * 0.8 : 0.4 + Math.random() * 1.6 }
+          else {
+            const pm = moveWithCollision(this.district.blockers, c.x, c.z, (dx / d) * speed * dt, (dz / d) * speed * dt)
+            if (Math.abs(pm.x - c.x) < 1e-5 && Math.abs(pm.z - c.z) < 1e-5) { c.tx = c.x; c.tz = c.z } else { c.x = pm.x; c.z = pm.z }
+            c.g.rotation.y += this.angleDiff(Math.atan2(dx, dz), c.g.rotation.y) * Math.min(1, dt * 12)
+          }
+        }
+        c.g.position.set(c.x, roach ? Math.abs(Math.sin(t * 30 + c.phase)) * 0.02 : 0, c.z)
+      }
+    }
+  }
+  debugCritters() { return this.critters.filter((c) => c.g.visible).map((c) => c.kind) }
 
   // ---------- riding a bus ----------
   private rideLeg(from: [number, number], to: [number, number], dur: number, ease: 'in' | 'out'): Promise<void> {

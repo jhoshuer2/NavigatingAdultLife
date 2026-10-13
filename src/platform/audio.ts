@@ -134,6 +134,9 @@ class AudioEngine {
   }
 
   /** A danfo rolling in: engine rumble that follows the bus (loud while it is moving fast, fading as it brakes), then a brake hiss and two honks. */
+  /** An owl's hoot (two falling notes) and a rat's squeak, for the night animals. */
+  hoot() { const c = this.ctx; if (!c || !this.cfg.sound) return; const t = c.currentTime + 0.02; this.tone(430, t, 0.28, 'sine', 0.3, undefined, 340); this.tone(430, t + 0.42, 0.4, 'sine', 0.3, undefined, 310) }
+  squeak() { const c = this.ctx; if (!c || !this.cfg.sound) return; const t = c.currentTime + 0.01; this.tone(1900, t, 0.09, 'square', 0.1, undefined, 2600); this.tone(2100, t + 0.11, 0.07, 'square', 0.08, undefined, 2700) }
   private waterNode?: { src: AudioBufferSourceNode; gain: GainNode }
   /** Running water for the tap or shower: hissing noise that fades in and out. Pass null to stop. */
   water(kind: 'tap' | 'shower' | null) {
