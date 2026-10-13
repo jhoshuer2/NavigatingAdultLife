@@ -115,6 +115,7 @@ export function performActivity(ctx: Ctx, id: string, args: ActivityArgs = {}): 
       addStat(ctx, 'health', Math.round(5 * f * pen), 'Rest')
       addStat(ctx, 'stress', -Math.round(9 * f * pen), 'Rest')
       addStat(ctx, 'happiness', Math.round((c.traits.includes('hustler') ? 1 : 3) * f), 'Rest')
+      addStat(ctx, 'energy', Math.round(45 * f * pen), 'Rested') // sleep gives your energy back (it used to refill only when the year turned)
       if (c.traits.includes('foodie')) { addStat(ctx, 'energy', 6, 'Good food'); addStat(ctx, 'happiness', 2, 'Good food') }
       if (args.appliancesOn) addStat(ctx, 'cash', -2500 * args.appliancesOn, 'Fuel and electricity')
       text = args.appliancesOn ? `You slept ${Math.round(hours)}h, but left ${args.appliancesOn} appliance${args.appliancesOn > 1 ? 's' : ''} on. Poor sleep and a bigger fuel bill.` : hours >= 7 ? 'A full night of sleep. NEPA, surprisingly, cooperated.' : `A short rest of ${Math.round(hours)}h. Better than nothing.`

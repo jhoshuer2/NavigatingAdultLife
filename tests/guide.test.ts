@@ -75,19 +75,30 @@ describe('voice', () => {
   it('never keeps sending you to study once the year is used up: it tells you to end the year', () => {
     const l = life(); l.character.dreamId = 'unsureLagos'; l.dreamStage = 0;
     l.character.edu.level = 'sss'; l.character.stats.energy = 90
-    expect(suggest(l)!.act).toBe('study')
+    expect(suggest(l, 14)!.act).toBe('study')
     l.activityCounts.study = 2
-    const next = suggest(l)!
+    const next = suggest(l, 14)!
     expect(next.act).not.toBe('study')
     expect(dreamGoal(l)!.doable).toBe(false)
     expect(dreamGoal(l)!.note).toMatch(/Sleep at home/)
+  })
+  it('gives a child a normal morning: freshen up, eat, help Mama, then school', () => {
+    const l = life(); l.character.age = 10; l.character.dreamId = 'unsureLagos'; l.dreamStage = 0; l.character.edu.level = 'primary'; l.character.stats.energy = 90
+    l.character.stats.happiness = 70; l.character.stats.stress = 20; l.character.stats.health = 90
+    expect(suggest(l, 6.8)!.id).toBe('groomMorning')
+    l.activityCounts.groom = 1; expect(suggest(l, 6.8)!.id).toBe('askFood')
+    l.activityCounts.meal = 1; expect(suggest(l, 6.8)!.id).toBe('helpMama')
+    l.activityCounts.chores = 1; expect(suggest(l, 6.8)!.act).toBe('study')
+    l.activityCounts.study = 2
+    expect(suggest(l, 14)!.id).toBe('dashFun')
+    l.activityCounts.dash = 1; expect(suggest(l, 14)!.id).toBe('footballFun')
   })
   it('fills the afternoon with fun things, then says go to bed from 7 pm wherever you are', () => {
     const l = life(); l.character.dreamId = 'unsureLagos'; l.dreamStage = 0; l.character.edu.level = 'sss'; l.character.stats.energy = 90
     l.character.stats.happiness = 70; l.character.stats.stress = 20; l.character.stats.health = 90
     l.activityCounts.study = 2
     expect(suggest(l, 14)!.id).toBe('dashFun') // done studying: go and play the Dash
-    l.activityCounts.dash = 1; l.activityCounts.hustle = 1
+    l.activityCounts.dash = 1; l.activityCounts.hustle = 1; l.activityCounts.play = 2
     l.character.age = 16; l.character.edu.level = 'none'; l.character.job = undefined as never; l.character.dreamId = 'bigOga'
     const a = suggest(l, 14)!; expect(a.errand).toBe('visit')
     l.flags[`d_visit_${l.character.age}`] = true

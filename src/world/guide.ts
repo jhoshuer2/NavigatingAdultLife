@@ -61,6 +61,12 @@ export function dreamGoal(life: GameState): DreamGoal | null {
 
 /** Free-time ideas for the part of the day between the day's work and bedtime. */
 const FUN = {
+  // mornings and afternoons of a normal Nigerian child (and anyone living at home)
+  groom: S('groomMorning', 'home', '🪥', 'Brush your teeth and freshen up', 'Go brush your teeth, freshen up', 'groom'),
+  breakfast: S('askFood', 'home', '🍛', 'Ask Mama for food', 'Ask Mama for food', 'meal'),
+  chores: S('helpMama', 'home', '🧹', 'Help Mama wash the plates and sweep', 'Help Mama wash plate, sweep house', 'chores'),
+  football: S('footballFun', 'pitch', '⚽', 'Go and play football at the pitch', 'Go the pitch play football', 'play'),
+  tv: S('watchTv', 'home', '📺', 'Watch TV for a while at home', 'Go house watch TV small', 'tv'),
   dash: S('dashFun', 'busstop', '🪙', 'Play Go-Slow Dash at the bus stop and collect coins', 'Go the bus stop play Go-Slow Dash, collect coins', 'dash'),
   visit: { ...S('visitFriend', 'home', '🏘️', "Visit a friend at their house", 'Go visit your padi for house'), errand: 'visit' as ErrandKind },
   explore: { ...S('exploreRoute', 'home', '🧭', 'Find a new route: follow the compass', 'Find new road: follow the compass'), errand: 'explore' as ErrandKind },
@@ -83,11 +89,19 @@ export function suggest(life: GameState, hour = 8): Suggestion | null {
   if (c.stats.happiness < 35) return SUGS.cheer
   if (c.stats.stress > 70) return SUGS.stress
   if (hour >= 19 || hour < 5) return FUN.evening // night: bed
+  // the morning at home: freshen up, eat, help Mama, then off to school or work
+  const young = c.age < 18
+  if (hour >= 5 && hour < 11 && c.age >= 5) {
+    if (used('groom') < 1) return FUN.groom
+    if (used('meal') < 1 && c.age < 30) return FUN.breakfast
+    if (young && used('chores') < 1 && c.stats.energy >= 12) return FUN.chores
+  }
   const goal = dreamGoal(life)
   if (goal?.doable) return goal.suggestion
   if (inSchool && used('study') < 2) return SUGS.study
   // the day's work is done: free time until evening (play the Dash, visit a friend, find a new route)
   if (c.age >= 6 && used('dash') < 1 && c.stats.energy >= 18) return FUN.dash
+  if (hour >= 12 && young && used('play') < 2 && c.stats.energy >= 14) return FUN.football
   if (!c.job && !inSchool && c.age >= 18 && c.age < 62) return SUGS.job
   if (c.job && used('overtime') < 1 && c.age < 60) return SUGS.boss
   if (c.age >= 14 && used('hustle') < 1 && c.stats.energy >= 22) return SUGS.hustle
@@ -96,6 +110,8 @@ export function suggest(life: GameState, hour = 8): Suggestion | null {
   if (c.age >= 8 && !life.flags[`d_explore_${c.age}`] && c.stats.energy >= 12) return FUN.explore
   if (used('socialise') < 1 && c.stats.energy >= 15) return SUGS.friend
   if (used('familyTime') < 1) return SUGS.family
+  if (hour >= 14 && life.flags['inst:tv'] && used('tv') < 1) return FUN.tv
+  if (hour >= 12 && used('meal') < 2 && c.age < 30) return { ...FUN.breakfast, id: 'askLunch', text: 'Ask Mama for lunch', say: say('Ask Mama for lunch', 'Ask Mama for food, make you chop') }
   if (c.age >= 10 && used('exercise') < 2 && c.stats.energy >= 20) return FUN.pitch
   if (used('treat') < 1 && c.stats.cash >= 40000 && c.stats.energy >= 10) return FUN.treat
   return FUN.wait
@@ -113,7 +129,7 @@ export const GEN = {
 
 // Which spot inside each building does the suggested thing. Missing = no single spot (people walk around, so just look around).
 const SPOT: Partial<Record<PlaceId, Partial<Record<string, string>>>> = {
-  home: { sleep: 'bed' },
+  home: { sleep: 'bed', groom: 'bath', chores: 'kitchen' },
   school: { study: 'mydesk', socialise: 'mates' },
   office: { overtime: 'mydesk' },
   jobcentre: { applyJob: 'counter' },
