@@ -1,4 +1,5 @@
 // Builds and animates one interior room as its own Three.js scene.
+import { homeDecorFor, type HomeDecor } from './homeDecor'
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import type { Gender } from '@engine/core/types'
@@ -44,6 +45,7 @@ export class InteriorView {
   private bulbMat = new THREE.MeshBasicMaterial({ color: 0x555555 })
   private windowMat = new THREE.MeshBasicMaterial({ color: 0x9ed3ff })
   private fanBlades?: THREE.Object3D
+  private decor?: HomeDecor
   private water = { tap: false, shower: false }
   private drops?: THREE.InstancedMesh
   private dropSeed: { a: number; r: number; y: number; v: number }[] = []
@@ -64,11 +66,14 @@ export class InteriorView {
   private icons: { s: THREE.Sprite; needs?: string }[] = []
   private boardTex?: THREE.CanvasTexture
 
-  constructor(id: PlaceId, installed?: Set<string>, tint?: { wall: number; floor: number }) {
+  constructor(id: PlaceId, installed?: Set<string>, tint?: { wall: number; floor: number }, districtId?: string) {
     const base = INTERIORS[id]
     if (!base) throw new Error(`no interior for ${id}`)
+    if (id === 'home' && districtId) this.decor = homeDecorFor(districtId)
     // the inside of your home takes on the look of your district (paint and flooring)
-    const def = tint ? { ...base, wallColor: tint.wall, floors: base.floors.map((f, i) => (i === 0 || i === 1 ? { ...f, color: tint.floor } : f)) } : base
+    let def = tint ? { ...base, wallColor: tint.wall, floors: base.floors.map((f, i) => (i === 0 || i === 1 ? { ...f, color: tint.floor } : f)) } : base
+    const dc = this.decor
+    if (dc) def = { ...def, objs: def.objs.map((o) => (o.kind === 'rug' ? { ...o, color: dc.rug } : o.kind === 'sofa' ? { ...o, color: dc.sofa } : o.kind === 'bed' ? { ...o, color: dc.bed } : o)) }
     this.def = def
     this.installed = installed ?? new Set(def.objs.map((o) => o.appl).filter(Boolean) as string[])
     this.blockers = interiorBlockers(def, this.installed)
@@ -109,6 +114,13 @@ export class InteriorView {
       this.applObjs.set(o.appl, [...(this.applObjs.get(o.appl) ?? []), ...extras])
     }
     this.applyInstalled()
+    if (this.decor) {
+      const dc = this.decor
+      for (const x of dc.boxes) W.box(x.b[0], x.b[1], x.b[2], x.b[3], x.b[4], x.b[5], x.c)
+      for (const c of dc.cyls) W.cyl(c.cx, c.cy, c.cz, c.r, c.h, c.c)
+      const rug = d.objs.find((o) => o.kind === 'rug')
+      if (rug) { const r = rug.rect, t = 0.22, y0 = 0.045, y1 = 0.058; W.box(r.x0 + t, r.x1 - t, y0, y1, r.z0 + t, r.z0 + t + 0.1, dc.rugTrim); W.box(r.x0 + t, r.x1 - t, y0, y1, r.z1 - t - 0.1, r.z1 - t, dc.rugTrim); W.box(r.x0 + t, r.x0 + t + 0.1, y0, y1, r.z0 + t, r.z1 - t, dc.rugTrim); W.box(r.x1 - t - 0.1, r.x1 - t, y0, y1, r.z0 + t, r.z1 - t, dc.rugTrim) }
+    }
     this.scene.add(W.mesh())
     // north-wall windows (colour follows the time of day)
     for (const w of d.windowsAt) { const win = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 1.6), this.windowMat); win.position.set(w.x, 2.1, d.bounds.z0 + 0.03); this.scene.add(win); const fr = new THREE.Mesh(new THREE.BoxGeometry(2.5, 1.9, 0.06), new THREE.MeshLambertMaterial({ color: 0xffffff })); fr.position.set(w.x, 2.1, d.bounds.z0 + 0.0); this.scene.add(fr) }
@@ -364,7 +376,7 @@ export class InteriorView {
   washSpot(kind: 'sink' | 'shower') {
     const o = this.def.objs.find((x) => x.kind === kind)
     if (!o) return null
-    const cx = (o.rect.x0 + o.rect.x1) / 2, cz = (o.rect.z0 + o.rect.z1) / 2
+    const cx = (o.rect.x0 + o.rect.x1) / 2
     return kind === 'sink'
       ? { x: cx, z: o.rect.z1 + 0.6, face: 0, cam: { pos: [cx - 3.4, 3.4, o.rect.z1 + 3.4] as [number, number, number], look: [cx, 1.7, o.rect.z1 + 0.2] as [number, number, number] } }
       : { x: o.rect.x0 + 0.5, z: o.rect.z0 + 0.95, face: Math.PI, cam: { pos: [o.rect.x0 + 3.2, 3.6, o.rect.z0 + 5.6] as [number, number, number], look: [o.rect.x0 + 0.5, 1.6, o.rect.z0 + 0.9] as [number, number, number] } }

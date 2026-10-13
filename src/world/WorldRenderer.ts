@@ -427,7 +427,7 @@ export class WorldRenderer {
   get inside(): PlaceId | null { return this.interior?.def.id ?? null }
   enterInterior(place: PlaceId, people: { id: string; name: string; gender: Gender; role: string }[], state: InteriorState, outsideAt?: { x: number; z: number }, installed?: Set<string>): boolean {
     let view: InteriorView
-    try { view = new InteriorView(place, installed, place === 'home' ? this.district.flavour.homeInterior : place === 'worship' && this.faith === 'mosque' ? { wall: 0xf3efdf, floor: 0x2f7a5a } : undefined) } catch { return false }
+    try { view = new InteriorView(place, installed, place === 'home' ? this.district.flavour.homeInterior : place === 'worship' && this.faith === 'mosque' ? { wall: 0xf3efdf, floor: 0x2f7a5a } : undefined, this.district.theme.id) } catch { return false }
     this.installedSet = installed ?? null
     this.interior?.dispose()
     this.outside = outsideAt ?? { x: this.px, z: this.pz }
