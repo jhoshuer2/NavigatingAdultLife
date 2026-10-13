@@ -48,7 +48,7 @@ function finish(ctx: Ctx, before: StatDelta[], text: string) {
   log(ctx.s, 'activity', text)
 }
 
-export interface ActivityArgs { target?: NpcRole; track?: TrackId; itemId?: string; hours?: number; appliancesOn?: number; perf?: number; donation?: number; pricePct?: number; spend?: number }
+export interface ActivityArgs { target?: NpcRole; track?: TrackId; itemId?: string; hours?: number; appliancesOn?: number; perf?: number; donation?: number; pricePct?: number; spend?: number; byMum?: boolean }
 
 export function performActivity(ctx: Ctx, id: string, args: ActivityArgs = {}): boolean {
   const { s, rng } = ctx
@@ -159,11 +159,13 @@ export function performActivity(ctx: Ctx, id: string, args: ActivityArgs = {}): 
       const item = args.itemId ? ITEM_BY_ID[args.itemId] : undefined
       const pct = Math.min(1, Math.max(0.5, args.pricePct ?? 1))
       const cost = item ? Math.round(item.price * pct) : 0
-      if (!item || c.items.includes(item.id) || c.age < item.minAge || c.stats.cash < cost) { c.stats.energy += def.cost.energy; s.activityCounts[id] -= 1; return false }
+      const mum = args.byMum && item ? mumCanBuy(ctx, item) : null
+      if (!item || c.items.includes(item.id) || (c.age < item.minAge && !mum?.ok) || c.stats.cash < cost) { c.stats.energy += def.cost.energy; s.activityCounts[id] -= 1; return false }
       addStat(ctx, 'cash', -cost, 'Shopping')
       c.items.push(item.id)
       applyEffects(ctx, item.effects, item.name)
-      text = pct < 1 ? `You bought: ${item.name}, haggled down ${Math.round((1 - pct) * 100)}%.` : `You bought: ${item.name}.`
+      if (args.byMum && mum?.ok) text = `You asked ${mum.who} and ${mum.who} bought ${item.name} ${item.appliance || item.id === 'rice' ? 'for the house' : 'for you'}, with your money.`
+      else text = pct < 1 ? `You bought: ${item.name}, haggled down ${Math.round((1 - pct) * 100)}%.` : `You bought: ${item.name}.`
       break
     }
     default: {
@@ -241,10 +243,23 @@ export function answerQuiz(ctx: Ctx, optionIndex: number): { correct: boolean; f
   return { correct, funny: correct ? q.funnyRight : q.funnyWrong, done }
 }
 
+/** Can a parent buy this for a child, with the child's own money? Parents buy for the house and for things a child is nearly old enough for. */
+export function mumCanBuy(ctx: Ctx, item: { id: string; minAge: number; appliance?: boolean }): { ok: boolean; who: string; why?: string } {
+  const c = ctx.s.character, s = ctx.s
+  const parent = (['mother', 'father'] as const).map((r) => (s.roles[r] ? s.npcs[s.roles[r]!] : undefined)).find((n) => n && n.alive)
+  if (c.housing.type !== 'family' || c.age >= 18 || !parent) return { ok: false, who: 'Mama', why: 'Only a parent can buy things for you.' }
+  const who = parent.role === 'mother' ? 'Mama' : 'Papa'
+  if (!item.appliance && item.id !== 'rice' && item.minAge > c.age + 6) return { ok: false, who, why: `${who} says: "You are too small for that one. Ask when you are older."` }
+  return { ok: true, who }
+}
+
+/** Everything the market sells (that you or your home do not already have), with whether you can buy it yourself or ask a parent to. */
 export function shopItems(ctx: Ctx) {
   const c = ctx.s.character
   const base = new Set(BASE_BY_HOUSING[c.housing.type] ?? [])
-  return ITEMS.filter((i) => !i.heirloom && c.age >= i.minAge && !c.items.includes(i.id) && !(i.appliance && base.has(i.id))).map((i) => ({ item: i, affordable: c.stats.cash >= i.price }))
+  return ITEMS.filter((i) => !i.heirloom && !c.items.includes(i.id) && !(i.appliance && base.has(i.id)))
+    .map((i) => ({ item: i, affordable: c.stats.cash >= i.price, canBuy: c.age >= i.minAge, mum: mumCanBuy(ctx, i) }))
+    .sort((a, b) => Number(b.canBuy || b.mum.ok) - Number(a.canBuy || a.mum.ok) || a.item.price - b.item.price)
 }
 
 export function jobOptions(ctx: Ctx) {

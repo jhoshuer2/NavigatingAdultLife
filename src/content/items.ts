@@ -19,6 +19,9 @@ export interface ItemDef {
 }
 
 export const ITEMS: ItemDef[] = [
+  { id: 'football', name: 'Football', icon: '⚽', desc: 'Kick about with your friends after school.', price: 8000, minAge: 3, passive: { yearlyHappiness: 1 }, effects: [{ stat: 'happiness', delta: 3 }] },
+  { id: 'storybooks', name: 'Story books', icon: '📚', desc: 'Folktales and adventures. Reading gets easier.', price: 6000, minAge: 3, passive: { studyBonus: 1 }, effects: [{ stat: 'happiness', delta: 1 }] },
+  { id: 'rice', name: 'Bag of rice for the house', icon: '🍚', desc: 'Food for the family. Mama cooks happier and everyone is calmer.', price: 45000, minAge: 8, passive: { yearlyHappiness: 1, yearlyStress: -1 }, effects: [{ stat: 'happiness', delta: 2 }] },
   { id: 'schoolBag', name: 'Good school bag', icon: '🎒', desc: 'Books stay dry. Study works a bit better.', price: 25000, minAge: 6, passive: { studyBonus: 1 }, effects: [{ stat: 'happiness', delta: 2 }] },
   { id: 'textbooks', name: 'Past questions & textbooks', icon: '📖', desc: 'Exam prep that actually matches the exam.', price: 45000, minAge: 12, passive: { examBonus: 6, studyBonus: 1 } },
   { id: 'phone', name: 'Smartphone', icon: '📱', desc: 'Jobs, gist and distractions. Helps you get hired.', price: 180000, minAge: 14, passive: { hireBonus: 4, yearlyHappiness: 1 } },

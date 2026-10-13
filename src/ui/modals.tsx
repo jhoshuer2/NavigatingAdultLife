@@ -160,7 +160,7 @@ export function SummaryModal() {
 
 export function ShopModal() {
   const { life, act, openSheet } = useGame()
-  const items = useMemo(() => (life ? getShopItems(life) : []), [life])
+  const items = useMemo(() => (life ? getShopItems(life).filter((x) => x.canBuy) : []), [life])
   return (
     <Modal title="Shop" onClose={() => openSheet(null)}>
       {items.length === 0 && <p className="opacity-70 text-center py-6">Nothing new to buy yet.</p>}
