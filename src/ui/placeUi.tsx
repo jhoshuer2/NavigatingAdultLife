@@ -84,6 +84,7 @@ export function PlaceModal() {
         ? <div className="chip chip-gold !text-sm mt-3"><Icon name="clock" size={14} color="#3b2300" /> Opens {fmtClock(opensAt(placeId))}</div>
         : <Btn variant="green" className={`w-full mt-3 ${mine && !rows.some((r) => r.def.id === mine.act) ? 'guide-glow' : ''}`} onClick={() => { audio.sfx('click'); enterPlace(placeId) }}><Icon name="door" size={20} /> Go inside</Btn>)}
       <div className="grid grid-cols-2 gap-2.5 mt-3">
+        {placeId === 'busstop' && <ActTile hot icon="🚌" label="Take the bus" reward="📍" disabled={idle || closed} onClick={() => { audio.sfx('click'); openSheet('bus') }} />}
         {placeId === 'pitch' && <ActTile hot icon="⚽" label="Play a match" energy={12} reward="🏆" disabled={idle || closed} onClick={() => { audio.sfx('click'); startMatch() }} />}
         {rows.map(({ def, enabled, reason, remaining }) => (
           <ActTile key={def.id} guide={!!mine && mine.act === def.id && enabled} icon={def.icon} label={def.label} energy={def.cost.energy} cash={def.cost.cash} reward={emojis(BENEFIT[def.id] ?? '')} reason={closed ? `Opens ${fmtClock(opensAt(placeId))}` : reason} left={remaining} disabled={!enabled || idle || closed} onClick={() => run(def)} />
@@ -147,6 +148,33 @@ export function PlacesModal() {
             <button key={p.id} className="tile" style={{ opacity: on ? 1 : 0.5 }} onClick={() => { audio.sfx('click'); goToPlace(p.id) }}>
               <span className="text-[32px] leading-none">{p.icon}</span>
               <span className="font-display text-[13px] leading-tight text-center uppercase">{p.name}</span>
+            </button>
+          )
+        })}
+      </div>
+    </Modal>
+  )
+}
+
+/** Pick where the bus takes you. The fare grows with the distance. */
+export function BusModal() {
+  const { life, openSheet, startRide } = useGame()
+  if (!life) return null
+  const d = districtFor(life.character.housing.districtId, faithOf(life))
+  const here = d.places.find((p) => p.id === 'busstop')!
+  const cash = life.character.stats.cash
+  const fareTo = (x: number, z: number) => 300 + 100 * Math.round(Math.hypot(x - here.door.x, z - here.door.z) / 25)
+  return (
+    <Modal title="🚌 Take the bus" onClose={() => openSheet(null)}>
+      <div className="text-xs opacity-75 mb-2">Pick where you are going. A bus will pull up at your stop. You have {nairaShort(cash)}.</div>
+      <div className="grid grid-cols-3 gap-2.5">
+        {d.places.filter((p) => p.id !== 'busstop').map((p) => {
+          const fare = fareTo(p.door.x, p.door.z), ok = cash >= fare && placeActive(life, p.id as PlaceId)
+          return (
+            <button key={p.id} className="tile" style={{ opacity: ok ? 1 : 0.45 }} disabled={!ok} onClick={() => { audio.sfx('click'); startRide(p.id as PlaceId, fare) }}>
+              <span className="text-[30px] leading-none">{p.icon}</span>
+              <span className="font-display text-[12px] leading-tight text-center uppercase">{p.name}</span>
+              <span className="chip chip-gold !text-[11px] !py-0">{nairaShort(fare)}</span>
             </button>
           )
         })}

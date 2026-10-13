@@ -13,6 +13,7 @@ import { fmtClock, isNight, isOpen, opensAt } from '../../world/time'
 import type { NpcRole } from '@engine/core/types'
 import { StudyTask, type StudyMode } from '../tasks/StudyTask'
 import { WashTask } from '../tasks/WashTask'
+import { RideTask } from '../tasks/RideTask'
 import { EatTask } from '../tasks/EatTask'
 import { TripTask } from '../tasks/TripTask'
 import { errandSpot } from '../../world/errands'
@@ -75,6 +76,7 @@ export default function World() {
     | { kind: 'match'; actAs: string }
     | { kind: 'pose'; mode: 'sofa' | 'bed' | 'chair' }
     | { kind: 'wash'; mode: 'brush' | 'bath' }
+    | { kind: 'ride'; dest: PlaceId }
     | { kind: 'eat'; who: string; role: NpcRole; perf: number }
     | { kind: 'cook' }
     | { kind: 'dine' }
@@ -270,7 +272,7 @@ export default function World() {
   const trail = useRef<{ x: number; z: number }[]>([])
   useEffect(() => { const t = trail.current, l = t[t.length - 1]; if (!l || Math.hypot(l.x - pos.x, l.z - pos.z) > 2.5) { t.push({ x: pos.x, z: pos.z }); if (t.length > 160) t.shift() } }, [pos])
   const voiceOn = meta.settings.sound && meta.settings.voice !== false
-  const coachKey = task && task.kind !== 'pose' && task.kind !== 'wash' ? task.kind : null
+  const coachKey = task && task.kind !== 'pose' && task.kind !== 'wash' && task.kind !== 'ride' ? task.kind : null
   const needCoach = !!coachKey && guideOn && !!HOWTO[coachKey] && (meta.tips?.[coachKey] ?? 0) < 2
   const [coached, setCoached] = useState<unknown>(null)
   const holdTask = needCoach && coached !== task
@@ -408,6 +410,11 @@ export default function World() {
     setTimeout(() => { if (r.inside) { r.exitInterior(); setInside(null); setHotId(null) } setTask({ kind: 'trip', trip, friends }); setFade(false) }, 280)
   }
   useEffect(() => { if (fresh('trip', g.tripReq)) startTrip() /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [g.tripReq])
+  const beginRide = (dest: PlaceId) => {
+    const r = rendRef.current; if (!r || r.inside || task) return
+    setTask({ kind: 'ride', dest })
+  }
+  useEffect(() => { if (fresh('ride', g.rideReq) && g.rideReq) beginRide(g.rideReq.dest) /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [g.rideReq])
   const startJog = () => {
     const r = rendRef.current; if (!r || fade) return
     const why = enabledAct('exercise'); if (why) { g.toast(why); return }
@@ -716,6 +723,7 @@ export default function World() {
       {task?.kind === 'penalty' && !holdTask && rendRef.current && <PenaltyTask r={rendRef.current} pitch={district.places.find((p) => p.id === 'pitch')!.rect} onDone={(perf) => endTask(perf)} />}
       {task?.kind === 'chores' && !holdTask && rendRef.current && <ChoresTask r={rendRef.current} motherId={INTERIORS.home?.people.find((p) => p.persistent === 'mother')?.id ?? null} helper={task.helper} onDone={(perf, hr) => endTask(perf, 0, 0, hr)} />}
       {task?.kind === 'pose' && !holdTask && rendRef.current && <PoseTask r={rendRef.current} mode={task.mode} tvOn={appl.tv} onToggleTv={() => toggle('tv')} onWatch={() => { const why = enabledAct('tv'); if (why) g.toast(why); else g.act('tv') }} onSleep={() => startSleep()} onStudy={() => startStudy('desk')} onDone={() => setTask(null)} />}
+      {task?.kind === 'ride' && rendRef.current && <RideTask r={rendRef.current} door={district.places.find((p) => p.id === task.dest)!.door} name={district.places.find((p) => p.id === task.dest)!.name} onDone={() => { setTask(null); g.advance(0.3) }} />}
       {task?.kind === 'wash' && rendRef.current && <WashTask r={rendRef.current} mode={task.mode} onDone={(perf) => endTask(perf)} />}
       {task?.kind === 'eat' && rendRef.current && <EatTask r={rendRef.current} who={task.who} onDone={() => { const t = task; setTask(null); g.act('meal', { target: t.role, perf: t.perf }); setCheer((n) => n + 1); setTimeout(() => setCheer(0), 3200) }} />}
       {task?.kind === 'cook' && !holdTask && rendRef.current && <CookTask r={rendRef.current} free={life.character.housing.type === 'family'} onDone={(perf, sp) => endTask(perf, 0, sp)} />}

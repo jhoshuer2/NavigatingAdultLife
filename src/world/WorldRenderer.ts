@@ -6,6 +6,7 @@ import type { Appearance, Gender } from '@engine/core/types'
 import type { Wear } from '@content/items'
 import { drawFlavourProp, drawOuting, drawWorship, skylineObjects, vehicleMesh } from './scenery'
 import type { VehicleKind, CrowdKind } from './flavour'
+import { audio } from '@platform/audio'
 import { WORLD, type District, type PlaceId, type Rect } from './layout'
 import { buildNav, findPath, moveWithCollision, walkable, type Nav } from './nav'
 import { animateHuman, buildHuman, hashLook, type HumanParts } from './characters'
@@ -44,6 +45,11 @@ export interface WorldNpc { id: string; name: string; gender: Gender; x: number;
 export interface Near { place: PlaceId | null; npc: string | null }
 export interface NearInside { hotspot: string | null; person: string | null; exit: boolean }
 
+interface Veh { g: THREE.Group; axis: 'x' | 'z'; dir: 1 | -1; lane: number; pos: number; speed: number; cur: number; kind: VehicleKind; pub: boolean; len: number; mode: 'drive' | 'approach' | 'dwell'; dwellT: number; served: boolean; honkT: number; wasBlocked: boolean; bub?: THREE.Sprite; bubT: number }
+interface Commuter { parts: HumanParts; x: number; z: number; home: { x: number; z: number }; state: 'wait' | 'board' | 'aboard' | 'alightPending' | 'alight'; tx: number; tz: number; delay: number }
+const PUBLIC: VehicleKind[] = ['danfo', 'brt', 'cab']
+const VLEN: Record<VehicleKind, number> = { danfo: 5.2, brt: 7.4, keke: 2.4, okada: 1.8, cab: 4.1, suv: 4.6 }
+
 export class WorldRenderer {
   readonly renderer: THREE.WebGLRenderer
   private scene = new THREE.Scene()
@@ -68,7 +74,10 @@ export class WorldRenderer {
   private npcs = new Map<string, { parts: HumanParts; npc: WorldNpc; label: THREE.Sprite; tx: number; tz: number; wt: number; moving: boolean }>()
   private ambient: { parts: HumanParts; x: number; z: number; heading: number; timer: number; speed: number; bubble?: THREE.Sprite; bubbleT: number; sayT: number; lines?: string[]; stay?: boolean; home?: { x: number; z: number; r: number } }[] = []
   private faith: 'church' | 'mosque' = 'church'
-  private traffic: { g: THREE.Group; axis: 'x' | 'z'; dir: 1 | -1; lane: number; pos: number; speed: number }[] = []
+  private traffic: Veh[] = []
+  private commuters: Commuter[] = []
+  private rideActive = false
+  private ride: { g: THREE.Group; leg: { from: [number, number]; to: [number, number]; dur: number; t: number; ease: 'in' | 'out'; face: number; res: () => void } | null; follow: boolean } | null = null
   private labelSprites = new Map<PlaceId, THREE.Sprite>()
   private textCache = new Map<string, THREE.SpriteMaterial>()
   private highlight: { place: PlaceId | null; ring: THREE.Mesh; arrow: THREE.Mesh } | null = null
@@ -356,22 +365,184 @@ export class WorldRenderer {
     const fl = this.district.flavour
     const add = (kind: VehicleKind, axis: 'x' | 'z', dir: 1 | -1, pos: number, speed: number) => {
       const g = vehicleMesh(kind); this.scene.add(g)
-      this.traffic.push({ g, axis, dir, lane: dir * 1.55, pos, speed })
+      this.traffic.push({ g, axis, dir, lane: dir * 1.55, pos, speed, cur: speed, kind, pub: PUBLIC.includes(kind), len: VLEN[kind], mode: 'drive', dwellT: 0, served: false, honkT: Math.random() * 2, wasBlocked: false, bubT: 0 })
     }
     for (let i = 0; i < fl.traffic.count; i++) {
       const kind = fl.traffic.kinds[i % fl.traffic.kinds.length]
       add(kind, i % 2 === 0 ? 'x' : 'z', i % 3 === 0 ? -1 : 1, -55 + ((i * 41) % 110), kind === 'okada' || kind === 'suv' ? 8.5 : kind === 'brt' ? 5.5 : 5 + (i % 3))
     }
     if (fl.traffic.convoy) { for (let k = 0; k < 3; k++) add('suv', 'x', 1, -50 - k * 7.5, 9) } // a politician's convoy with its escorts
+    // the buses that serve your stop: they run down the road beside it, halt there, honk, take people on and let people off
+    const bus: VehicleKind = this.district.theme.city === 'abuja' ? 'cab' : 'danfo'
+    add(bus, 'z', 1, -52, 5.4); add(bus, 'z', 1, -12, 5.4)
+    this.makeCommuters()
   }
-  private updateTraffic(dt: number) {
-    for (const v of this.traffic) {
-      v.pos += v.dir * v.speed * dt
-      if (v.pos > 58) v.pos = -58; else if (v.pos < -58) v.pos = 58
-      if (v.axis === 'x') { v.g.position.set(v.pos, 0, v.lane); v.g.rotation.y = v.dir > 0 ? 0 : Math.PI }
-      else { v.g.position.set(v.lane, 0, v.pos); v.g.rotation.y = v.dir > 0 ? -Math.PI / 2 : Math.PI / 2 }
+
+  private get stopZ() { return this.district.places.find((p) => p.id === 'busstop')!.door.z }
+  /** People waiting at the bus stop. They board a bus when it halts and come back off the next one. */
+  private makeCommuters() {
+    const bs = this.district.places.find((p) => p.id === 'busstop')!
+    const names = ['commuterA', 'commuterB', 'commuterC', 'commuterD']
+    names.forEach((nm, i) => {
+      const female = i % 2 === 1
+      const parts = buildHuman({ look: hashLook(nm + this.district.theme.id, female ? 'female' : 'male'), age: 26 + i * 4, gender: female ? 'female' : 'male', scale: 1.1 })
+      const x = bs.rect.x0 + 0.8 + (i % 2) * 1.3, z = bs.rect.z0 + 0.8 + i * 1.0
+      parts.group.position.set(x, 0, z); parts.group.rotation.y = -Math.PI / 2
+      this.scene.add(parts.group)
+      this.commuters.push({ parts, x, z, home: { x, z }, state: 'wait', tx: x, tz: z, delay: 0 })
+    })
+  }
+  /** Everyone on foot that a driver must not run over. */
+  private folks(): { x: number; z: number }[] {
+    const out: { x: number; z: number }[] = []
+    if (!this.interior && !this.rideActive && this.player.group.visible && !this.sleeping) out.push({ x: this.px, z: this.pz })
+    for (const a of this.ambient) out.push(a)
+    for (const o of this.npcs.values()) out.push(o.npc)
+    for (const c of this.commuters) if (c.state !== 'aboard' && c.state !== 'alightPending') out.push(c)
+    return out
+  }
+  private honk(v: Veh, text = 'Beep beep!') {
+    if (Math.hypot(v.g.position.x - this.px, v.g.position.z - this.pz) > 26) return
+    audio.sfx('horn')
+    if (v.bub) { this.scene.remove(v.bub); v.bub = undefined }
+    v.bub = this.textSprite(text, { bg: 'rgba(255,224,102,0.96)', fg: '#1c1b22', size: 5 }); v.bubT = 1.4; this.scene.add(v.bub)
+  }
+  private busDwell(v: Veh) {
+    const doorX = v.lane + 1.45, z = this.stopZ
+    let boarded = 0
+    for (const c of this.commuters) if (c.state === 'wait' && boarded < 2) { c.state = 'board'; c.tx = doorX; c.tz = z + boarded * 0.7 - 0.3; boarded++ }
+    let off = 0
+    for (const c of this.commuters) if (c.state === 'aboard' && off < 2 && Math.random() < 0.85) { c.state = 'alightPending'; c.delay = 1.3 + off * 1.1; off++ }
+  }
+  private updateCommuters(dt: number) {
+    for (const c of this.commuters) {
+      const P = c.parts
+      if (c.state === 'aboard' || c.state === 'alightPending') {
+        P.group.visible = false
+        if (c.state === 'alightPending') { c.delay -= dt; if (c.delay <= 0) { c.x = c.tx = 3.0 + 1.55 - 0.1; c.z = this.stopZ + Math.random() * 0.6; c.tx = c.home.x + (Math.random() - 0.5) * 0.8; c.tz = c.home.z + (Math.random() - 0.5) * 0.8; c.state = 'alight'; P.group.visible = true } }
+        continue
+      }
+      P.group.visible = true
+      if (c.state === 'board' || c.state === 'alight') {
+        const dx = c.tx - c.x, dz = c.tz - c.z, d = Math.hypot(dx, dz)
+        if (d < 0.35) { if (c.state === 'board') c.state = 'aboard'; else { c.state = 'wait'; c.home = { x: c.tx, z: c.tz } } }
+        else { c.x += (dx / d) * 2.0 * dt; c.z += (dz / d) * 2.0 * dt; P.group.rotation.y += this.angleDiff(Math.atan2(dx, dz), P.group.rotation.y) * Math.min(1, dt * 8) }
+        animateHuman(P, this.time + c.x, true, 0.7)
+      } else { animateHuman(P, this.time, false); P.group.rotation.y += this.angleDiff(-Math.PI / 2, P.group.rotation.y) * Math.min(1, dt * 3) }
+      P.group.position.set(c.x, 0, c.z)
     }
   }
+
+  private updateTraffic(dt: number) {
+    const folks = this.folks(), stopZ = this.stopZ
+    for (const v of this.traffic) {
+      const al = (p: { x: number; z: number }) => (v.axis === 'x' ? p.x : p.z), la = (p: { x: number; z: number }) => (v.axis === 'x' ? p.z : p.x)
+      const half = v.len / 2, stopDist = 2.6 + v.cur * 0.55
+      // a person in front of the bumper, or beside the car on the road: wait
+      let blockedByPerson = false
+      for (const p of folks) {
+        const rel = (al(p) - v.pos) * v.dir
+        if (rel > -half && rel < half + stopDist && Math.abs(la(p) - v.lane) < 1.7 && Math.abs(la(p)) < 3.2) { blockedByPerson = true; break }
+      }
+      let cap = v.speed
+      // slow down for a vehicle ahead in the same lane
+      for (const o of this.traffic) {
+        if (o === v || o.axis !== v.axis || o.dir !== v.dir || o.lane !== v.lane) continue
+        const gap = (o.pos - v.pos) * v.dir - half - o.len / 2
+        if (gap > -0.5 && gap < 4 + v.cur * 0.7) cap = Math.min(cap, gap < 1.4 ? 0 : o.cur)
+      }
+      // do not drive into the junction while something is crossing it
+      if (v.pos * v.dir < 0 && Math.abs(v.pos) > 3.2 && Math.abs(v.pos) < half + 6) for (const w of this.traffic) if (w.axis !== v.axis && Math.abs(w.pos) < 4.2 + w.len / 2) cap = 0
+      // the buses that serve the stop
+      if (v.pub && v.axis === 'z' && v.dir === 1) {
+        const d = stopZ - v.pos
+        if (v.mode === 'drive' && !v.served && d > 0 && d < 14) v.mode = 'approach'
+        if (v.mode === 'approach') {
+          cap = Math.min(cap, Math.max(1.2, d * 0.9))
+          if (d < -0.5) { v.mode = 'drive'; v.served = true }
+          else if (d < 0.4 || (d < 1.2 && v.cur < 0.3)) { v.mode = 'dwell'; v.dwellT = 6.5; this.honk(v, 'Oya enter!'); this.busDwell(v) }
+        }
+        if (v.mode === 'dwell') { cap = 0; v.dwellT -= dt; if (v.dwellT <= 0) { v.mode = 'drive'; v.served = true; this.honk(v, 'Beep beep!') } }
+      }
+      const target = blockedByPerson ? 0 : cap
+      v.cur = v.cur > target ? Math.max(target, v.cur - 14 * dt) : Math.min(target, v.cur + 4 * dt)
+      // honk when someone steps out in front, and again now and then while waiting for them
+      v.honkT -= dt
+      if (blockedByPerson) {
+        if (!v.wasBlocked && v.cur > 1.5) { this.honk(v); v.honkT = 3 }
+        else if (v.cur < 0.3 && v.honkT <= 0) { this.honk(v, v.kind === 'danfo' ? 'Oga, waka well!' : 'Beep beep!'); v.honkT = 3 + Math.random() * 2 }
+      }
+      v.wasBlocked = blockedByPerson
+      v.pos += v.dir * v.cur * dt
+      if (v.pos > 58) { v.pos = -58; v.served = false; v.mode = 'drive' } else if (v.pos < -58) v.pos = 58
+      if (v.axis === 'x') { v.g.position.set(v.pos, 0, v.lane); v.g.rotation.y = v.dir > 0 ? 0 : Math.PI }
+      else { v.g.position.set(v.lane, 0, v.pos); v.g.rotation.y = v.dir > 0 ? -Math.PI / 2 : Math.PI / 2 }
+      if (v.bub) { v.bubT -= dt; v.bub.position.set(v.g.position.x, 4.2, v.g.position.z); if (v.bubT <= 0) { this.scene.remove(v.bub); v.bub = undefined } }
+    }
+    this.updateCommuters(dt)
+    this.stepRide(dt)
+  }
+
+  // ---------- riding a bus ----------
+  private rideLeg(from: [number, number], to: [number, number], dur: number, ease: 'in' | 'out'): Promise<void> {
+    const rd = this.ride!
+    return new Promise((res) => { rd.leg = { from, to, dur, t: 0, ease, face: Math.atan2(-(to[1] - from[1]), to[0] - from[0]), res } })
+  }
+  private stepRide(dt: number) {
+    const rd = this.ride; if (!rd) return
+    const lg = rd.leg
+    if (lg) {
+      lg.t += dt
+      const k = Math.min(1, lg.t / lg.dur), e = lg.ease === 'out' ? 1 - (1 - k) * (1 - k) : k * k
+      const x = lg.from[0] + (lg.to[0] - lg.from[0]) * e, z = lg.from[1] + (lg.to[1] - lg.from[1]) * e
+      rd.g.position.set(x, 0, z); rd.g.rotation.y = lg.face
+      if (k >= 1) { rd.leg = null; lg.res() }
+    }
+    if (rd.follow) { const p = rd.g.position; this.camOverride = { pos: [p.x + 7, 8, p.z + 12], look: [p.x, 1, p.z] }; this.interior?.showIcons(false) }
+  }
+  private pause(sec: number) { return new Promise<void>((r) => setTimeout(r, sec * 1000)) }
+  private spawnRide() {
+    const g = vehicleMesh(this.district.theme.city === 'abuja' ? 'cab' : 'danfo'); this.scene.add(g)
+    this.ride = { g, leg: null, follow: false }
+  }
+  private endRide() { if (this.ride) { this.scene.remove(this.ride.g); this.ride = null } }
+  /** A bus pulls up at your stop, you walk to its door and climb in. */
+  async rideBoard() {
+    this.rideActive = true
+    const z = this.stopZ, lane = 1.55
+    this.spawnRide(); this.ride!.g.position.set(lane, 0, z - 26)
+    const arrive = this.rideLeg([lane, z - 26], [lane, z], 3.4, 'out')
+    await arrive
+    const door = { x: lane + 1.5, z }
+    this.walkTo(door.x + 0.6, door.z)
+    const t0 = Date.now()
+    while (Date.now() - t0 < 5500) { await this.pause(0.15); if (Math.hypot(this.px - (door.x + 0.6), this.pz - door.z) < 0.7) break }
+    this.player.group.visible = false; this.setFrozen(true)
+    await this.pause(0.4)
+  }
+  async rideDepart() { const rd = this.ride!; rd.follow = true; const z = this.stopZ; await this.rideLeg([1.55, z], [1.55, z + 45], 3.2, 'in') }
+  /** The bus comes in beside your destination, you step off and walk to its door. */
+  async rideArrive(door: { x: number; z: number }) {
+    this.endRide(); this.spawnRide()
+    const xRoad = Math.abs(door.z) <= Math.abs(door.x)
+    const sgn = (n: number) => (n < 0 ? -1 : 1)
+    let end: [number, number], start: [number, number], alight: { x: number; z: number }
+    if (xRoad) { const lane = sgn(door.z) * 1.55, dir = sgn(door.z); end = [door.x, lane]; start = [Math.max(-56, Math.min(56, door.x - dir * 30)), lane]; alight = { x: door.x, z: sgn(door.z) * 3.9 } }
+    else { const lane = sgn(door.x) * 1.55, dir = sgn(door.x); end = [lane, door.z]; start = [lane, Math.max(-56, Math.min(56, door.z - dir * 30))]; alight = { x: sgn(door.x) * 3.9, z: door.z } }
+    const rd = this.ride!; rd.follow = true; rd.g.position.set(start[0], 0, start[1])
+    await this.rideLeg(start, end, 3.2, 'out')
+    audio.sfx('horn'); const bub = this.textSprite('Oya, we don reach!', { bg: 'rgba(255,224,102,0.96)', fg: '#1c1b22', size: 5 }); bub.position.set(rd.g.position.x, 4.2, rd.g.position.z); this.scene.add(bub); setTimeout(() => this.scene.remove(bub), 1800)
+    await this.pause(0.5)
+    const free = this.freeNear(alight.x, alight.z); this.placePlayer(free.x, free.z, 0); this.player.group.visible = true
+    rd.follow = false; this.camOverride = null; this.interior?.showIcons(true)
+    this.setFrozen(false); this.rideActive = false
+    this.walkTo(door.x, door.z)
+    // the bus drives off the way it was going
+    const away: [number, number] = [end[0] + (xRoad ? (end[0] >= start[0] ? 1 : -1) * 50 : 0), end[1] + (xRoad ? 0 : (end[1] >= start[1] ? 1 : -1) * 50)]
+    void this.rideLeg(end, away, 3.5, 'in').then(() => this.endRide())
+  }
+  debugCommuters() { return this.commuters.map((c) => c.state) }
+  debugTraffic() { return this.traffic.map((v) => ({ lane: v.lane, dir: v.dir, kind: v.kind, axis: v.axis, pos: +v.pos.toFixed(1), cur: +v.cur.toFixed(2), mode: v.mode })) }
 
   /** The street characters of this district: touts at the bus stop, politicians and their aides, hawkers on the road. */
   private makeCrowd() {
