@@ -45,7 +45,7 @@ export interface WorldNpc { id: string; name: string; gender: Gender; x: number;
 export interface Near { place: PlaceId | null; npc: string | null }
 export interface NearInside { hotspot: string | null; person: string | null; exit: boolean }
 
-interface Veh { g: THREE.Group; axis: 'x' | 'z'; dir: 1 | -1; lane: number; pos: number; speed: number; cur: number; kind: VehicleKind; pub: boolean; len: number; mode: 'drive' | 'approach' | 'dwell'; dwellT: number; served: boolean; honkT: number; wasBlocked: boolean; bub?: THREE.Sprite; bubT: number }
+interface Veh { off?: boolean; g: THREE.Group; axis: 'x' | 'z'; dir: 1 | -1; lane: number; pos: number; speed: number; cur: number; kind: VehicleKind; pub: boolean; len: number; mode: 'drive' | 'approach' | 'dwell'; dwellT: number; served: boolean; honkT: number; wasBlocked: boolean; bub?: THREE.Sprite; bubT: number }
 interface Commuter { parts: HumanParts; x: number; z: number; home: { x: number; z: number }; state: 'wait' | 'board' | 'aboard' | 'alightPending' | 'alight'; tx: number; tz: number; delay: number }
 const PUBLIC: VehicleKind[] = ['danfo', 'brt', 'cab']
 const VLEN: Record<VehicleKind, number> = { danfo: 5.2, brt: 7.4, keke: 2.4, okada: 1.8, cab: 4.1, suv: 4.6 }
@@ -72,7 +72,7 @@ export class WorldRenderer {
   private raycaster = new THREE.Raycaster()
   private ground: THREE.Mesh
   private npcs = new Map<string, { parts: HumanParts; npc: WorldNpc; label: THREE.Sprite; tx: number; tz: number; wt: number; moving: boolean }>()
-  private ambient: { parts: HumanParts; x: number; z: number; heading: number; timer: number; speed: number; bubble?: THREE.Sprite; bubbleT: number; sayT: number; lines?: string[]; stay?: boolean; home?: { x: number; z: number; r: number } }[] = []
+  private ambient: { parts: HumanParts; x: number; z: number; heading: number; timer: number; speed: number; bubble?: THREE.Sprite; bubbleT: number; sayT: number; lines?: string[]; stay?: boolean; home?: { x: number; z: number; r: number }; away?: boolean; homing?: { x: number; z: number; t: number }; linger?: number }[] = []
   private faith: 'church' | 'mosque' = 'church'
   private traffic: Veh[] = []
   private commuters: Commuter[] = []
@@ -392,13 +392,21 @@ export class WorldRenderer {
       this.commuters.push({ parts, x, z, home: { x, z }, state: 'wait', tx: x, tz: z, delay: 0 })
     })
   }
+  /** How busy the streets are: full by day, thinning from 9pm, nobody at all after midnight until the early morning. */
+  private streetLife(): number {
+    const h = this.hour
+    if (h >= 6.5 && h < 21) return 1
+    if (h >= 21) return 1 - (0.9 * (h - 21)) / 3
+    if (h < 5) return 0
+    return (h - 5) / 1.5
+  }
   /** Everyone on foot that a driver must not run over. */
   private folks(): { x: number; z: number }[] {
     const out: { x: number; z: number }[] = []
     if (!this.interior && !this.rideActive && this.player.group.visible && !this.sleeping) out.push({ x: this.px, z: this.pz })
-    for (const a of this.ambient) out.push(a)
+    for (const a of this.ambient) if (a.parts.group.visible) out.push(a)
     for (const o of this.npcs.values()) out.push(o.npc)
-    for (const c of this.commuters) if (c.state !== 'aboard' && c.state !== 'alightPending') out.push(c)
+    for (const c of this.commuters) if (c.state !== 'aboard' && c.state !== 'alightPending' && c.parts.group.visible) out.push(c)
     return out
   }
   private honk(v: Veh, text = 'Beep beep!') {
@@ -415,8 +423,10 @@ export class WorldRenderer {
     for (const c of this.commuters) if (c.state === 'aboard' && off < 2 && Math.random() < 0.85) { c.state = 'alightPending'; c.delay = 1.3 + off * 1.1; off++ }
   }
   private updateCommuters(dt: number) {
+    const quiet = this.streetLife() < 0.05
     for (const c of this.commuters) {
       const P = c.parts
+      if (quiet && c.state === 'wait' && Math.hypot(c.x - this.px, c.z - this.pz) > 12) { P.group.visible = false; continue }
       if (c.state === 'aboard' || c.state === 'alightPending') {
         P.group.visible = false
         if (c.state === 'alightPending') { c.delay -= dt; if (c.delay <= 0) { c.x = c.tx = 3.0 + 1.55 - 0.1; c.z = this.stopZ + Math.random() * 0.6; c.tx = c.home.x + (Math.random() - 0.5) * 0.8; c.tz = c.home.z + (Math.random() - 0.5) * 0.8; c.state = 'alight'; P.group.visible = true } }
@@ -434,8 +444,13 @@ export class WorldRenderer {
   }
 
   private updateTraffic(dt: number) {
-    const folks = this.folks(), stopZ = this.stopZ
-    for (const v of this.traffic) {
+    const folks = this.folks(), stopZ = this.stopZ, L = this.streetLife(), nv = this.traffic.length
+    for (let vi = 0; vi < nv; vi++) {
+      const v = this.traffic[vi]
+      // at night the cars go home: they keep driving until they are well out of sight, then stay off the road
+      const far = Math.hypot(v.g.position.x - this.px, v.g.position.z - this.pz) > 28
+      if (vi / nv >= L) { if (far) { v.off = true; v.g.visible = false; if (v.bub) { this.scene.remove(v.bub); v.bub = undefined } } } else if (v.off && far) { v.off = false; v.g.visible = true }
+      if (v.off) continue
       const al = (p: { x: number; z: number }) => (v.axis === 'x' ? p.x : p.z), la = (p: { x: number; z: number }) => (v.axis === 'x' ? p.z : p.x)
       const half = v.len / 2, stopDist = 2.6 + v.cur * 0.55
       // a person in front of the bumper, or beside the car on the road: wait
@@ -447,12 +462,12 @@ export class WorldRenderer {
       let cap = v.speed
       // slow down for a vehicle ahead in the same lane
       for (const o of this.traffic) {
-        if (o === v || o.axis !== v.axis || o.dir !== v.dir || o.lane !== v.lane) continue
+        if (o === v || o.off || o.axis !== v.axis || o.dir !== v.dir || o.lane !== v.lane) continue
         const gap = (o.pos - v.pos) * v.dir - half - o.len / 2
         if (gap > -0.5 && gap < 4 + v.cur * 0.7) cap = Math.min(cap, gap < 1.4 ? 0 : o.cur)
       }
       // do not drive into the junction while something is crossing it
-      if (v.pos * v.dir < 0 && Math.abs(v.pos) > 3.2 && Math.abs(v.pos) < half + 6) for (const w of this.traffic) if (w.axis !== v.axis && Math.abs(w.pos) < 4.2 + w.len / 2) cap = 0
+      if (v.pos * v.dir < 0 && Math.abs(v.pos) > 3.2 && Math.abs(v.pos) < half + 6) for (const w of this.traffic) if (!w.off && w.axis !== v.axis && Math.abs(w.pos) < 4.2 + w.len / 2) cap = 0
       // the buses that serve the stop
       if (v.pub && v.axis === 'z' && v.dir === 1) {
         const d = stopZ - v.pos
@@ -541,6 +556,7 @@ export class WorldRenderer {
     const away: [number, number] = [end[0] + (xRoad ? (end[0] >= start[0] ? 1 : -1) * 50 : 0), end[1] + (xRoad ? 0 : (end[1] >= start[1] ? 1 : -1) * 50)]
     void this.rideLeg(end, away, 3.5, 'in').then(() => this.endRide())
   }
+  debugStreet() { return { cars: this.traffic.filter((v) => v.g.visible && !v.off).length, people: this.ambient.filter((a) => a.parts.group.visible).length + this.commuters.filter((c) => c.parts.group.visible).length } }
   debugCommuters() { return this.commuters.map((c) => c.state) }
   debugTraffic() { return this.traffic.map((v) => ({ lane: v.lane, dir: v.dir, kind: v.kind, axis: v.axis, pos: +v.pos.toFixed(1), cur: +v.cur.toFixed(2), mode: v.mode })) }
 
@@ -957,7 +973,29 @@ export class WorldRenderer {
     }
     // ambient wanderers (outdoors only)
     this.updateTraffic(dt)
-    for (const a of this.ambient) {
+    const L = this.streetLife(), nAmb = this.ambient.length, late = this.hour < 5
+    for (let ai = 0; ai < nAmb; ai++) {
+      const a = this.ambient[ai]
+      // late at night nearly everyone is indoors: most people go home, a couple linger a little longer and then head home too
+      if (!late) a.linger = 40 + Math.random() * 50; else if (a.linger === undefined) a.linger = 40 + Math.random() * 50
+      if (late && ai < 2 && a.linger! > 0) a.linger! -= dt
+      const want = ai / nAmb < L || (late && ai < 2 && a.linger! > 0)
+      const far = Math.hypot(a.x - this.px, a.z - this.pz) > 16
+      if (!want) {
+        if (a.away) { a.parts.group.visible = false; continue }
+        if (far) { a.away = true; a.parts.group.visible = false; if (a.bubble) { this.scene.remove(a.bubble); a.bubble = undefined } continue }
+        if (!a.homing) { let best = this.district.places[0].door, bd = 1e9; for (const pl of this.district.places) { const d = Math.hypot(pl.door.x - a.x, pl.door.z - a.z); if (d < bd) { bd = d; best = pl.door } } a.homing = { x: best.x, z: best.z, t: 25 } }
+        a.homing.t -= dt
+        const dx = a.homing.x - a.x, dz = a.homing.z - a.z, d = Math.hypot(dx, dz)
+        if (d < 1 || a.homing.t <= 0) { a.away = true; a.parts.group.visible = false; if (a.bubble) { this.scene.remove(a.bubble); a.bubble = undefined } continue }
+        const sp = 1.7 * dt, pm = moveWithCollision(this.district.blockers, a.x, a.z, (dx / d) * sp, (dz / d) * sp)
+        a.x = pm.x; a.z = pm.z; a.heading = Math.atan2(dx, dz)
+        a.parts.group.position.set(a.x, 0, a.z); a.parts.group.rotation.y += this.angleDiff(a.heading, a.parts.group.rotation.y) * Math.min(1, dt * 6)
+        animateHuman(a.parts, this.time + a.x, true, 0.7)
+        continue
+      }
+      if (a.away) { if (!far) continue; a.away = false; a.homing = undefined; a.parts.group.visible = true }
+      a.homing = undefined
       a.timer -= dt
       if (a.timer <= 0) {
         a.heading += (Math.random() - 0.5) * 2.6; a.timer = 2 + Math.random() * 4; a.speed = a.stay || Math.random() < 0.25 ? 0 : 1.2 + Math.random() * 1.2
