@@ -134,6 +134,19 @@ class AudioEngine {
   }
 
   /** A danfo rolling in: engine rumble that follows the bus (loud while it is moving fast, fading as it brakes), then a brake hiss and two honks. */
+  private waterNode?: { src: AudioBufferSourceNode; gain: GainNode }
+  /** Running water for the tap or shower: hissing noise that fades in and out. Pass null to stop. */
+  water(kind: 'tap' | 'shower' | null) {
+    const c = this.ctx, m = this.master
+    const old = this.waterNode
+    if (old && c) { old.gain.gain.cancelScheduledValues(c.currentTime); old.gain.gain.setTargetAtTime(0.0001, c.currentTime, 0.08); try { old.src.stop(c.currentTime + 0.4) } catch { /* already stopped */ } this.waterNode = undefined }
+    if (!kind || !c || !m || !this.noise || !this.cfg.sound) return
+    const src = c.createBufferSource(); src.buffer = this.noise; src.loop = true
+    const f = c.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = kind === 'shower' ? 3200 : 2200; f.Q.value = 0.6
+    const gain = c.createGain(); gain.gain.setValueAtTime(0.0001, c.currentTime); gain.gain.setTargetAtTime(kind === 'shower' ? 0.5 : 0.32, c.currentTime, 0.12)
+    src.connect(f); f.connect(gain); gain.connect(m); src.start(); this.waterNode = { src, gain }
+  }
+
   busArrive(dur: number) {
     const c = this.ctx; const m = this.master
     if (!c || !m || !this.noise || !this.cfg.sound) return

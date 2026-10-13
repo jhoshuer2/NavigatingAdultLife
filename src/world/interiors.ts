@@ -56,7 +56,7 @@ export const INTERIORS: Partial<Record<PlaceId, Interior>> = {
       { id: 'fan', name: 'Standing fan', icon: '🌀', x: 2.1, z: 1.7, r: 1.8, needs: 'fan', actions: [{ label: 'Turn the fan on/off', icon: '🌀', cmd: 'toggle:fan' }] },
       { id: 'light', name: 'Light switch', icon: '💡', x: 2.4, z: 5.6, r: 1.6, actions: [{ label: 'Turn the lights on/off', icon: '💡', cmd: 'toggle:light' }] },
       { id: 'kitchen', name: 'Kitchen', icon: '🍛', x: 7.0, z: -0.6, r: 2.3, actions: [{ label: 'Cook a meal', icon: '🍳', cmd: 'task:cook', needs: 'cooker' }, { label: 'Do the household chores', icon: '🧹', cmd: 'task:chores' }] },
-      { id: 'bath', name: 'Bathroom', icon: '🪥', x: 7.0, z: 4.8, r: 2.2, actions: [{ label: 'Brush teeth and freshen up', icon: '🪥', cmd: 'act:groom' }, { label: 'Take a bath', icon: '🚿', cmd: 'act:groom' }] },
+      { id: 'bath', name: 'Bathroom', icon: '🪥', x: 7.0, z: 4.8, r: 2.2, actions: [{ label: 'Brush teeth and freshen up', icon: '🪥', cmd: 'wash:brush' }, { label: 'Take a bath', icon: '🚿', cmd: 'wash:bath' }] },
     ],
     people: [
       { id: 'mother', name: 'Mama', role: 'mother', x: -0.2, z: 3.2, line: 'Have you eaten? Sit down first.', persistent: 'mother' },

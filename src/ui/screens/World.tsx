@@ -12,6 +12,7 @@ import { INTERIORS, type HotAction } from '../../world/interiors'
 import { fmtClock, isNight, isOpen, opensAt } from '../../world/time'
 import type { NpcRole } from '@engine/core/types'
 import { StudyTask, type StudyMode } from '../tasks/StudyTask'
+import { WashTask } from '../tasks/WashTask'
 import { EatTask } from '../tasks/EatTask'
 import { TripTask } from '../tasks/TripTask'
 import { errandSpot } from '../../world/errands'
@@ -73,6 +74,7 @@ export default function World() {
     | { kind: 'trip'; trip: 'hike' | 'beach'; friends: string[] }
     | { kind: 'match'; actAs: string }
     | { kind: 'pose'; mode: 'sofa' | 'bed' | 'chair' }
+    | { kind: 'wash'; mode: 'brush' | 'bath' }
     | { kind: 'eat'; who: string; role: NpcRole; perf: number }
     | { kind: 'cook' }
     | { kind: 'dine' }
@@ -268,7 +270,7 @@ export default function World() {
   const trail = useRef<{ x: number; z: number }[]>([])
   useEffect(() => { const t = trail.current, l = t[t.length - 1]; if (!l || Math.hypot(l.x - pos.x, l.z - pos.z) > 2.5) { t.push({ x: pos.x, z: pos.z }); if (t.length > 160) t.shift() } }, [pos])
   const voiceOn = meta.settings.sound && meta.settings.voice !== false
-  const coachKey = task && task.kind !== 'pose' ? task.kind : null
+  const coachKey = task && task.kind !== 'pose' && task.kind !== 'wash' ? task.kind : null
   const needCoach = !!coachKey && guideOn && !!HOWTO[coachKey] && (meta.tips?.[coachKey] ?? 0) < 2
   const [coached, setCoached] = useState<unknown>(null)
   const holdTask = needCoach && coached !== task
@@ -517,6 +519,7 @@ export default function World() {
     if (perf !== undefined && perf >= 0 && t.kind !== 'shop' && t.kind !== 'pose' && !(t.kind === 'talk' && t.actId === 'meal')) { setCheer((n) => n + 1); setTimeout(() => setCheer(0), 3200) } // task completed: confetti
     if (t.kind === 'penalty') { if (perf !== undefined) g.act(t.act, { perf }) }
     else if (t.kind === 'chores') { if (perf !== undefined) g.act('chores', { perf, target: helperRole as NpcRole | undefined }) }
+    else if (t.kind === 'wash') { if (perf !== undefined) g.act('groom', { perf }) }
     else if (t.kind === 'cook' || t.kind === 'dine') { if (perf !== undefined) g.act('meal', { perf, spend: spendAmt }) }
     else if (t.kind === 'match') { if (perf !== undefined && perf >= 0) g.act(t.actAs, { perf }) }
     else if (t.kind === 'jog') { if (perf !== undefined) g.act('exercise', { perf }) }
@@ -539,6 +542,7 @@ export default function World() {
     if (cmd === 'sleep') { setHotId(null); startSleep() }
     else if (cmd.startsWith('toggle:')) toggle(cmd.slice(7) as 'light' | 'tv' | 'fan')
     else if (cmd === 'pose:sofa' || cmd === 'pose:bed' || cmd === 'pose:chair') { setHotId(null); setTask({ kind: 'pose', mode: cmd === 'pose:sofa' ? 'sofa' : cmd === 'pose:chair' ? 'chair' : 'bed' }) }
+    else if (cmd === 'wash:brush' || cmd === 'wash:bath') { setHotId(null); const why = enabledAct('groom'); if (why) g.toast(why); else setTask({ kind: 'wash', mode: cmd === 'wash:brush' ? 'brush' : 'bath' }) }
     else if (cmd === 'task:cook') { setHotId(null); const why = enabledAct('meal'); if (why) g.toast(why); else setTask({ kind: 'cook' }) }
     else if (cmd === 'task:dine') { setHotId(null); const why = enabledAct('meal'); if (why) g.toast(why); else setTask({ kind: 'dine' }) }
     else if (cmd === 'task:chores') { setHotId(null); beginChores() }
@@ -712,6 +716,7 @@ export default function World() {
       {task?.kind === 'penalty' && !holdTask && rendRef.current && <PenaltyTask r={rendRef.current} pitch={district.places.find((p) => p.id === 'pitch')!.rect} onDone={(perf) => endTask(perf)} />}
       {task?.kind === 'chores' && !holdTask && rendRef.current && <ChoresTask r={rendRef.current} motherId={INTERIORS.home?.people.find((p) => p.persistent === 'mother')?.id ?? null} helper={task.helper} onDone={(perf, hr) => endTask(perf, 0, 0, hr)} />}
       {task?.kind === 'pose' && !holdTask && rendRef.current && <PoseTask r={rendRef.current} mode={task.mode} tvOn={appl.tv} onToggleTv={() => toggle('tv')} onWatch={() => { const why = enabledAct('tv'); if (why) g.toast(why); else g.act('tv') }} onSleep={() => startSleep()} onStudy={() => startStudy('desk')} onDone={() => setTask(null)} />}
+      {task?.kind === 'wash' && rendRef.current && <WashTask r={rendRef.current} mode={task.mode} onDone={(perf) => endTask(perf)} />}
       {task?.kind === 'eat' && rendRef.current && <EatTask r={rendRef.current} who={task.who} onDone={() => { const t = task; setTask(null); g.act('meal', { target: t.role, perf: t.perf }); setCheer((n) => n + 1); setTimeout(() => setCheer(0), 3200) }} />}
       {task?.kind === 'cook' && !holdTask && rendRef.current && <CookTask r={rendRef.current} free={life.character.housing.type === 'family'} onDone={(perf, sp) => endTask(perf, 0, sp)} />}
       {task?.kind === 'dine' && !holdTask && rendRef.current && <DineTask r={rendRef.current} cash={life.character.stats.cash} onDone={(perf, sp) => endTask(sp ? perf : undefined, 0, sp)} />}

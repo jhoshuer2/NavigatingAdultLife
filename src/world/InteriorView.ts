@@ -44,6 +44,11 @@ export class InteriorView {
   private bulbMat = new THREE.MeshBasicMaterial({ color: 0x555555 })
   private windowMat = new THREE.MeshBasicMaterial({ color: 0x9ed3ff })
   private fanBlades?: THREE.Object3D
+  private water = { tap: false, shower: false }
+  private drops?: THREE.InstancedMesh
+  private dropSeed: { a: number; r: number; y: number; v: number }[] = []
+  private stream?: THREE.Mesh
+  private ripple?: THREE.Mesh
   private fanOn = false
   private people = new Map<string, { parts: HumanParts; sprite: THREE.Sprite; id: string; name: string; line: string; role: string; x: number; z: number; persistent?: string; prole?: string; act?: Activity | null; route: { x: number; z: number }[]; anchor?: Anchor; seat?: Anchor; leaving?: boolean; nextT: number; moving: boolean }>()
   private occupied = new Map<string, string>() // anchor id -> person id
@@ -193,7 +198,7 @@ export class InteriorView {
       case 'table': W.box(r.x0, r.x1, h - 0.1, h, r.z0, r.z1, c); for (const [x, z] of [[r.x0 + 0.12, r.z0 + 0.12], [r.x1 - 0.12, r.z0 + 0.12], [r.x0 + 0.12, r.z1 - 0.12], [r.x1 - 0.12, r.z1 - 0.12]]) W.box(x - 0.06, x + 0.06, 0, h - 0.1, z - 0.06, z + 0.06, shade(c, 0.7)); W.cyl(cx, h + 0.12, cz, 0.22, 0.24, 0xffffff); break
       case 'shower': W.box(r.x0, r.x1, 0, 0.06, r.z0, r.z1, c); W.cyl(r.x0 + 0.2, 1.6, r.z0 + 0.2, 0.05, 3, 0x888899); W.cyl(r.x0 + 0.5, 3.0, r.z0 + 0.3, 0.3, 0.08, 0xaaaaaa); break
       case 'toilet': W.box(r.x0, r.x1, 0, 0.5, r.z0 + 0.3, r.z1, c); W.box(r.x0, r.x1, 0.5, 1.0, r.z0, r.z0 + 0.35, c); break
-      case 'sink': W.box(r.x0, r.x1, 0.7, 0.85, r.z0, r.z1, c); W.box(r.x0 + 0.1, r.x1 - 0.1, 0, 0.7, r.z0 + 0.1, r.z1 - 0.1, 0xd8d8e0); W.cyl(cx, 1.0, cz, 0.04, 0.3, 0xaaaaaa); break
+      case 'sink': W.box(r.x0, r.x1, 0.7, 0.85, r.z0, r.z1, c); W.box(cx - 0.04, cx + 0.04, 1.1, 1.18, cz - 0.04, cz + 0.2, 0xaaaaaa); W.box(r.x0 + 0.1, r.x1 - 0.1, 0, 0.7, r.z0 + 0.1, r.z1 - 0.1, 0xd8d8e0); W.cyl(cx, 1.0, cz, 0.04, 0.3, 0xaaaaaa); break
       case 'pew': W.box(r.x0, r.x1, 0, 0.5, r.z0, r.z1, c); W.box(r.x0, r.x1, 0.5, h + 0.2, r.z0, r.z0 + 0.12, c); break
       case 'pulpit': W.box(r.x0, r.x1, 0, h, r.z0, r.z1, c); W.box(cx - 0.9, cx + 0.9, h, h + 1.6, r.z0, r.z0 + 0.1, shade(c, 1.3)); break
       case 'board': W.box(r.x0, r.x1, 0.9, 0.9 + h * 0.7, r.z0, r.z1 + 0.1, c); W.box(r.x0 - 0.1, r.x1 + 0.1, 0.85, 0.9, r.z0, r.z1 + 0.12, 0x8a5a32); break
@@ -355,8 +360,56 @@ export class InteriorView {
     }
   }
 
+  /** Where to stand for the sink and the shower, and the camera that shows it. */
+  washSpot(kind: 'sink' | 'shower') {
+    const o = this.def.objs.find((x) => x.kind === kind)
+    if (!o) return null
+    const cx = (o.rect.x0 + o.rect.x1) / 2, cz = (o.rect.z0 + o.rect.z1) / 2
+    return kind === 'sink'
+      ? { x: cx, z: o.rect.z1 + 0.6, face: 0, cam: { pos: [cx - 3.4, 3.4, o.rect.z1 + 3.4] as [number, number, number], look: [cx, 1.7, o.rect.z1 + 0.2] as [number, number, number] } }
+      : { x: o.rect.x0 + 0.5, z: o.rect.z0 + 0.95, face: Math.PI, cam: { pos: [o.rect.x0 + 3.2, 3.6, o.rect.z0 + 5.6] as [number, number, number], look: [o.rect.x0 + 0.5, 1.6, o.rect.z0 + 0.9] as [number, number, number] } }
+  }
+
+  /** Turn the tap or the shower on or off: a falling spray over the shower, a stream and ripples at the sink. */
+  setWater(kind: 'tap' | 'shower', on: boolean) {
+    this.water[kind] = on
+    if (!this.drops) {
+      const g = new THREE.BoxGeometry(0.03, 0.3, 0.03)
+      this.drops = new THREE.InstancedMesh(g, new THREE.MeshBasicMaterial({ color: 0x8fd0ff, transparent: true, opacity: 0.8 }), 90); this.drops.frustumCulled = false; this.scene.add(this.drops)
+      for (let i = 0; i < 90; i++) this.dropSeed.push({ a: Math.random() * Math.PI * 2, r: Math.random(), y: Math.random() * 3, v: 4.5 + Math.random() * 2 })
+      this.stream = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.3, 0.06), new THREE.MeshBasicMaterial({ color: 0x8fd0ff, transparent: true, opacity: 0.85 })); this.scene.add(this.stream)
+      this.ripple = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.02, 14), new THREE.MeshBasicMaterial({ color: 0x9fdcff, transparent: true, opacity: 0.7 })); this.scene.add(this.ripple)
+    }
+    const sink = this.def.objs.find((x) => x.kind === 'sink')
+    if (sink) { const cx = (sink.rect.x0 + sink.rect.x1) / 2, cz = (sink.rect.z0 + sink.rect.z1) / 2; this.stream!.position.set(cx, 1.0, cz + 0.2); this.ripple!.position.set(cx, 0.86, cz + 0.2) }
+  }
+
+  private stepWater() {
+    if (!this.drops) return
+    const sh = this.def.objs.find((x) => x.kind === 'shower')
+    const on = this.water.shower && !!sh
+    this.drops.visible = on
+    if (on && sh) {
+      const hx = sh.rect.x0 + 0.5, hz = sh.rect.z0 + 0.3, m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(1, 1, 1), p = new THREE.Vector3()
+      for (let i = 0; i < this.dropSeed.length; i++) {
+        const d = this.dropSeed[i]
+        d.y -= d.v * (1 / 60); if (d.y < 0) { d.y = 2.9; d.a = Math.random() * Math.PI * 2; d.r = Math.random() }
+        const spread = 0.12 + (1 - d.y / 2.9) * 0.4 * d.r
+        p.set(hx + Math.cos(d.a) * spread, d.y + 0.1, hz + 0.45 + Math.sin(d.a) * spread * 0.9)
+        m.compose(p, q, s); this.drops.setMatrixAt(i, m)
+      }
+      this.drops.instanceMatrix.needsUpdate = true
+    }
+    const tap = this.water.tap
+    if (this.stream && this.ripple) {
+      this.stream.visible = tap; this.ripple.visible = tap
+      if (tap) { this.stream.scale.y = 0.85 + Math.sin(this.time * 40) * 0.15; this.ripple.scale.setScalar(1 + Math.sin(this.time * 9) * 0.12) }
+    }
+  }
+
   update(dt: number) {
     this.time += dt
+    this.stepWater()
     if (this.fanOn && this.fanBlades) this.fanBlades.rotation.y += dt * 14
     if (this.tvScreen && this.tvMat.color.getHex() !== 0x0b0b10) this.tvMat.color.setHex(Math.floor(this.time * 3) % 2 ? 0x6fa4ff : 0x8fb6ff)
     const h = this.markTarget === '__exit' ? this.def.door : this.markTarget ? this.def.hotspots.find((x) => x.id === this.markTarget) : null

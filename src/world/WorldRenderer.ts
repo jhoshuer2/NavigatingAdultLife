@@ -472,6 +472,58 @@ export class WorldRenderer {
   private root(): THREE.Scene { return this.interior ? this.interior.scene : this.scene }
   setFrozen(v: boolean) { this.frozen = v; if (v) { this.input = { x: 0, z: 0 }; this.path = null } }
   setSitting(v: boolean) { this.sitting = v }
+
+  // ---------- washing: brushing teeth, rinsing, showering ----------
+  private wash: { pose: 'brush' | 'rinse' | 'shower' | 'soap'; t: number } | null = null
+  private washFx?: { brush: THREE.Group; foam: THREE.Mesh[] }
+  washSpot(kind: 'sink' | 'shower') { return this.interior?.washSpot(kind) ?? null }
+  setWater(kind: 'tap' | 'shower', on: boolean) { this.interior?.setWater(kind, on) }
+  private ensureWashFx() {
+    if (this.washFx) return this.washFx
+    const brush = new THREE.Group()
+    const handle = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.09, 0.7), new THREE.MeshLambertMaterial({ color: 0x2b8ad6 })); brush.add(handle)
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.12, 0.2), new THREE.MeshLambertMaterial({ color: 0xffffff })); head.position.z = -0.4; brush.add(head)
+    brush.position.set(0.28, 2.27, 0.59); brush.rotation.y = 0.71; brush.visible = false
+    const foam: THREE.Mesh[] = []
+    const fm = new THREE.MeshBasicMaterial({ color: 0xffffff })
+    for (let i = 0; i < 12; i++) { const f = new THREE.Mesh(new THREE.SphereGeometry(0.05 + (i % 3) * 0.03, 8, 6), fm); f.visible = false; foam.push(f) }
+    this.player.body.add(brush); for (const f of foam) this.player.body.add(f)
+    return (this.washFx = { brush, foam })
+  }
+  /** Pose the player for washing. null stands them back up. */
+  washPose(p: 'brush' | 'rinse' | 'shower' | 'soap' | null) {
+    const fx = this.ensureWashFx()
+    this.wash = p ? { pose: p, t: 0 } : null
+    fx.brush.visible = p === 'brush'
+    if (!p) { this.player.body.rotation.x = 0; this.player.armL.rotation.set(0, 0, 0); this.player.armR.rotation.set(0, 0, 0); for (const f of fx.foam) f.visible = false }
+  }
+  /** Foam on the face (toothpaste) or all over (soap). */
+  setFoam(mode: 'none' | 'mouth' | 'body') {
+    const fx = this.ensureWashFx()
+    fx.foam.forEach((f, i) => {
+      f.visible = mode === 'body' || (mode === 'mouth' && i < 4)
+      if (mode === 'mouth') f.position.set((i - 1.5) * 0.09, 2.17 + (i % 2) * 0.05, 0.36)
+      else f.position.set([-0.5, 0.5, -0.3, 0.3, 0, -0.55, 0.55, 0.15, -0.15, 0, -0.35, 0.35][i], [2.6, 2.6, 2.1, 2.1, 2.75, 1.9, 1.9, 1.5, 1.2, 1.7, 1.1, 1.1][i], 0.3)
+    })
+  }
+  private stepWash(dt: number) {
+    const w = this.wash; if (!w) return
+    w.t += dt
+    const P = this.player, t = w.t
+    if (w.pose === 'brush') {
+      P.body.rotation.x = 0.08; P.armL.rotation.x = 0
+      P.armR.rotation.x = -2.0 + Math.sin(t * 17) * 0.14
+      const b = this.washFx!.brush, k = Math.sin(t * 17) * 0.05; b.position.set(0.28 + 0.65 * k, 2.27 + Math.sin(t * 11) * 0.02, 0.59 + 0.76 * k)
+    } else if (w.pose === 'rinse') {
+      const lean = Math.max(0, Math.sin(t * 2.4))
+      P.body.rotation.x = 0.1 + lean * 0.32; P.armL.rotation.x = P.armR.rotation.x = -1.3 - lean * 0.1; P.armL.rotation.z = 0.25; P.armR.rotation.z = -0.25
+    } else if (w.pose === 'shower') {
+      P.body.rotation.x = 0; P.armL.rotation.x = -2.5 + Math.sin(t * 9) * 0.25; P.armR.rotation.x = -2.5 - Math.sin(t * 9) * 0.25
+    } else {
+      P.armL.rotation.set(-1.0 + Math.sin(t * 8) * 0.3, 0, 0.5); P.armR.rotation.set(-1.0 - Math.sin(t * 8) * 0.3, 0, -0.5)
+      this.washFx!.foam.forEach((f, i) => { if (f.visible) f.scale.setScalar(1 + Math.sin(t * 3 + i) * 0.12) })
+    }
+  }
   setCameraOverride(o: { pos: [number, number, number]; look: [number, number, number]; shift?: number } | null) { this.camOverride = o; this.interior?.showIcons(!o); for (const l of this.labelSprites.values()) l.visible = !o; for (const n of this.npcs.values()) n.label.visible = !o; if (o) { this.camLook.set(this.px, 1, this.pz) } }
   /** The nearest open floor to a point (not inside furniture or a wall), searching outward in rings. */
   freeNear(x: number, z: number): { x: number; z: number } {
@@ -693,6 +745,7 @@ export class WorldRenderer {
       this.player.group.position.set(this.px, 0, this.pz)
       this.player.group.rotation.y += this.angleDiff(this.heading, this.player.group.rotation.y) * Math.min(1, dt * 14)
       animateHuman(this.player, this.time, this.moving)
+      this.stepWash(dt)
       if (this.sitting) { this.player.legL.rotation.x = this.player.legR.rotation.x = -1.45; this.player.group.position.y = -0.45 } else if (this.player.group.position.y < 0) this.player.group.position.y = 0
     }
     this.stepDirected(dt)
