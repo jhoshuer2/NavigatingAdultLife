@@ -133,6 +133,23 @@ export function animateHuman(p: HumanParts, t: number, moving: boolean, speed = 
   p.body.position.y = Math.abs(Math.sin(t * 9 * speed)) * 0.07
 }
 
+/** Exercise moves for gym-goers and early-morning joggers. Sets limb angles for the current time; call resetPose to stand them back up. */
+export type Move = 'run' | 'lift' | 'stretch' | 'jacks' | 'squat'
+export function exercisePose(p: HumanParts, move: Move, t: number) {
+  const s = Math.sin(t)
+  p.body.rotation.x = 0; p.body.position.y = 0
+  p.legL.rotation.set(0, 0, 0); p.legR.rotation.set(0, 0, 0); p.armL.rotation.set(0, 0, 0); p.armR.rotation.set(0, 0, 0)
+  if (move === 'run') { const w = Math.sin(t * 12) * 0.9; p.legL.rotation.x = w; p.legR.rotation.x = -w; p.armL.rotation.x = -w; p.armR.rotation.x = w; p.body.position.y = Math.abs(Math.sin(t * 12)) * 0.08 }
+  else if (move === 'lift') { const k = 0.5 + 0.5 * Math.sin(t * 3.4); p.armL.rotation.x = -0.3 - k * 1.7; p.armR.rotation.x = -0.3 - (1 - k) * 1.7 }
+  else if (move === 'stretch') { const k = 0.5 + 0.5 * s; p.body.rotation.x = 0.15 + k * 0.85; p.armL.rotation.x = p.armR.rotation.x = -1.1 - k * 0.6 }
+  else if (move === 'jacks') { const k = 0.5 + 0.5 * Math.sin(t * 7); p.armL.rotation.z = 0.2 + k * 2.4; p.armR.rotation.z = -0.2 - k * 2.4; p.legL.rotation.z = k * 0.45; p.legR.rotation.z = -k * 0.45; p.body.position.y = k * 0.18 }
+  else { const k = 0.5 + 0.5 * Math.sin(t * 3); p.body.position.y = -k * 0.55; p.legL.rotation.x = p.legR.rotation.x = -k * 0.9; p.armL.rotation.x = p.armR.rotation.x = -1.2 * k }
+}
+export function resetPose(p: HumanParts) {
+  p.body.rotation.x = 0; p.body.position.y = 0
+  p.legL.rotation.set(0, 0, 0); p.legR.rotation.set(0, 0, 0); p.armL.rotation.set(0, 0, 0); p.armR.rotation.set(0, 0, 0)
+}
+
 export function hashLook(name: string, gender: 'male' | 'female'): Appearance {
   let h = 0
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0

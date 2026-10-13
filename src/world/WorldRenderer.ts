@@ -9,7 +9,7 @@ import type { VehicleKind, CrowdKind } from './flavour'
 import { audio } from '@platform/audio'
 import { WORLD, type District, type PlaceId, type Rect } from './layout'
 import { buildNav, findPath, moveWithCollision, walkable, type Nav } from './nav'
-import { animateHuman, buildHuman, hashLook, type HumanParts } from './characters'
+import { animateHuman, buildHuman, exercisePose, hashLook, resetPose, type HumanParts, type Move } from './characters'
 import { InteriorView, type InteriorState } from './InteriorView'
 import { lightingAt } from './time'
 
@@ -73,7 +73,7 @@ export class WorldRenderer {
   private raycaster = new THREE.Raycaster()
   private ground: THREE.Mesh
   private npcs = new Map<string, { parts: HumanParts; npc: WorldNpc; label: THREE.Sprite; tx: number; tz: number; wt: number; moving: boolean }>()
-  private ambient: { parts: HumanParts; x: number; z: number; heading: number; timer: number; speed: number; bubble?: THREE.Sprite; bubbleT: number; sayT: number; lines?: string[]; stay?: boolean; home?: { x: number; z: number; r: number }; away?: boolean; homing?: { x: number; z: number; t: number }; linger?: number }[] = []
+  private ambient: { parts: HumanParts; x: number; z: number; heading: number; timer: number; speed: number; bubble?: THREE.Sprite; bubbleT: number; sayT: number; lines?: string[]; stay?: boolean; home?: { x: number; z: number; r: number }; away?: boolean; homing?: { x: number; z: number; t: number }; linger?: number; ex?: { mode: 'jog' | Move; dir: 1 | -1; axis: 'x' | 'z'; line: number; ph: number } }[] = []
   private faith: 'church' | 'mosque' = 'church'
   private traffic: Veh[] = []
   private commuters: Commuter[] = []
@@ -233,6 +233,43 @@ export class WorldRenderer {
     }
   }
 
+  private gymGoers: { parts: HumanParts; move: Move; ph: number }[] = []
+  /** The gym is glass on every side and on the roof, so you can see the treadmills and people working out from the street. */
+  private gymBuilding(b: Batch, r: Rect, doorX: number) {
+    const w = r.x1 - r.x0, dd = r.z1 - r.z0, cx = (r.x0 + r.x1) / 2, cz = (r.z0 + r.z1) / 2, H = 4.2
+    b.box(cx, 0.08, cz, w, 0.16, dd, 0x3a3a44); b.box(cx - 3, 0.17, r.z1 - 3.4, 6.5, 0.04, 4, 0x2f7a5a)
+    for (const x of [r.x0, r.x1]) for (const z of [r.z0, r.z1]) b.box(x, H / 2, z, 0.35, H, 0.35, 0x6a6a74)
+    for (let x = r.x0 + 3.25; x < r.x1 - 0.5; x += 3.25) { b.box(x, H / 2, r.z1, 0.14, H, 0.14, 0x6a6a74); b.box(x, H / 2, r.z0, 0.14, H, 0.14, 0x6a6a74) }
+    for (let z = r.z0 + 3.2; z < r.z1 - 0.5; z += 3.2) { b.box(r.x0, H / 2, z, 0.14, H, 0.14, 0x6a6a74); b.box(r.x1, H / 2, z, 0.14, H, 0.14, 0x6a6a74) }
+    for (const z of [r.z0, r.z1]) b.box(cx, H, z, w + 0.35, 0.3, 0.3, 0x6a6a74)
+    for (const x of [r.x0, r.x1]) b.box(x, H, cz, 0.3, 0.3, dd + 0.35, 0x6a6a74)
+    for (let x = r.x0 + 3.25; x < r.x1; x += 3.25) b.box(x, H + 0.1, cz, 0.18, 0.18, dd, 0x6a6a74)
+    // the glass: see-through panels on the four walls and the roof
+    const glass = new THREE.MeshLambertMaterial({ color: 0xa8e0ff, transparent: true, opacity: 0.2, depthWrite: false })
+    const pane = (px: number, py: number, pz: number, pw: number, ph: number, pd: number) => { const m = new THREE.Mesh(new THREE.BoxGeometry(pw, ph, pd), glass); m.position.set(px, py, pz); this.scene.add(m) }
+    pane(cx, H / 2, r.z1, w, H, 0.06); pane(cx, H / 2, r.z0, w, H, 0.06); pane(r.x0, H / 2, cz, 0.06, H, dd); pane(r.x1, H / 2, cz, 0.06, H, dd); pane(cx, H + 0.05, cz, w, 0.06, dd)
+    // door and sign
+    b.box(doorX, 1.1, r.z1 + 0.04, 2.4, 2.2, 0.12, 0x1c2a3a); b.box(cx, H + 0.9, r.z1 + 0.1, 7, 1.2, 0.3, 0x1ec8b4)
+    // equipment you can see through the glass
+    for (const x of [r.x0 + 2.5, r.x0 + 5.5, r.x0 + 8.5]) { b.box(x, 0.4, r.z0 + 2.2, 1.3, 0.5, 2.2, 0x24242c); b.box(x, 1.4, r.z0 + 1.2, 1.0, 0.7, 0.2, 0x1a2a3a); b.box(x - 0.5, 0.9, r.z0 + 1.2, 0.1, 1.0, 0.1, 0x888890); b.box(x + 0.5, 0.9, r.z0 + 1.2, 0.1, 1.0, 0.1, 0x888890) }
+    b.box(r.x1 - 3, 0.3, cz - 1, 2.0, 0.5, 0.9, 0x2a2a30); b.box(r.x1 - 3, 0.75, cz - 1, 2.6, 0.06, 0.06, 0xbbbbc4); for (const sx of [-1.3, 1.3]) b.box(r.x1 - 3 + sx, 0.8, cz - 1, 0.2, 0.9, 0.5, 0x1c1b22)
+    b.box(r.x1 - 1.2, 0.7, r.z0 + 1.0, 2.0, 1.4, 0.8, 0x55555e)
+    b.box(cx, 2.0, r.z0 + 0.1, w - 1, 2.6, 0.08, 0xb8d8ee) // mirrors on the back wall
+    // people working out inside
+    const mk = (name: string, g: 'male' | 'female', x: number, z: number, move: Move, face: number) => {
+      const parts = buildHuman({ look: hashLook(name, g), age: 28, gender: g, scale: 1.1 }); parts.group.position.set(x, 0.16, z); parts.group.rotation.y = face; this.scene.add(parts.group)
+      this.gymGoers.push({ parts, move, ph: Math.random() * 6 })
+    }
+    mk('gymA', 'male', r.x0 + 2.5, r.z0 + 2.4, 'run', Math.PI); mk('gymB', 'female', r.x0 + 5.5, r.z0 + 2.4, 'run', Math.PI)
+    mk('gymC', 'male', r.x1 - 3, cz + 0.2, 'lift', 0); mk('gymD', 'female', cx - 3, r.z1 - 3.0, 'jacks', 0); mk('gymE', 'male', cx - 1, r.z1 - 2.4, 'squat', 0)
+  }
+  private updateGym(dt: number) {
+    if (!this.gymGoers.length) return
+    const open = this.hour >= 5 && this.hour < 22 && !this.interior
+    for (const gg of this.gymGoers) { gg.parts.group.visible = open; if (open) exercisePose(gg.parts, gg.move, this.time + gg.ph) }
+    void dt
+  }
+
   private buildStatic() {
     const d = this.district, t = d.theme
     const b = new Batch(), lit = new Batch(), lamps = new Batch()
@@ -248,6 +285,7 @@ export class WorldRenderer {
     const mk = d.places.find((p) => p.id === 'market')!
     b.box((mk.rect.x0 + mk.rect.x1) / 2, 0.04, (mk.rect.z0 + mk.rect.z1) / 2, mk.rect.x1 - mk.rect.x0, 0.05, mk.rect.z1 - mk.rect.z0, 0xb98d57)
     for (const bl of d.buildings) {
+      if (bl.place === 'gym') { this.gymBuilding(b, bl.rect, d.places.find((p) => p.id === 'gym')!.door.x); continue }
       const { rect: r, h, color, roof } = bl
       const w = r.x1 - r.x0, dd = r.z1 - r.z0, cx = (r.x0 + r.x1) / 2, cz = (r.z0 + r.z1) / 2
       b.box(cx, h / 2, cz, w, h, dd, color)
@@ -499,6 +537,7 @@ export class WorldRenderer {
     }
     this.updateCommuters(dt)
     this.updateCritters(dt)
+    this.updateGym(dt)
     this.stepRide(dt)
   }
 
@@ -775,7 +814,7 @@ export class WorldRenderer {
   setSitting(v: boolean) { this.sitting = v }
 
   // ---------- washing: brushing teeth, rinsing, showering ----------
-  private wash: { pose: 'brush' | 'rinse' | 'shower' | 'soap'; t: number } | null = null
+  private wash: { pose: 'brush' | 'rinse' | 'shower' | 'soap' | Move; t: number } | null = null
   private washFx?: { brush: THREE.Group; foam: THREE.Mesh[] }
   washSpot(kind: 'sink' | 'shower') { return this.interior?.washSpot(kind) ?? null }
   setWater(kind: 'tap' | 'shower', on: boolean) { this.interior?.setWater(kind, on) }
@@ -792,11 +831,11 @@ export class WorldRenderer {
     return (this.washFx = { brush, foam })
   }
   /** Pose the player for washing. null stands them back up. */
-  washPose(p: 'brush' | 'rinse' | 'shower' | 'soap' | null) {
+  washPose(p: 'brush' | 'rinse' | 'shower' | 'soap' | Move | null) {
     const fx = this.ensureWashFx()
     this.wash = p ? { pose: p, t: 0 } : null
     fx.brush.visible = p === 'brush'
-    if (!p) { this.player.body.rotation.x = 0; this.player.armL.rotation.set(0, 0, 0); this.player.armR.rotation.set(0, 0, 0); for (const f of fx.foam) f.visible = false }
+    if (!p) { resetPose(this.player); this.player.body.rotation.x = 0; this.player.armL.rotation.set(0, 0, 0); this.player.armR.rotation.set(0, 0, 0); for (const f of fx.foam) f.visible = false }
   }
   /** Foam on the face (toothpaste) or all over (soap). */
   setFoam(mode: 'none' | 'mouth' | 'body') {
@@ -811,6 +850,7 @@ export class WorldRenderer {
     const w = this.wash; if (!w) return
     w.t += dt
     const P = this.player, t = w.t
+    if (w.pose === 'run' || w.pose === 'lift' || w.pose === 'stretch' || w.pose === 'jacks' || w.pose === 'squat') { exercisePose(P, w.pose, t); return }
     if (w.pose === 'brush') {
       P.body.rotation.x = 0.08; P.armL.rotation.x = 0
       P.armR.rotation.x = -2.0 + Math.sin(t * 17) * 0.14
@@ -1087,7 +1127,8 @@ export class WorldRenderer {
     }
     // ambient wanderers (outdoors only)
     this.updateTraffic(dt)
-    const L = this.streetLife(), nAmb = this.ambient.length, late = this.hour < 5
+    const dawn = this.hour >= 5 && this.hour < 6.5
+    const L = Math.max(this.streetLife(), dawn ? 0.6 : 0), nAmb = this.ambient.length, late = this.hour < 5
     for (let ai = 0; ai < nAmb; ai++) {
       const a = this.ambient[ai]
       // late at night nearly everyone is indoors: most people go home, a couple linger a little longer and then head home too
@@ -1110,6 +1151,28 @@ export class WorldRenderer {
       }
       if (a.away) { if (!far) continue; a.away = false; a.homing = undefined; a.parts.group.visible = true }
       a.homing = undefined
+      // 5am to 6:30am: people jog along the pavements and do their morning exercises (jumping jacks, stretches, squats)
+      if (dawn && !a.stay) {
+        if (!a.ex) { const modes = ['jog', 'jacks', 'stretch', 'jog', 'squat', 'jog'] as const; a.ex = { mode: modes[ai % 6], dir: ai % 2 ? 1 : -1, axis: ai % 4 < 2 ? 'x' : 'z', line: ai % 3 === 0 ? 3.9 : -3.9, ph: Math.random() * 6 } }
+        const e = a.ex
+        if (e.mode === 'jog') {
+          const coord = e.axis === 'x' ? a.x : a.z, other = e.axis === 'x' ? a.z : a.x
+          const od = e.line - other, on = Math.abs(od) < 0.1 ? 0 : Math.sign(od) * Math.min(Math.abs(od), 3 * dt)
+          const nc = coord + e.dir * 3.4 * dt
+          if (Math.abs(nc) > 40) e.dir = (e.dir === 1 ? -1 : 1)
+          if (e.axis === 'x') { a.x = nc; a.z = other + on } else { a.z = nc; a.x = other + on }
+          a.heading = e.axis === 'x' ? (e.dir > 0 ? Math.PI / 2 : -Math.PI / 2) : e.dir > 0 ? 0 : Math.PI
+          a.parts.group.position.set(a.x, 0, a.z); a.parts.group.rotation.y += this.angleDiff(a.heading, a.parts.group.rotation.y) * Math.min(1, dt * 8)
+          animateHuman(a.parts, this.time + a.ex.ph, true, 1.9)
+        } else {
+          exercisePose(a.parts, e.mode, this.time + e.ph); a.parts.group.position.set(a.x, 0, a.z); a.parts.group.rotation.y += this.angleDiff(0, a.parts.group.rotation.y) * Math.min(1, dt * 4)
+        }
+        a.sayT -= dt
+        if (a.bubble) { a.bubbleT -= dt; a.bubble.position.set(a.x, 3.2, a.z); if (a.bubbleT <= 0) { this.scene.remove(a.bubble); a.bubble = undefined } }
+        else if (Math.hypot(a.x - this.px, a.z - this.pz) < 13 && a.sayT <= 0) { const L2 = ['Morning jog!', 'One, two, three, four!', 'Stay fit o!', 'Good morning!', 'Feel the burn!']; a.sayT = 6 + Math.random() * 8; a.bubbleT = 3; a.bubble = this.textSprite(L2[Math.floor(Math.random() * L2.length)], { bg: 'rgba(255,255,255,0.94)', fg: '#1c1b22', size: 5.2 }); this.scene.add(a.bubble) }
+        continue
+      }
+      if (a.ex) { a.ex = undefined; resetPose(a.parts) }
       a.timer -= dt
       if (a.timer <= 0) {
         a.heading += (Math.random() - 0.5) * 2.6; a.timer = 2 + Math.random() * 4; a.speed = a.stay || Math.random() < 0.25 ? 0 : 1.2 + Math.random() * 1.2

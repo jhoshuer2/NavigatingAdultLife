@@ -7,7 +7,7 @@ import { INTERIORS, interiorBlockers, type Anchor, type IObj, type Interior } fr
 import type { Activity } from './residents'
 import type { PlaceId, Rect } from './layout'
 import { buildNavFor, findPath, type Nav } from './nav'
-import { animateHuman, buildHuman, hashLook, type HumanParts } from './characters'
+import { animateHuman, buildHuman, exercisePose, hashLook, type HumanParts } from './characters'
 import { lightingAt } from './time'
 
 class Batch {
@@ -121,6 +121,12 @@ export class InteriorView {
       const rug = d.objs.find((o) => o.kind === 'rug')
       if (rug) { const r = rug.rect, t = 0.22, y0 = 0.045, y1 = 0.058; W.box(r.x0 + t, r.x1 - t, y0, y1, r.z0 + t, r.z0 + t + 0.1, dc.rugTrim); W.box(r.x0 + t, r.x1 - t, y0, y1, r.z1 - t - 0.1, r.z1 - t, dc.rugTrim); W.box(r.x0 + t, r.x0 + t + 0.1, y0, y1, r.z0 + t, r.z1 - t, dc.rugTrim); W.box(r.x1 - t - 0.1, r.x1 - t, y0, y1, r.z0 + t, r.z1 - t, dc.rugTrim) }
     }
+    if (d.id === 'gym') { // barbell over the bench, dumbbells on the rack, mirrors on the back wall
+      const bn = d.objs.find((o) => o.id === 'bench')
+      if (bn) { const cx = (bn.rect.x0 + bn.rect.x1) / 2, cz = (bn.rect.z0 + bn.rect.z1) / 2; W.box(cx - 1.2, cx + 1.2, 1.4, 1.46, cz - 0.03, cz + 0.03, 0xbbbbc4); for (const sx of [-1.15, 1.15]) W.box(cx + sx - 0.12, cx + sx + 0.12, 1.1, 1.76, cz - 0.3, cz + 0.3, 0x1c1b22); W.box(cx - 0.9, cx - 0.84, 0.55, 1.4, cz - 0.03, cz + 0.03, 0x888890); W.box(cx + 0.84, cx + 0.9, 0.55, 1.4, cz - 0.03, cz + 0.03, 0x888890) }
+      for (let i = 0; i < 5; i++) { W.box(7.8 + i * 0.4, 8.05 + i * 0.4, 1.5, 1.7 + (i % 2) * 0.05, -6.6, -6.2, 0x1c1b22) }
+      W.box(-9.6, 9.6, 0.8, 3.0, this.def.bounds.z0 + 0.02, this.def.bounds.z0 + 0.08, 0xb8d8ee) // mirrors
+    }
     this.scene.add(W.mesh())
     // north-wall windows (colour follows the time of day)
     for (const w of d.windowsAt) { const win = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 1.6), this.windowMat); win.position.set(w.x, 2.1, d.bounds.z0 + 0.03); this.scene.add(win); const fr = new THREE.Mesh(new THREE.BoxGeometry(2.5, 1.9, 0.06), new THREE.MeshLambertMaterial({ color: 0xffffff })); fr.position.set(w.x, 2.1, d.bounds.z0 + 0.0); this.scene.add(fr) }
@@ -216,6 +222,7 @@ export class InteriorView {
       case 'board': W.box(r.x0, r.x1, 0.9, 0.9 + h * 0.7, r.z0, r.z1 + 0.1, c); W.box(r.x0 - 0.1, r.x1 + 0.1, 0.85, 0.9, r.z0, r.z1 + 0.12, 0x8a5a32); break
       case 'cubicle': W.box(r.x0, r.x1, 0, h, r.z0, r.z0 + 0.12, c); W.box(r.x0, r.x0 + 0.12, 0, h, r.z0, r.z1, c); W.box(r.x1 - 0.12, r.x1, 0, h, r.z0, r.z1, c); break
       case 'plant': W.cyl(cx, 0.25, cz, 0.28, 0.5, 0x8a5a32); W.cyl(cx, 0.9, cz, 0.38, 0.9, 0x2f9a4a, 6); break
+      case 'treadmill': W.box(r.x0, r.x1, 0, 0.35, r.z0, r.z1, c); W.box(r.x0 + 0.15, r.x1 - 0.15, 0.35, 0.42, r.z0 + 0.1, r.z1 - 0.1, 0x111116); W.box(r.x0 + 0.05, r.x0 + 0.2, 0.35, 1.5, r.z0, r.z0 + 0.15, 0x888890); W.box(r.x1 - 0.2, r.x1 - 0.05, 0.35, 1.5, r.z0, r.z0 + 0.15, 0x888890); W.box(r.x0 + 0.1, r.x1 - 0.1, 1.3, 1.65, r.z0 - 0.05, r.z0 + 0.25, 0x1a2a3a); W.box(r.x0 + 0.4, r.x1 - 0.4, 1.4, 1.55, r.z0 + 0.25, r.z0 + 0.27, 0x7affc8); break
       case 'rug': W.box(r.x0, r.x1, 0.02, 0.06, r.z0, r.z1, c); break
       case 'ac': W.box(r.x0, r.x1, 2.3, 2.85, r.z0, r.z1, c); W.box(r.x0 + 0.1, r.x1 - 0.1, 2.38, 2.45, r.z1 - 0.02, r.z1 + 0.02, 0x9fb4c8); break
       case 'shelf': W.box(r.x0, r.x1, 0, h, r.z0, r.z1, c); for (let y = 0.5; y < h; y += 0.6) W.box(r.x0 - 0.02, r.x1 + 0.02, y, y + 0.05, r.z0, r.z1, shade(c, 0.6)); break
@@ -369,6 +376,7 @@ export class InteriorView {
       } else p.moving = false
       animateHuman(p.parts, this.time + p.x, p.moving, 0.7)
       if (p.seat?.pose === 'sit' && !p.moving) { p.parts.legL.rotation.x = p.parts.legR.rotation.x = -1.45 }
+      if (this.def.id === 'gym' && !p.moving && p.seat) exercisePose(p.parts, p.id === 'mother' ? 'jacks' : 'squat', this.time + p.x) // the family work out too
     }
   }
 
@@ -428,7 +436,7 @@ export class InteriorView {
     this.marker.visible = this.arrow.visible = !!h
     if (h) { this.marker.position.set(h.x, 0.1, h.z); this.marker.scale.setScalar(1 + Math.sin(this.time * 4) * 0.1); this.arrow.position.set(h.x, 3.5 + Math.abs(Math.sin(this.time * 3)) * 0.5, h.z) }
     this.stepResidents(dt)
-    for (const p of this.people.values()) if (!p.prole) animateHuman(p.parts, this.time, false)
+    for (const p of this.people.values()) if (!p.prole) { if (this.def.id === 'gym') exercisePose(p.parts, p.id === 'coach' ? 'lift' : 'run', this.time + (p.id === 'coach' ? 0 : 1.7)); else animateHuman(p.parts, this.time, false) }
   }
 
   dispose() {

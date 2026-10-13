@@ -17,6 +17,8 @@ export function presenceAt(role: string, hour: number, id = role): Presence {
   const h = ((hour % 24) + 24) % 24
   const r = roll(id, h)
   const away: Presence = { where: 'away', activity: 'idle' }
+  // early risers: Mama and Papa often go to the gym between 5am and 6:30am
+  if ((role === 'mother' || role === 'father') && h >= 5 && h < 6.5 && roll(id, h, 'gym') < 0.7) return { where: 'place:gym', activity: 'idle' }
   if (SLEEP(h)) return away
   switch (role) {
     case 'mother':

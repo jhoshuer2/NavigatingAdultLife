@@ -60,6 +60,7 @@ export function PlaceModal() {
     audio.sfx('click')
     if (def.id === 'rest' && placeId === 'home') { enterPlace('home', 'sleep'); return }
     if (def.id === 'study' && INTERIORS[placeId]) { enterPlace(placeId); return }
+    if (def.id === 'exercise' && placeId === 'gym') { enterPlace(placeId); return }
     if (def.id === 'chores' && placeId === 'home') { startChores(); return }
     if ((def.id === 'overtime' || def.id === 'community') && INTERIORS[placeId]) { enterPlace(placeId); return }
     if (placeId === 'market' && def.id === 'shop') { startShop(); return }

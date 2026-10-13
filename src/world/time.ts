@@ -2,7 +2,7 @@
 import type { PlaceId } from './layout'
 
 export const OPENING: Partial<Record<PlaceId, [number, number]>> = {
-  school: [7, 16], office: [8, 17], jobcentre: [8, 17], worship: [5, 21], mamaput: [7, 22], market: [7, 20], busstop: [5, 23],
+  school: [7, 16], office: [8, 17], jobcentre: [8, 17], worship: [5, 21], mamaput: [7, 22], market: [7, 20], busstop: [5, 23], gym: [5, 22],
 }
 
 export const ACTIVITY_HOURS: Record<string, number> = {

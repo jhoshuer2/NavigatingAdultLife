@@ -2,7 +2,7 @@
 import type { Rect, PlaceId } from './layout'
 
 export type ObjKind =
-  | 'bed' | 'wardrobe' | 'desk' | 'chair' | 'sofa' | 'tvunit' | 'fan' | 'counter' | 'fridge' | 'table' | 'shower' | 'toilet' | 'sink' | 'pew' | 'board' | 'cubicle' | 'plant' | 'rug' | 'shelf' | 'cooler' | 'pulpit' | 'bench' | 'stool' | 'cooker' | 'ac'
+  | 'bed' | 'wardrobe' | 'desk' | 'chair' | 'sofa' | 'tvunit' | 'fan' | 'counter' | 'fridge' | 'table' | 'shower' | 'toilet' | 'sink' | 'treadmill' | 'pew' | 'board' | 'cubicle' | 'plant' | 'rug' | 'shelf' | 'cooler' | 'pulpit' | 'bench' | 'stool' | 'cooker' | 'ac'
 
 export interface IObj { kind: ObjKind; rect: Rect; h: number; color: number; blocks?: boolean; id?: string; appl?: string }
 export interface HotAction { label: string; icon: string; cmd: string; note?: string; needs?: string }
@@ -78,6 +78,35 @@ export const INTERIORS: Partial<Record<PlaceId, Interior>> = {
       { id: 'st2', kind: 'stand', x: 2.4, z: 3.6, ax: 2.4, az: 3.6, pose: 'stand', face: -0.6 },
       { id: 'st3', kind: 'stand', x: 6.6, z: 0.3, ax: 6.6, az: 0.3, pose: 'stand', face: 0 },
       { id: 'st4', kind: 'stand', x: -6.0, z: 4.4, ax: -6.0, az: 4.4, pose: 'stand', face: 2.4 },
+    ],
+  },
+  gym: {
+    id: 'gym', name: 'Iron Gym', bounds: r(-10, 10, -7, 7), wallColor: 0xdfe8f0, door: { x: 0, z: 6.2 }, spawn: { x: 0, z: 5 },
+    floors: [{ rect: r(-10, 10, -7, 7), color: 0x3a3a44 }, { rect: r(-8.6, -2.6, 1.0, 5.4), color: 0x2f7a5a }],
+    walls: [],
+    objs: [
+      { kind: 'treadmill', rect: r(-8.4, -7.0, -6.6, -4.4), h: 1.3, color: 0x24242c, id: 'tm1' }, { kind: 'treadmill', rect: r(-5.4, -4.0, -6.6, -4.4), h: 1.3, color: 0x24242c, id: 'tm2' }, { kind: 'treadmill', rect: r(-2.4, -1.0, -6.6, -4.4), h: 1.3, color: 0x24242c, id: 'tm3' },
+      { kind: 'bench', rect: r(4.4, 6.6, -3.4, -2.4), h: 0.55, color: 0x2a2a30, id: 'bench' },
+      { kind: 'shelf', rect: r(7.6, 9.8, -6.8, -6.0), h: 1.5, color: 0x55555e }, { kind: 'cooler', rect: r(9.0, 9.8, -1.6, -0.8), h: 1.2, color: 0x2b8ad6 },
+      { kind: 'counter', rect: r(-9.8, -6.2, 5.6, 6.8), h: 1.0, color: 0x9a7a5a },
+      { kind: 'rug', rect: r(-8.6, -2.6, 1.0, 5.4), h: 0.04, color: 0x2f7a5a, blocks: false },
+      { kind: 'plant', rect: r(9.0, 9.7, 5.6, 6.3), h: 1.5, color: 0x2f7a3a },
+    ],
+    hotspots: [
+      { id: 'treadmill', name: 'Treadmill', icon: '🏃', x: -5.4, z: -3.4, r: 2.4, actions: [{ label: 'Run on the treadmill', icon: '🏃', cmd: 'gym:run' }] },
+      { id: 'weights', name: 'Weights', icon: '🏋️', x: 5.5, z: -1.4, r: 2.4, actions: [{ label: 'Lift weights', icon: '🏋️', cmd: 'gym:lift' }] },
+      { id: 'mats', name: 'Exercise mats', icon: '🧘', x: -5.6, z: 3.2, r: 2.6, actions: [{ label: 'Stretch and warm up', icon: '🧘', cmd: 'gym:stretch' }] },
+    ],
+    people: [
+      { id: 'mother', name: 'Mama', role: 'mother', x: -7.0, z: 3.0, line: 'Exercise before the day starts. Join me!', persistent: 'mother' },
+      { id: 'father', name: 'Papa', role: 'father', x: -4.0, z: 3.4, line: 'One more set, then breakfast.', persistent: 'father' },
+      { id: 'coach', name: 'Coach Bode', role: 'coach', x: 2.4, z: -1.2, line: 'No pain, no gain! Form first.' },
+      { id: 'member', name: 'Gym member', role: 'member', x: -3.2, z: -3.2, line: 'Excuse me, are you using that?' },
+    ],
+    windowsAt: [],
+    anchors: [
+      { id: 'g1', kind: 'stand', x: -7.2, z: 2.2, ax: -7.2, az: 2.2, pose: 'stand', face: 0 }, { id: 'g2', kind: 'stand', x: -5.4, z: 2.6, ax: -5.4, az: 2.6, pose: 'stand', face: 0 },
+      { id: 'g3', kind: 'stand', x: -3.6, z: 2.2, ax: -3.6, az: 2.2, pose: 'stand', face: 0 }, { id: 'g4', kind: 'stand', x: -6.4, z: 4.4, ax: -6.4, az: 4.4, pose: 'stand', face: 0 },
     ],
   },
   school: {

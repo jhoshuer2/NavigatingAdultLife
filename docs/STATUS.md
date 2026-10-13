@@ -183,3 +183,7 @@ Street life follows the clock (`WorldRenderer.streetLife`): full from 6:30am to 
 
 ## Night animals
 From about 7:30pm to 6am (`WorldRenderer.nightLevel`) owls (on rooftops, glowing eyes, swivelling heads, "I be witch o!" with a hoot when you come near), rats and cockroaches (scurry about, scatter from you, rats squeak), bats flapping round, and street cats with glowing eyes (meow) come out. They gather around wherever you are and are hidden by day and indoors.
+
+## Dawn exercise and the gym
+- **5am to 6:30am** people on the street jog along the pavements (with "Morning jog!" and "Feel the burn!" bubbles) or do jumping jacks, stretches and squats where they stand. Poses live in `characters.exercisePose`.
+- **The gym** (new place `gym`, west of the pitch, open 5am to 10pm): glass walls and roof, so you can see treadmills and people working out from the street. Inside: treadmills, weights, mats, a coach and a member. You can run, lift or stretch (`GymTask`: tap to do 12 reps), which counts as the Exercise activity. Mama and Papa often work out there between 5 and 6:30am.

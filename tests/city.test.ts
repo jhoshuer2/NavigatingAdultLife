@@ -25,7 +25,7 @@ describe('cities', () => {
       expect(DISTRICTS[h.id].city).toBe(h.city)
       expect(cityOfHome(h.id)).toBe(h.city)
       const d = buildDistrict(h.id)
-      expect(d.places.length).toBe(10)
+      expect(d.places.length).toBe(11)
     }
     expect(cityOfHome('unknown-old-save')).toBe('lagos')
   })

@@ -4,7 +4,7 @@ import { CITIES, type CityId } from '@content/cities'
 import { flavourOf, worshipName, type Faith, type Flavour } from './flavour'
 
 export interface Rect { x0: number; x1: number; z0: number; z1: number }
-export type PlaceId = 'home' | 'school' | 'market' | 'mamaput' | 'pitch' | 'worship' | 'busstop' | 'office' | 'jobcentre' | 'outing'
+export type PlaceId = 'home' | 'school' | 'market' | 'mamaput' | 'pitch' | 'worship' | 'busstop' | 'office' | 'jobcentre' | 'outing' | 'gym'
 
 export interface Place {
   id: PlaceId
@@ -25,7 +25,7 @@ export interface DistrictTheme {
   id: string; city: CityId; name: string; tagline: string
   wall: number[]; roof: number; ground: number; roadColor: number; sidewalk: number
   trees: number; density: number; tall: number
-  names: Record<PlaceId, string>
+  names: Record<Exclude<PlaceId, 'gym'>, string> & { gym?: string }
 }
 
 export const DISTRICTS: Record<string, DistrictTheme> = {
@@ -84,6 +84,7 @@ export function placesFor(theme: DistrictTheme): Place[] {
     { id: 'busstop', name: n.busstop, icon: theme.city === 'abuja' ? '🚕' : '🚌', blurb: `Catch the ${CITIES[theme.city].vehicle.name} and run ${CITIES[theme.city].name} in Go-Slow Dash.`, rect: { x0: 4, x1: 8, z0: 21, z1: 26 }, door: { x: 2.2, z: 23 }, zoneR: 3.2, activities: ['dash'], color: 0xffd23f },
     { id: 'office', name: n.office, icon: '🏢', blurb: 'Where the salary comes from. And the stress.', rect: { x0: -27, x1: -12, z0: 13, z1: 27 }, door: { x: -19.5, z: 10.5 }, zoneR: 3, activities: ['overtime', 'quitJob'], color: 0x4a5a8a },
     { id: 'outing', name: n.outing, icon: theme.city === 'abuja' ? '⛰️' : '🏖️', blurb: theme.city === 'abuja' ? 'Hike up the hills with your friends. Abuja is built around them.' : 'Take your friends to the beach. This is Lagos weekend.', rect: { x0: 9, x1: 31, z0: -47, z1: -35 }, door: { x: 20, z: -32 }, zoneR: 6.5, activities: [theme.city === 'abuja' ? 'hike' : 'beach'], color: theme.city === 'abuja' ? 0x4a8a3a : 0x35b0d8, open: true },
+    { id: 'gym', name: n.gym ?? `${theme.name} Fitness Gym`, icon: '🏋️', blurb: 'Treadmills, weights and mats behind glass walls, so the whole street can watch you sweat. Open from 5am.', rect: { x0: -44, x1: -31, z0: -19, z1: -9.5 }, door: { x: -37.5, z: -7 }, zoneR: 3, activities: ['exercise'], color: 0x1ec8b4 },
     { id: 'jobcentre', name: n.jobcentre, icon: '📝', blurb: 'CVs, aptitude tests and "who do you know?"', rect: { x0: -45, x1: -33, z0: 11, z1: 21 }, door: { x: -39, z: 8.5 }, zoneR: 3, activities: ['applyJob'], color: 0x0f7a4a },
   ]
 }
