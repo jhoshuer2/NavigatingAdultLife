@@ -155,6 +155,73 @@ export class WorldRenderer {
     this.lampMat.color.setHex(L.dark > 0.5 ? 0xfff0a0 : L.dark > 0.15 ? 0xffe9a6 : 0x8a8a92)
   }
 
+  /** The family home, dressed the way houses really look in each city: Lagos has zinc roofs, a veranda of doors, water tanks and washing lines; Abuja has stepped tiled roofs, porch pillars, parapets, hedges and gate pillars. */
+  private homeExterior(b: Batch, bl: { rect: Rect; h: number; color: number; roof: number }, id: string, city: string) {
+    const r = bl.rect, h = bl.h, w = r.x1 - r.x0, dd = r.z1 - r.z0, cx = (r.x0 + r.x1) / 2, cz = (r.z0 + r.z1) / 2, fz = r.z1
+    if (city === 'lagos') {
+      const modern = id === 'lekki' || id === 'yaba'
+      if (!modern) {
+        // corrugated zinc roof: a flat slab with ridges, rusty colour
+        b.box(cx, h + 0.2, cz, w + 0.8, 0.35, dd + 0.8, 0x9a5a3a)
+        for (let x = r.x0 - 0.3; x < r.x1 + 0.4; x += 0.7) b.box(x, h + 0.45, cz, 0.18, 0.16, dd + 0.8, 0xb56a44)
+        // veranda in front: a covered corridor with a door for every family and a low wall
+        b.box(cx, 2.9, fz + 1.0, w + 0.6, 0.18, 2.0, 0x7a4a2a)
+        for (let x = r.x0 + 0.5; x <= r.x1 - 0.4; x += 3) b.box(x, 1.45, fz + 1.9, 0.18, 2.9, 0.18, 0x6a3b1d)
+        b.box(cx, 0.5, fz + 1.95, w, 0.9, 0.14, bl.color)
+        const doors = Math.max(2, Math.floor(w / 2.6))
+        for (let i = 0; i < doors; i++) b.box(r.x0 + (i + 0.5) * (w / doors), 1.0, fz + 0.1, 0.9, 2.0, 0.1, [0x2b3a8c, 0x0f7a4a, 0xc4262e, 0x6a3b1d][i % 4])
+        // laundry line across the veranda
+        for (let i = 0; i < 4; i++) b.box(r.x0 + 1.2 + i * (w - 2.4) / 3, 2.4, fz + 1.7, 0.5, 0.7, 0.05, [0xf2efe6, 0xe0457b, 0x2b3a8c, 0xf5b91c][i])
+        b.box(cx, 2.78, fz + 1.7, w - 1, 0.03, 0.03, 0x444444)
+        if (bl.h > 5) { b.box(cx, 5.2, fz + 1.0, w + 0.6, 0.15, 1.6, 0x7a4a2a); for (let x = r.x0 + 0.3; x <= r.x1 - 0.2; x += 0.9) b.box(x, 5.7, fz + 1.75, 0.08, 1.0, 0.08, 0x3a3a44) }
+        // black polytank on a stand and a rooftop aerial
+        b.cyl(r.x0 + 1.6, h + 1.4, cz, 0.8, 0.8, 1.4, 0x1c1b22, 10); b.box(r.x0 + 1.6, h + 0.55, cz, 1.5, 0.4, 1.5, 0x6a6a74)
+        b.box(r.x1 - 1.5, h + 1.6, cz + 1, 0.06, 2.4, 0.06, 0x444444); b.box(r.x1 - 1.5, h + 2.4, cz + 1, 1.2, 0.05, 0.05, 0x444444)
+      } else {
+        // modern Lagos duplex: flat roof with water tank, glass balcony, white walls
+        b.box(cx, h + 0.2, cz, w + 0.6, 0.4, dd + 0.6, 0x5a6a7a)
+        b.cyl(cx + w * 0.25, h + 1.4, cz, 0.9, 0.9, 1.7, 0x1c1b22, 10); b.box(cx + w * 0.25, h + 0.6, cz, 1.8, 0.5, 1.8, 0x8a8a92)
+        for (let f = 1; f < Math.max(2, Math.round(h / 3.2)); f++) {
+          b.box(cx, f * 3.1, fz + 0.9, w * 0.7, 0.18, 1.8, 0xe6e6e0)
+          b.box(cx, f * 3.1 + 0.6, fz + 1.8, w * 0.7, 1.0, 0.06, 0x9fd1ff)
+        }
+        for (let x = r.x0 + 0.6; x <= r.x1 - 0.5; x += 3.4) b.box(x, 1.3, fz + 0.06, 1.6, 2.4, 0.08, 0x6aa0c8)
+        b.box(cx, 0.4, fz + 3.2, 3, 0.1, 5, 0xc9c4b8) // driveway
+      }
+      return
+    }
+    // ---- Abuja ----
+    const bung = id === 'kubwa', block = id === 'wuse', villa = id === 'maitama'
+    if (block) {
+      // apartment block: flat roof with parapet, glass balcony strips every floor, lift tower
+      b.box(cx, h + 0.15, cz, w + 0.4, 0.3, dd + 0.4, 0x4f6272)
+      for (const [px, pz, pw, pd] of [[cx, r.z1 + 0.15, w + 0.4, 0.3], [cx, r.z0 - 0.15, w + 0.4, 0.3], [r.x0 - 0.15, cz, 0.3, dd], [r.x1 + 0.15, cz, 0.3, dd]]) b.box(px, h + 0.7, pz, pw, 0.8, pd, 0xdfe6ec)
+      b.box(r.x1 - 1.5, h + 1.4, r.z0 + 1.5, 2, 2, 2, 0xb9c4cd)
+      for (let f = 0; f * 3 + 3 < h; f++) { b.box(cx, 3 + f * 3, fz + 0.5, w * 0.8, 0.14, 1.0, 0xffffff); b.box(cx, 3.5 + f * 3, fz + 1.0, w * 0.8, 0.9, 0.05, 0x9fd1ff) }
+      b.box(cx, 1.2, fz + 0.1, w * 0.5, 2.4, 0.1, 0x6aa0c8)
+      return
+    }
+    // stepped tiled roof (terracotta, or green zinc in Kubwa) so it reads as pitched rather than flat
+    const tile = bung ? 0x7a8a6a : 0xb5532e
+    const steps = bung ? 2 : 3
+    for (let i = 0; i < steps; i++) {
+      const k = i / steps
+      b.box(cx, h + 0.2 + i * 0.55, cz, (w + 1.0) * (1 - k * 0.55), 0.55, (dd + 1.0) * (1 - k * 0.3), tile)
+    }
+    // porch with two pillars
+    b.box(cx, 2.9, fz + 1.2, Math.min(w * 0.6, 5), 0.25, 2.4, 0xf4ecd8)
+    for (const sx of [-1, 1]) b.cyl(cx + sx * Math.min(w * 0.28, 2.2), 1.45, fz + 2.2, 0.22, 0.22, 2.9, 0xfaf6ea, 10)
+    b.box(cx, 0.12, fz + 1.4, Math.min(w * 0.6, 5), 0.24, 2.8, 0xd9d2c2)
+    // low hedge and a lawn along the front
+    for (const sx of [-1, 1]) b.box(cx + sx * (w / 2 + 1.6) / 1 * 0.5 + sx * 1.4, 0.35, fz + 4.6, w / 2 - 1, 0.7, 0.8, 0x2f7a3a)
+    b.box(cx, 0.04, fz + 3.2, w + 2, 0.05, 3.4, 0x6fb55a)
+    // gate pillars
+    for (const sx of [-1, 1]) { b.box(cx + sx * 2.2, 1.3, fz + 4.8, 0.6, 2.6, 0.6, 0xf4ecd8); b.box(cx + sx * 2.2, 2.7, fz + 4.8, 0.8, 0.2, 0.8, villa ? 0xd4a017 : 0xb5532e) }
+    if (villa) { // second storey balcony and a dish
+      b.box(cx, 5.6, fz + 0.8, w * 0.5, 0.18, 1.6, 0xf4ecd8); b.cyl(r.x1 - 1.2, h + 1.8, cz, 0.7, 0.7, 0.12, 0xd0d0d8, 12)
+    }
+  }
+
   private buildStatic() {
     const d = this.district, t = d.theme
     const b = new Batch(), lit = new Batch(), lamps = new Batch()
@@ -173,7 +240,7 @@ export class WorldRenderer {
       const { rect: r, h, color, roof } = bl
       const w = r.x1 - r.x0, dd = r.z1 - r.z0, cx = (r.x0 + r.x1) / 2, cz = (r.z0 + r.z1) / 2
       b.box(cx, h / 2, cz, w, h, dd, color)
-      b.box(cx, h + 0.25, cz, w + 0.5, 0.5, dd + 0.5, roof)
+      if (bl.place !== 'home') b.box(cx, h + 0.25, cz, w + 0.5, 0.5, dd + 0.5, roof)
       const rows = Math.max(1, Math.floor((h - 1.5) / 3)), cols = Math.max(1, Math.floor(w / 2.6))
       for (let rr = 0; rr < rows; rr++) for (let c = 0; c < cols; c++) {
         const isLit = (rr * 7 + c * 3 + Math.floor(cx)) % 3 === 0
@@ -181,6 +248,7 @@ export class WorldRenderer {
       }
       const dc = Math.max(1, Math.floor(dd / 3.2))
       for (let rr = 0; rr < rows; rr++) for (let c = 0; c < dc; c++) ((rr + c) % 3 === 0 ? lit : b).box(r.x1 + 0.04, 2 + rr * 3, r.z0 + (c + 0.5) * (dd / dc), 0.08, 1.4, 1.1, 0x4c6a8a)
+      if (bl.place === 'home') this.homeExterior(b, bl, d.theme.id, d.theme.city)
       if (bl.place) {
         const pl = d.places.find((p) => p.id === bl.place)!
         b.box(pl.door.x, 1.1, r.z1 + 0.05, 1.6, 2.2, 0.12, 0x6a3b1d)
