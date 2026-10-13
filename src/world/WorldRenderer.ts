@@ -4,7 +4,7 @@ import * as THREE from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import type { Appearance, Gender } from '@engine/core/types'
 import type { Wear } from '@content/items'
-import { drawFlavourProp, drawOuting, skylineObjects, vehicleMesh } from './scenery'
+import { drawFlavourProp, drawOuting, drawWorship, skylineObjects, vehicleMesh } from './scenery'
 import type { VehicleKind, CrowdKind } from './flavour'
 import { WORLD, type District, type PlaceId, type Rect } from './layout'
 import { buildNav, findPath, moveWithCollision, walkable, type Nav } from './nav'
@@ -67,6 +67,7 @@ export class WorldRenderer {
   private ground: THREE.Mesh
   private npcs = new Map<string, { parts: HumanParts; npc: WorldNpc; label: THREE.Sprite; tx: number; tz: number; wt: number; moving: boolean }>()
   private ambient: { parts: HumanParts; x: number; z: number; heading: number; timer: number; speed: number; bubble?: THREE.Sprite; bubbleT: number; sayT: number; lines?: string[]; stay?: boolean; home?: { x: number; z: number; r: number } }[] = []
+  private faith: 'church' | 'mosque' = 'church'
   private traffic: { g: THREE.Group; axis: 'x' | 'z'; dir: 1 | -1; lane: number; pos: number; speed: number }[] = []
   private labelSprites = new Map<PlaceId, THREE.Sprite>()
   private textCache = new Map<string, THREE.SpriteMaterial>()
@@ -106,7 +107,7 @@ export class WorldRenderer {
   private stallGroup?: THREE.Group
   private marks = new Map<string, THREE.Sprite>()
 
-  constructor(private container: HTMLElement, private district: District, opts: { look: Appearance; age: number; gender: Gender; wear: Wear[]; uniform: boolean; month: number; hour: number; spawn: { x: number; z: number } }) {
+  constructor(private container: HTMLElement, private district: District, opts: { look: Appearance; age: number; gender: Gender; wear: Wear[]; faith?: 'church' | 'mosque'; uniform: boolean; month: number; hour: number; spawn: { x: number; z: number } }) {
     const dpr = window.devicePixelRatio || 1
     this.renderer = new THREE.WebGLRenderer({ antialias: dpr <= 1.5, powerPreference: 'high-performance' })
     this.renderer.setPixelRatio(Math.min(dpr, 1.5))
@@ -120,6 +121,7 @@ export class WorldRenderer {
     this.scene.add(this.hemi, this.sun)
     this.ground = new THREE.Mesh(new THREE.PlaneGeometry(WORLD.half * 2 + 60, WORLD.half * 2 + 60), new THREE.MeshLambertMaterial({ color: district.theme.ground }))
     this.ground.rotation.x = -Math.PI / 2; this.ground.position.y = -0.02; this.scene.add(this.ground)
+    this.faith = opts.faith ?? 'church'
     this.buildStatic()
     for (const o of skylineObjects(district)) this.scene.add(o)
     this.player = buildHuman({ look: opts.look, age: opts.age, gender: opts.gender, wear: opts.wear, uniform: opts.uniform, scale: 1.1 })
@@ -217,6 +219,11 @@ export class WorldRenderer {
     for (const [sx, sz] of [[bs.rect.x0 + 0.3, bs.rect.z0 + 0.3], [bs.rect.x1 - 0.3, bs.rect.z0 + 0.3], [bs.rect.x0 + 0.3, bs.rect.z1 - 0.3], [bs.rect.x1 - 0.3, bs.rect.z1 - 0.3]]) b.box(sx, 1.5, sz, 0.2, 3, 0.2, 0x555566)
     for (const bl of d.buildings.slice(0, 18)) if (!bl.place) b.box(bl.rect.x1 + 0.7, 0.45, bl.rect.z1 - 1, 0.9, 0.9, 0.9, 0xc4262e)
     drawOuting(b, d)
+    // your house of worship, and the other faith's landmark up the road
+    for (const bl of d.buildings) {
+      if (bl.place === 'worship') drawWorship(b, bl.rect, bl.h, this.faith, d.theme.city)
+      else if (bl.landmark) drawWorship(b, bl.rect, bl.h, this.faith === 'mosque' ? 'church' : 'mosque', d.theme.city)
+    }
     const mesh = b.build(); if (mesh) this.scene.add(mesh)
     const litMesh = lit.build(this.winLitMat); if (litMesh) this.scene.add(litMesh)
     const lampMesh = lamps.build(this.lampMat); if (lampMesh) this.scene.add(lampMesh)
@@ -352,7 +359,7 @@ export class WorldRenderer {
   get inside(): PlaceId | null { return this.interior?.def.id ?? null }
   enterInterior(place: PlaceId, people: { id: string; name: string; gender: Gender; role: string }[], state: InteriorState, outsideAt?: { x: number; z: number }, installed?: Set<string>): boolean {
     let view: InteriorView
-    try { view = new InteriorView(place, installed, place === 'home' ? this.district.flavour.homeInterior : undefined) } catch { return false }
+    try { view = new InteriorView(place, installed, place === 'home' ? this.district.flavour.homeInterior : place === 'worship' && this.faith === 'mosque' ? { wall: 0xf3efdf, floor: 0x2f7a5a } : undefined) } catch { return false }
     this.installedSet = installed ?? null
     this.interior?.dispose()
     this.outside = outsideAt ?? { x: this.px, z: this.pz }

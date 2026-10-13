@@ -81,3 +81,16 @@ export const FLAVOUR: Record<string, Flavour> = {
   },
 }
 export const flavourOf = (districtId: string): Flavour => FLAVOUR[districtId] ?? FLAVOUR.surulere
+
+export type Faith = 'church' | 'mosque'
+/** Which house of worship is yours: a mosque for Hausa players or when your story made you Muslim, otherwise a church. */
+export const faithOf = (life: { character: { heritage: string }; flags: Record<string, unknown> }): Faith => (life.flags.faithMuslim || life.character.heritage === 'hausa' ? 'mosque' : 'church')
+/** The name and blurb of your place of worship in each city. */
+export function worshipName(city: 'lagos' | 'abuja', faith: Faith): { name: string; blurb: string } {
+  if (city === 'abuja') return faith === 'mosque'
+    ? { name: 'National Mosque', blurb: 'The golden dome and four tall minarets. Prayers, fellowship and food.' }
+    : { name: 'National Ecumenical Centre', blurb: 'The big white church by the hills. Service, fellowship and food.' }
+  return faith === 'mosque'
+    ? { name: 'Central Mosque', blurb: 'Green domes and two tall minarets. Prayers, fellowship and food.' }
+    : { name: 'Praise Cathedral', blurb: 'A big auditorium with a cross on the tower. Service, vigils and food.' }
+}

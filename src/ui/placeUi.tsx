@@ -3,7 +3,8 @@ import { useGame } from '../store'
 import { Btn, DeltaChips, Modal, nairaShort } from './components'
 import { Icon } from './icons'
 import { getActivities } from '@engine/api'
-import { DISTRICTS, buildDistrict, type PlaceId } from '../world/layout'
+import { DISTRICTS, districtFor, type PlaceId } from '../world/layout'
+import { faithOf } from '../world/flavour'
 import { placeActive, placeNote, suggest } from '../world/guide'
 import { INTERIORS } from '../world/interiors'
 import { isOpen, opensAt, fmtClock } from '../world/time'
@@ -44,7 +45,7 @@ export function PlaceModal() {
   const acts = useMemo(() => (life ? getActivities(life) : []), [life])
   const guideOn = meta.settings.guide !== false
   if (!life || !placeId) return null
-  const district = buildDistrict(life.character.housing.districtId)
+  const district = districtFor(life.character.housing.districtId, faithOf(life))
   const place = district.places.find((p) => p.id === placeId)
   if (!place) return null
   const rows = place.activities.map((id) => acts.find((a) => a.def.id === id)).filter(Boolean) as typeof acts
@@ -136,7 +137,7 @@ export function NpcModal() {
 export function PlacesModal() {
   const { life, openSheet, goToPlace } = useGame()
   if (!life) return null
-  const d = buildDistrict(life.character.housing.districtId)
+  const d = districtFor(life.character.housing.districtId, faithOf(life))
   return (
     <Modal title={DISTRICTS[life.character.housing.districtId]?.name ?? 'Your area'} onClose={() => openSheet(null)}>
       <div className="grid grid-cols-3 gap-2.5">

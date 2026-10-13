@@ -111,3 +111,47 @@ export function vehicleMesh(kind: VehicleKind): THREE.Group {
   }
   return g
 }
+
+const GOLD = 0xd4a017
+/** A stack of discs that reads as a dome. */
+function dome(b: BatchLike, x: number, y: number, z: number, r: number, color: number) {
+  const steps: [number, number][] = [[1, 0.25], [0.94, 0.5], [0.8, 0.75], [0.6, 1], [0.38, 1.2], [0.15, 1.35]]
+  let prev = 0
+  for (const [k, hh] of steps) { const h = (hh - prev) * r; b.cyl(x, y + prev * r + h / 2, z, r * k, r * (k > 0.9 ? 1 : k + 0.1), h, color, 14); prev = hh }
+}
+const minaret = (b: BatchLike, x: number, y: number, z: number, h: number, body: number, cap: number) => {
+  b.cyl(x, y + h / 2, z, 0.38, 0.5, h, body, 8); b.cyl(x, y + h * 0.78, z, 0.85, 0.85, 0.22, body, 8); b.cone(x, y + h + 0.9, z, 0.6, 1.8, cap, 8); b.box(x, y + h + 2.0, z, 0.08, 0.7, 0.08, cap)
+}
+
+/** A house of worship with the look of its city: Abuja's National Mosque and Ecumenical Centre, Lagos's Central Mosque and big churches. */
+export function drawWorship(b: BatchLike, rect: { x0: number; x1: number; z0: number; z1: number }, h: number, faith: 'church' | 'mosque', city: 'lagos' | 'abuja') {
+  const { x, z, w, d } = mid(rect)
+  const top = h + 0.5
+  if (faith === 'mosque') {
+    const abuja = city === 'abuja'
+    b.box(x, h / 2, z, w + 0.2, h, d + 0.2, abuja ? 0xf6efdc : 0xffffff)                        // painted body
+    b.box(x, h * 0.35, z + d / 2 + 0.12, w - 2, 1.0, 0.1, abuja ? GOLD : 0x2f8a4a)             // trim band
+    b.box(x, 1.7, z + d / 2 + 0.12, 2.2, 3.4, 0.12, 0x2a2018)                                  // arched doorway
+    if (abuja) {
+      dome(b, x, top, z, w * 0.42, GOLD)                                                         // the big golden dome
+      for (const [mx, mz] of [[rect.x0 - 0.2, rect.z0 - 0.2], [rect.x1 + 0.2, rect.z0 - 0.2], [rect.x0 - 0.2, rect.z1 + 0.2], [rect.x1 + 0.2, rect.z1 + 0.2]] as const) minaret(b, mx, 0, mz, h + 7, 0xf6efdc, GOLD) // four minarets
+    } else {
+      dome(b, x - w * 0.22, top, z, w * 0.26, 0x2f8a4a); dome(b, x + w * 0.22, top, z, w * 0.26, 0x2f8a4a); dome(b, x, top, z, w * 0.2, 0xffffff)
+      for (const mx of [rect.x0 - 0.2, rect.x1 + 0.2]) minaret(b, mx, 0, rect.z1 + 0.2, h + 6, 0xffffff, 0x2f8a4a)                     // two minarets in front
+    }
+  } else {
+    const abuja = city === 'abuja'
+    b.box(x, h / 2, z, w + 0.2, h, d + 0.2, abuja ? 0xf2f2f0 : 0xf3f0e4)
+    b.box(x, h + 0.3, z, w + 0.8, 0.6, d + 0.8, abuja ? 0x9aa4ae : 0x8a3b24)                     // roof
+    b.box(x, 1.8, z + d / 2 + 0.12, 2.6, 3.6, 0.12, 0x5a3a24)                                    // big doors
+    if (abuja) {
+      b.cone(x, top + 5.5, z, w * 0.5, 11, 0x9fd1e8, 4); b.box(x, top + 11.6, z, 0.12, 2.2, 0.12, GOLD); b.box(x, top + 12.2, z, 1.1, 0.12, 0.12, GOLD) // a glass pyramid and a gold cross
+      for (const sx of [-1, 1]) b.box(x + sx * (w / 2 - 0.4), h / 2, z + d / 2 + 0.14, 0.7, h, 0.2, 0xcfd4d8)                              // columns
+    } else {
+      b.box(x, top + 5, z + d / 2 - 1.6, 3.2, 10, 3.2, 0xf6f2e6)                                // front tower
+      b.cone(x, top + 11.2, z + d / 2 - 1.6, 2.4, 2.6, 0x8a3b24, 4)
+      b.box(x, top + 13.6, z + d / 2 - 1.6, 0.14, 2.4, 0.14, 0xffffff); b.box(x, top + 14.2, z + d / 2 - 1.6, 1.2, 0.14, 0.14, 0xffffff) // the cross
+      b.box(x - w / 2 + 1.6, h * 0.7, z + d / 2 + 0.15, 1.4, 3.6, 0.1, 0xc4262e)               // a red banner
+    }
+  }
+}

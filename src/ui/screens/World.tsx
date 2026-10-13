@@ -5,7 +5,8 @@ import { Icon, type IconName } from '../icons'
 import { Avatar } from '../Avatar'
 import { getActivities, getShopItems } from '@engine/api'
 import { useActivityRouter } from '../useActivities'
-import { buildDistrict, DISTRICTS, SPAWN, WORLD, type District, type PlaceId } from '../../world/layout'
+import { districtFor, DISTRICTS, SPAWN, WORLD, type District, type PlaceId } from '../../world/layout'
+import { faithOf } from '../../world/flavour'
 import { WorldRenderer, type Near, type NearInside, type WorldNpc } from '../../world/WorldRenderer'
 import { INTERIORS, type HotAction } from '../../world/interiors'
 import { fmtClock, isNight, isOpen, opensAt } from '../../world/time'
@@ -104,7 +105,8 @@ export default function World() {
   const [replay, setReplay] = useState(false)
   const [flash, setFlash] = useState<string | null>(null)
   const districtId = life?.character.housing.districtId ?? 'surulere'
-  const district = useMemo<District>(() => buildDistrict(districtId), [districtId])
+  const faith = life ? faithOf(life) : 'church'
+  const district = useMemo<District>(() => districtFor(districtId, faith), [districtId, faith])
   const age = life?.character.age ?? 6
   const ageBand = age < 12 ? 0 : age < 18 ? 1 : 2
   const modalOpen = !!g.sheet || life?.phase !== 'action' || (!!life?.quiz && !task) || (!!task && task.kind !== 'chores' && task.kind !== 'shop' && task.kind !== 'jog' && task.kind !== 'trip' && task.kind !== 'match') || !!destPick || !!coopPick || !!hotId || !!sleep || fade || mapOpen
@@ -121,7 +123,7 @@ export default function World() {
     if (!el || !life) return
     const c = life.character
     let r: WorldRenderer
-    try { r = new WorldRenderer(el, district, { look: c.appearance, age: c.age, gender: c.gender, wear: wearOf(c.items), uniform: false, month, hour: hourRef.current, spawn: SPAWN }) } catch { track('webgl_unavailable'); setFail(true); return }
+    try { r = new WorldRenderer(el, district, { look: c.appearance, age: c.age, gender: c.gender, wear: wearOf(c.items), faith, uniform: false, month, hour: hourRef.current, spawn: SPAWN }) } catch { track('webgl_unavailable'); setFail(true); return }
     rendRef.current = r
     r.onNear(setNear)
     r.onNearInside((n) => {

@@ -1,7 +1,7 @@
 // Walkable district layout. Pure data + helpers: no Three.js, no DOM. Units are metres; x east, z south.
 import { makeRng } from '@engine/core/rng'
 import { CITIES, type CityId } from '@content/cities'
-import { flavourOf, type Flavour } from './flavour'
+import { flavourOf, worshipName, type Faith, type Flavour } from './flavour'
 
 export interface Rect { x0: number; x1: number; z0: number; z1: number }
 export type PlaceId = 'home' | 'school' | 'market' | 'mamaput' | 'pitch' | 'worship' | 'busstop' | 'office' | 'jobcentre' | 'outing'
@@ -100,7 +100,7 @@ export interface District {
   sidewalks: Rect[]
   props: Prop[]
   blockers: Rect[]
-  buildings: { place?: PlaceId; rect: Rect; h: number; color: number; roof: number }[]
+  buildings: { place?: PlaceId; rect: Rect; h: number; color: number; roof: number; /** a landmark of the other faith, standing nearby for show */ landmark?: boolean }[]
 }
 
 const r = (x0: number, x1: number, z0: number, z1: number): Rect => ({ x0, x1, z0, z1 })
@@ -113,6 +113,13 @@ export const SHOP_SPOTS: { x: number; z: number }[] = [
   { x: 14.2, z: 16.4 }, { x: 19.2, z: 16.4 }, { x: 24.2, z: 16.4 }, { x: 29.2, z: 16.4 },
   { x: 14.2, z: 21.2 }, { x: 19.2, z: 21.2 }, { x: 24.2, z: 21.2 },
 ]
+
+/** The district as it looks for you: your faith decides the name of your place of worship. */
+export function districtFor(districtId: string, faith: Faith = 'church'): District {
+  const d = buildDistrict(districtId)
+  const w = worshipName(d.theme.city, faith)
+  return { ...d, places: d.places.map((p) => (p.id === 'worship' ? { ...p, name: w.name, blurb: w.blurb, icon: faith === 'mosque' ? '🕌' : '⛪' } : p)) }
+}
 
 export function buildDistrict(districtId: string): District {
   const theme = DISTRICTS[districtId] ?? DISTRICTS.surulere
@@ -134,7 +141,10 @@ export function buildDistrict(districtId: string): District {
     buildings.push({ place: p.id, rect: p.rect, h, color: look?.color ?? (p.id === 'jobcentre' ? 0xd9f0e2 : p.id === 'busstop' ? 0xdddddd : theme.wall[1]), roof: look?.roof ?? p.color })
     blockers.push(p.rect)
   }
-  const placeRects = places.map((p) => p.rect)
+  // the other faith's house of worship stands a little further up the road, so both are part of the skyline
+  const landmark = r(33, 44, -39, -28)
+  buildings.push({ rect: landmark, h: 9, color: 0xf4f0e6, roof: 0xd4a017, landmark: true }); blockers.push(landmark)
+  const placeRects = [...places.map((p) => p.rect), landmark]
   const avoid = (q: Rect, pad = 2) => placeRects.some((pr) => overlaps(q, pr, pad)) || buildings.some((b) => overlaps(q, b.rect, pad)) || places.some((p) => inRect(p.door.x, p.door.z, q, 4))
   const openZones = places.filter((p) => p.open).map((p) => r(p.door.x - p.zoneR - 2, p.door.x + p.zoneR + 2, p.door.z - p.zoneR - 2, p.door.z + p.zoneR + 2))
   openZones.push(places.find((p) => p.id === 'outing')!.rect) // keep houses out of the hills and the beach
