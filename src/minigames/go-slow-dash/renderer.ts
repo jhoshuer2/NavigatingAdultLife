@@ -1,7 +1,7 @@
 // Three.js renderer for Go-Slow Dash. All geometry is procedural low-poly (no external assets).
 import * as THREE from 'three'
 import type { Appearance, Gender } from '@engine/core/types'
-import { LANE_W, OBSTACLE_RESPONSE, segmentAt, type DashObj, type DashState, type ObstacleKind, type RouteSegment } from './sim'
+import { BUS_ROOF, LANE_W, OBSTACLE_RESPONSE, segmentAt, type DashObj, type DashState, type ObstacleKind, type RouteSegment } from './sim'
 import { buildHuman } from '../../world/characters'
 import type { Wear } from '@content/items'
 
@@ -43,6 +43,8 @@ export class DashRenderer {
   private busHeads: THREE.Mesh[] = []
   private speedStreaks: THREE.InstancedMesh
   private ctxLost = false
+  private hemi: THREE.HemisphereLight
+  private sun: THREE.DirectionalLight
 
   private city: 'lagos' | 'abuja' = 'lagos'
 
@@ -60,8 +62,8 @@ export class DashRenderer {
     this.scene.add(this.root)
     this.scene.fog = new THREE.Fog(0xffb28a, 40, 150)
     this.scene.background = this.makeSky()
-    this.scene.add(new THREE.HemisphereLight(0xffe2c4, 0x5a4a6a, 0.95))
-    const sun = new THREE.DirectionalLight(0xfff0d0, 1.05); sun.position.set(-6, 14, 8); this.scene.add(sun)
+    this.hemi = new THREE.HemisphereLight(0xffe2c4, 0x5a4a6a, 0.95); this.scene.add(this.hemi)
+    this.sun = new THREE.DirectionalLight(0xfff0d0, 1.05); this.sun.position.set(-6, 14, 8); this.scene.add(this.sun)
 
     // road
     this.roadMat = mat(0x3d3d46)
@@ -140,9 +142,127 @@ export class DashRenderer {
       case 'stalledDanfo': this.buildBus(g); this.playerParts.body = this.player.children[0] ?? this.playerParts.body; g.scale.set(0.95, 0.95, 0.95); break
       case 'okada': { const b = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 1.6), mat(0xc4262e)); b.position.y = 0.75; g.add(b); for (const z of [-0.7, 0.7]) { const w = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.14, 10), mat(0x1c1b22)); w.rotation.z = Math.PI / 2; w.position.set(0, 0.4, z); g.add(w) }
         const r = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.9, 0.4), mat(0x2bb3a6)); r.position.set(0, 1.45, 0); g.add(r); const hd = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 6), mat(0xffd23f)); hd.position.set(0, 2.0, 0); g.add(hd); break }
+      case 'car': {
+        const col = [0xd62828, 0x2b6ad0, 0xf2efe6, 0x2a2a30, 0x1f9d55, 0xf5b91c][Math.floor(Math.random() * 6)]
+        const body = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.8, 4), mat(col)); body.position.set(0, 0.8, -2); g.add(body)
+        const cab = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.7, 2), mat(col)); cab.position.set(0, 1.5, -2.2); g.add(cab)
+        for (const sx of [-1, 1]) { const w = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.5, 1.7), mat(0x9fd1ff)); w.position.set(sx * 0.81, 1.55, -2.2); g.add(w) }
+        const ws = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.5, 0.05), mat(0x9fd1ff)); ws.position.set(0, 1.5, -1.18); g.add(ws)
+        for (const x of [-0.9, 0.9]) for (const z of [-0.8, -3.2]) { const w = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 0.25, 10), mat(0x1c1b22)); w.rotation.z = Math.PI / 2; w.position.set(x, 0.38, z); g.add(w) }
+        const lt = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.15, 0.05), mat(0xff3030)); lt.position.set(0, 0.95, -4.02); g.add(lt)
+        break }
+      case 'train': {
+        const abuja = this.city === 'abuja'
+        const body = abuja ? 0xf4f6f4 : 0x2b4fb8, stripe = abuja ? 0x1f9d55 : 0xf4f6f4
+        for (let c = 0; c < 3; c++) {
+          const z0 = -c * 6.8
+          const car = new THREE.Mesh(new THREE.BoxGeometry(2.4, 2.9, 6.4), mat(body)); car.position.set(0, 1.95, z0 - 3.2); g.add(car)
+          const st = new THREE.Mesh(new THREE.BoxGeometry(2.44, 0.4, 6.44), mat(stripe)); st.position.set(0, 1.2, z0 - 3.2); g.add(st)
+          for (const sx of [-1, 1]) for (let i = 0; i < 3; i++) { const w = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.9, 1.2), mat(0x9fd1ff)); w.position.set(sx * 1.2, 2.4, z0 - 1.2 - i * 2.0); g.add(w) }
+          for (const z of [-1.2, -5.2]) { const wb = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.5, 1.4), mat(0x2a2a30)); wb.position.set(0, 0.35, z0 + z); g.add(wb) }
+        }
+        const nose = new THREE.Mesh(new THREE.BoxGeometry(2.3, 1.2, 0.5), mat(0xffd23f)); nose.position.set(0, 1.3, 0.1); g.add(nose)
+        const hl = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.35, 0.1), mat(0xfff3b0)); hl.position.set(0, 2.3, 0.02); g.add(hl)
+        break }
+      case 'plane': {
+        // a small plane taxiing across the road: fuselage across all three lanes, wings low enough that you slide underneath
+        const fus = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.85, 12, 10), mat(0xf4f6f8)); fus.rotation.z = Math.PI / 2; fus.position.set(0, 2.4, 0); g.add(fus)
+        const nose = new THREE.Mesh(new THREE.ConeGeometry(0.85, 1.6, 10), mat(0xd62828)); nose.rotation.z = -Math.PI / 2; nose.position.set(6.8, 2.4, 0); g.add(nose)
+        const wing = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.22, 7), mat(0xe6e9ec)); wing.position.set(1, 1.5, 0); g.add(wing)
+        const tail = new THREE.Mesh(new THREE.BoxGeometry(1.4, 2.2, 0.2), mat(0x2b3a8c)); tail.position.set(-5.4, 3.5, 0); g.add(tail)
+        const tailW = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.15, 3), mat(0xe6e9ec)); tailW.position.set(-5.4, 2.6, 0); g.add(tailW)
+        for (let i = 0; i < 6; i++) { const w = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.35, 1.75), mat(0x4c6a8a)); w.position.set(-3.5 + i * 1.1, 2.7, 0); g.add(w) }
+        for (const z of [-1.6, 1.6]) { const p = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 1.4, 6), mat(0x555566)); p.position.set(1, 0.7, z); g.add(p); const wl = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.16, 8), mat(0x1c1b22)); wl.rotation.x = Math.PI / 2; wl.position.set(1, 0.28, z); g.add(wl) }
+        break }
+      case 'bigBus': {
+        const abuja = this.city === 'abuja'
+        const L = 11, body = abuja ? 0x2b6ad0 : 0xd62828
+        const b = new THREE.Mesh(new THREE.BoxGeometry(2.5, 1.45, L), mat(body)); b.position.set(0, 1.07, -L / 2); g.add(b)
+        const lower = new THREE.Mesh(new THREE.BoxGeometry(2.54, 0.5, L + 0.04), mat(0xf4f6f4)); lower.position.set(0, 0.6, -L / 2); g.add(lower)
+        const roof = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.1, L - 0.4), mat(0xcfd6dc)); roof.position.set(0, BUS_ROOF - 0.05, -L / 2); g.add(roof)
+        for (let i = 0; i < 5; i++) { const ch = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.04, 0.3), mat(0xffd23f)); ch.position.set(0, BUS_ROOF + 0.01, -1.4 - i * 2.0); g.add(ch) }
+        for (const sx of [-1, 1]) for (let i = 0; i < 5; i++) { const w = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.6, 1.4), mat(0x9fd1ff)); w.position.set(sx * 1.26, 1.25, -1.3 - i * 2.0); g.add(w) }
+        const ws = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.7, 0.05), mat(0x9fd1ff)); ws.position.set(0, 1.25, 0.03); g.add(ws)
+        for (const sx of [-1, 1]) for (const z of [-2, -8.5]) { const w = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.3, 10), mat(0x1c1b22)); w.rotation.z = Math.PI / 2; w.position.set(sx * 1.15, 0.42, z); g.add(w) }
+        const lab = this.label(abuja ? 'AMAC' : 'BRT', 1.0); lab.position.set(0, 2.9, -1); g.add(lab)
+        break }
+      case 'walker': this.makePerson(g, [0x2b3a8c, 0xc4562a, 0x0f7a4a, 0xe0457b, 0x6a3b9a][Math.floor(Math.random() * 5)], 0); break
+      case 'crowd': { const cols = [0x2b3a8c, 0xc4562a, 0x0f7a4a, 0xe0457b, 0xf5b91c]; for (let i = 0; i < 4; i++) this.makePerson(g, cols[(i + Math.floor(Math.random() * 5)) % 5], 0, [-0.8, 0.2, 0.9, -0.1][i], [0.2, -0.2, 0.3, 0.8][i]); const sign = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.7, 0.06), mat(0xffffff)); sign.position.set(0.2, 2.4, 0.2); g.add(sign); const pole = new THREE.Mesh(new THREE.BoxGeometry(0.05, 1.4, 0.05), mat(0x6a4a2a)); pole.position.set(0.2, 1.7, 0.2); g.add(pole); break }
+      case 'shack': {
+        const wall = [0xe8c27a, 0xcf8a5a, 0xa8d0a0, 0xe0a0a0][Math.floor(Math.random() * 4)]
+        const b = new THREE.Mesh(new THREE.BoxGeometry(2.3, 2.1, 2.4), mat(wall)); b.position.set(0, 1.05, 0); g.add(b)
+        const roof = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.15, 2.9), mat(0x9a5a3a)); roof.position.set(0, 2.25, 0); roof.rotation.x = 0.12; g.add(roof)
+        const win = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.8, 0.06), mat(0x3a2a20)); win.position.set(0, 1.3, 1.22); g.add(win)
+        const awn = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.1, 0.7), mat([0xd62828, 0x2b3a8c, 0x1f9d55][Math.floor(Math.random() * 3)])); awn.position.set(0, 1.85, 1.5); g.add(awn)
+        const lab = this.label('SHOP', 0.9); lab.position.set(0, 2.8, 1.2); g.add(lab)
+        break }
       case 'barrier': { for (let i = 0; i < 4; i++) { const b = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.4, 0.3), mat(i % 2 ? 0xffffff : 0xd62828)); b.position.set(-0.9 + i * 0.6, 0.9, 0); g.add(b) } for (const x of [-1, 1]) { const p = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.1, 0.12), mat(0x555566)); p.position.set(x, 0.55, 0); g.add(p) } break }
     }
     return g
+  }
+
+  private makePerson(g: THREE.Group, shirt: number, y = 0, x = 0, z = 0) {
+    const skin = [0x5c3317, 0x7a4a2a, 0x3d2210][Math.floor(Math.random() * 3)]
+    const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.24, 0.7, 3, 6), mat(shirt)); body.position.set(x, y + 1.0, z); g.add(body)
+    const legs = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.55, 0.25), mat(0x2a2a40)); legs.position.set(x, y + 0.3, z); g.add(legs)
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 6), mat(skin)); head.position.set(x, y + 1.75, z); g.add(head)
+  }
+
+  private makeTunnel(len: number): THREE.Group {
+    const g = new THREE.Group()
+    const half = LANE_W * 1.5 + 1.6
+    const concrete = mat(0x7a7a84)
+    const roof = new THREE.Mesh(new THREE.BoxGeometry(half * 2 + 1.2, 0.8, len), concrete); roof.position.set(0, 8.2, -len / 2); g.add(roof)
+    for (const sx of [-1, 1]) { const wall = new THREE.Mesh(new THREE.BoxGeometry(0.8, 8.4, len), mat(0x6a6a74)); wall.position.set(sx * (half + 0.4), 4.2, -len / 2); g.add(wall) }
+    for (let z = 0; z < len; z += 7) {
+      const rib = new THREE.Mesh(new THREE.BoxGeometry(half * 2 + 1.2, 0.5, 0.5), mat(0x55555e)); rib.position.set(0, 7.65, -z - 1); g.add(rib)
+      const lamp = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.14, 0.5), new THREE.MeshBasicMaterial({ color: 0xfff0b0 })); lamp.position.set(0, 7.5, -z - 4); g.add(lamp)
+      for (const sx of [-1, 1]) { const st = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.3, 1.4), new THREE.MeshBasicMaterial({ color: 0xffa030 })); st.position.set(sx * (half - 0.1), 1.2, -z - 3); g.add(st) }
+    }
+    const mouth = new THREE.Mesh(new THREE.BoxGeometry(half * 2 + 2.6, 2.2, 1.2), mat(0x4a4a54)); mouth.position.set(0, 9.4, -0.4); g.add(mouth)
+    const lab = this.label('TUNNEL', 1.6); lab.position.set(0, 9.6, 0.4); g.add(lab)
+    return g
+  }
+
+  private makeJunction(len: number): THREE.Group {
+    const g = new THREE.Group()
+    const w = LANE_W * 3
+    for (let i = 0; i < 9; i++) { const z = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.03, 4), mat(0xf4f1e6)); z.position.set(-w / 2 + 0.5 + i * (w / 9), 0.04, -len / 2); g.add(z) }
+    const cross = new THREE.Mesh(new THREE.BoxGeometry(w + 8, 0.02, 3), mat(0x33333c)); cross.position.set(0, 0.03, -len / 2 - 4.5); void cross
+    for (const sx of [-1, 1]) {
+      const px = sx * (LANE_W * 1.5 + 1.1)
+      const pole = new THREE.Mesh(new THREE.BoxGeometry(0.16, 4.2, 0.16), mat(0x44444e)); pole.position.set(px, 2.1, -1); g.add(pole)
+      const box = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.3, 0.4), mat(0x1c1b22)); box.position.set(px, 4.4, -1); g.add(box)
+      for (const [i, c] of [0xff3030, 0xffc928, 0x30e060].entries()) { const l = new THREE.Mesh(new THREE.SphereGeometry(0.14, 6, 6), new THREE.MeshBasicMaterial({ color: c })); l.position.set(px - sx * 0.02, 4.8 - i * 0.4, -0.78); g.add(l) }
+      for (let i = 0; i < 3; i++) this.makePerson(g, [0x2b3a8c, 0xc4562a, 0xe0457b][i], 0.3, px + sx * (0.6 + i * 0.5), -3 - i * 1.2)
+    }
+    return g
+  }
+
+  private rival?: { group: THREE.Group; parts: { legL?: THREE.Object3D; legR?: THREE.Object3D; armL?: THREE.Object3D; armR?: THREE.Object3D } }
+  /** Add a second runner: a teal robot on foot, or a teal cab on the road. */
+  setRival(name: string) {
+    if (this.rival) return
+    const g = new THREE.Group(), parts: { legL?: THREE.Object3D; legR?: THREE.Object3D; armL?: THREE.Object3D; armR?: THREE.Object3D } = {}
+    const teal = 0x1ec8b4
+    if (this.mode === 'danfo') {
+      const body = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.9, 5.2), mat(teal)); body.position.y = 1.55; g.add(body)
+      const st = new THREE.Mesh(new THREE.BoxGeometry(2.24, 0.34, 5.24), mat(0x1c1b22)); st.position.y = 1.35; g.add(st)
+      const wind = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.7, 0.06), mat(0x9fd1ff)); wind.position.set(0, 1.95, 2.62); g.add(wind)
+      for (const x of [-1, 1]) for (const z of [-1.7, 1.7]) { const w = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.35, 10), mat(0x1c1b22)); w.rotation.z = Math.PI / 2; w.position.set(x * 1.0, 0.5, z); g.add(w) }
+    } else {
+      const body = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.0, 0.5), mat(teal)); body.position.y = 1.35; g.add(body)
+      const head = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.5, 0.5), mat(0xdfe8ec)); head.position.y = 2.1; g.add(head)
+      const visor = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.16, 0.06), new THREE.MeshBasicMaterial({ color: 0x7affc8 })); visor.position.set(0, 2.12, -0.27); g.add(visor)
+      const ant = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.4, 5), mat(0x555566)); ant.position.y = 2.55; g.add(ant)
+      const ball = new THREE.Mesh(new THREE.SphereGeometry(0.1, 6, 6), new THREE.MeshBasicMaterial({ color: 0xff4f6a })); ball.position.y = 2.8; g.add(ball)
+      const limb = (x: number, y: number, h: number, col: number) => { const pv = new THREE.Group(); pv.position.set(x, y, 0); const m = new THREE.Mesh(new THREE.BoxGeometry(0.22, h, 0.22), mat(col)); m.position.y = -h / 2; pv.add(m); g.add(pv); return pv }
+      parts.legL = limb(-0.2, 0.9, 0.9, 0x2a3a44); parts.legR = limb(0.2, 0.9, 0.9, 0x2a3a44); parts.armL = limb(-0.55, 1.75, 0.8, 0xdfe8ec); parts.armR = limb(0.55, 1.75, 0.8, 0xdfe8ec)
+    }
+    g.traverse((o) => { const m = o as THREE.Mesh; const mt = m.material as THREE.Material | undefined; if (mt && 'opacity' in mt) { mt.transparent = true; (mt as THREE.MeshLambertMaterial).opacity = 0.85 } })
+    const tag = this.label(name, 1.2); tag.position.y = this.mode === 'danfo' ? 4.4 : 3.5; g.add(tag)
+    g.visible = false
+    this.root.add(g); this.rival = { group: g, parts }
   }
 
   private makePower(kind: string): THREE.Group {
@@ -221,7 +341,20 @@ export class DashRenderer {
   // ---------- frame ----------
   hit() { this.shake = 0.5 }
 
-  render(st: DashState, dt: number, time: number) {
+  private tunnelDim = 0
+  private drawRival(st: DashState, rv: DashState | undefined, time: number) {
+    const r = this.rival
+    if (!r) return
+    if (!rv) { r.group.visible = false; return }
+    const rel = rv.dist - st.dist
+    r.group.visible = rel > -6 && rel < 140
+    r.group.position.set(rv.x * LANE_W + (Math.abs(rv.x - st.x) < 0.4 && Math.abs(rel) < 4 ? 0.7 : 0), rv.y, -rel)
+    if (rv.over) r.group.rotation.z = Math.min(1.4, r.group.rotation.z + 0.1)
+    const sw = Math.sin(time * (8 + rv.speed * 0.5)) * 0.9
+    if (r.parts.legL) { r.parts.legL.rotation.x = sw; r.parts.legR!.rotation.x = -sw; r.parts.armL!.rotation.x = -sw; r.parts.armR!.rotation.x = sw }
+  }
+
+  render(st: DashState, dt: number, time: number, rival?: DashState) {
     if (this.ctxLost) return
     const t0 = performance.now()
     const dist = st.dist
@@ -242,6 +375,7 @@ export class DashRenderer {
       p.body.rotation.z = (st.lane - st.x) * 0.06
       this.busHeads.forEach((h, i) => { h.visible = i < st.aboard })
     }
+    this.drawRival(st, rival, time)
     this.player.visible = st.invuln <= 0 || Math.floor(time * 14) % 2 === 0 || st.powers.suya > 0
     this.shadow.position.set(st.x * LANE_W, 0.04, 0); this.shadow.scale.setScalar(this.mode === 'danfo' ? 2 : 1 - Math.min(0.5, st.y * 0.15))
     // camera
@@ -272,7 +406,7 @@ export class DashRenderer {
     let ci = 0
     for (const o of st.objs) {
       const rel = o.dist - dist
-      if (rel < -8 || rel > 140 || o.taken) { continue }
+      if (rel + (o.length ?? 0) < -8 || rel > 160 || o.taken) { continue }
       if (o.type === 'coin') {
         if (ci >= 140) continue
         this.tmp.position.set(o.lane * LANE_W, (o.y ?? 0.9) + Math.sin(time * 3 + o.id) * 0.08, -rel); this.tmp.rotation.set(0, time * 3 + o.id, 0); this.tmp.updateMatrix()
@@ -282,19 +416,27 @@ export class DashRenderer {
       used.add(o.id)
       let a = this.active.get(o.id)
       if (!a) {
-        const key = o.type === 'obstacle' ? o.kind : o.type === 'power' ? `power:${o.kind}` : 'stop'
+        const key = o.type === 'obstacle' ? o.kind : o.type === 'power' ? `power:${o.kind}` : o.type === 'tunnel' ? 'tunnel' : o.type === 'decor' ? 'junction' : 'stop'
         const free = this.pool.get(key)?.pop()
-        const group = free ?? (o.type === 'obstacle' ? this.makeObstacle(o.kind as ObstacleKind) : o.type === 'power' ? this.makePower(o.kind) : this.makeStop(o))
+        const group = free ?? (o.type === 'obstacle' ? this.makeObstacle(o.kind as ObstacleKind) : o.type === 'power' ? this.makePower(o.kind) : o.type === 'tunnel' ? this.makeTunnel(o.length ?? 70) : o.type === 'decor' ? this.makeJunction(o.length ?? 12) : this.makeStop(o))
         this.root.add(group); a = { group, kind: key }; this.active.set(o.id, a)
       }
-      a.group.position.set(o.type === 'stop' ? 0 : o.lane * LANE_W, 0, -rel)
+      a.group.position.set(o.type === 'stop' || o.type === 'tunnel' || o.type === 'decor' ? 0 : (o.x ?? o.lane) * LANE_W, 0, -rel)
+      if (o.kind === 'walker') a.group.position.y = Math.abs(Math.sin(time * 9 + o.id)) * 0.12
+      if (o.kind === 'plane') a.group.position.x = 0
       if (o.type === 'stop') a.group.position.x = o.lane * LANE_W
       if (o.type === 'power') a.group.rotation.y = time * 2
-      if (o.type === 'obstacle' && o.passed && OBSTACLE_RESPONSE[o.kind as ObstacleKind] !== 'dodge') a.group.position.y = 0
+      if (o.type === 'obstacle' && o.passed && OBSTACLE_RESPONSE[o.kind as ObstacleKind] === 'jump' && o.kind !== 'walker') a.group.position.y = 0
     }
     this.coins.count = ci; this.coins.instanceMatrix.needsUpdate = true; if (this.coins.instanceColor) this.coins.instanceColor.needsUpdate = true
     for (const [id, a] of this.active) if (!used.has(id)) { this.root.remove(a.group); const arr = this.pool.get(a.kind) ?? []; arr.push(a.group); this.pool.set(a.kind, arr); this.active.delete(id) }
     for (const sp of this.spinners) sp.rotation.y = time * 2
+    // inside a tunnel the light drops and the fog turns dark
+    let inTun = 0
+    for (const o of st.objs) if (o.type === 'tunnel') { const rel = o.dist - dist; if (rel < 6 && rel + (o.length ?? 70) > 0) { inTun = 1; break } }
+    this.tunnelDim += (inTun - this.tunnelDim) * Math.min(1, dt * 5)
+    this.hemi.intensity = 0.95 * (1 - 0.5 * this.tunnelDim); this.sun.intensity = 1.05 * (1 - 0.7 * this.tunnelDim)
+    if (this.scene.fog) { (this.scene.fog as THREE.Fog).color.setHex(0xffb28a).lerp(new THREE.Color(0x1a1620), this.tunnelDim) }
     // speed streaks
     const sv = Math.max(0, (st.speed - 16) / 12)
     for (let i = 0; i < 24; i++) { const side = i % 2 ? 1 : -1; const z = -((i * 9 + dist * 2.2) % 70); this.tmp.position.set(side * (4 + (i * 7) % 9), 0.4 + (i * 5) % 6, z); this.tmp.scale.set(1, 1, 0.3 + sv * 1.6); this.tmp.updateMatrix(); this.speedStreaks.setMatrixAt(i, this.tmp.matrix) }

@@ -20,7 +20,9 @@ for (let i = 0; i < 6; i++) {
 await page.getByRole('button', { name: /Play Go-Slow Dash/ }).click()
 await page.waitForTimeout(1500)
 await page.screenshot({ path: `${OUT}/20-dash-ready.png` })
-await page.getByText('Tap to start').click()
+await page.getByText('▶ Play').click()
+await page.screenshot({ path: `${OUT}/20b-dash-choose.png` })
+await page.getByText('Run alone').click()
 for (let i = 0; i < 12; i++) { await page.waitForTimeout(500); await page.keyboard.press(['ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown'][i % 4]) }
 await page.screenshot({ path: `${OUT}/21-dash-run.png` })
 for (let i = 0; i < 80; i++) { await page.waitForTimeout(500); if (await page.getByText('WAHALA!').count()) break; await page.keyboard.press(['ArrowLeft', 'ArrowRight', 'ArrowUp'][i % 3]) }

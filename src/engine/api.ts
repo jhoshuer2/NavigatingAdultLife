@@ -99,7 +99,7 @@ export function setLifestyle(state: GameState, lifestyle: Lifestyle): GameState 
   return withCtx(state, (ctx) => { ctx.s.character.lifestyle = lifestyle }).state
 }
 
-export interface MiniGameResult { coins: number; distance: number; closeCalls: number; passengers: number; mode: 'foot' | 'danfo'; score: number; fares?: number; missionsDone?: number }
+export interface MiniGameResult { coins: number; distance: number; closeCalls: number; passengers: number; mode: 'foot' | 'danfo'; score: number; fares?: number; missionsDone?: number; raceWon?: boolean }
 
 /** Apply the result of a Go-Slow Dash run to the life sim. Pure; the cash-out cap is enforced here. */
 export function applyDashResult(state: GameState, r: MiniGameResult): { state: GameState; cash: number; capped: boolean } {
@@ -115,6 +115,7 @@ export function applyDashResult(state: GameState, r: MiniGameResult): { state: G
     addStat(ctx, 'happiness', 2, 'Go-Slow Dash')
     if (r.closeCalls >= 5) addStat(ctx, 'reputation', 1, 'Go-Slow Dash')
     s.flags.dashPlayed = true
+    if (r.raceWon) s.flags.dashRaceWon = true
     if (r.distance >= 500) s.flags.dash500 = true
     if (r.distance >= 1500) s.flags.dash1500 = true
     s.dashBest = Math.max(s.dashBest, r.score)
