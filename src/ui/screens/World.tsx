@@ -5,10 +5,11 @@ import { Icon, type IconName } from '../icons'
 import { Avatar } from '../Avatar'
 import { getActivities, getShopItems } from '@engine/api'
 import { useActivityRouter } from '../useActivities'
-import { districtFor, DISTRICTS, SPAWN, WORLD, type District, type PlaceId } from '../../world/layout'
+import { districtFor, DISTRICTS, spawnOf, WORLD, type District, type PlaceId } from '../../world/layout'
 import { faithOf } from '../../world/flavour'
 import { WorldRenderer, type Near, type NearInside, type WorldNpc } from '../../world/WorldRenderer'
 import { INTERIORS, type HotAction } from '../../world/interiors'
+import { setHomeVariant } from '../../world/homes'
 import { fmtClock, isNight, isOpen, opensAt } from '../../world/time'
 import type { NpcRole } from '@engine/core/types'
 import { StudyTask, type StudyMode } from '../tasks/StudyTask'
@@ -93,7 +94,6 @@ export default function World() {
   const rendRef = useRef<WorldRenderer | null>(null)
   const [near, setNear] = useState<Near>({ place: null, npc: null })
   const [fail, setFail] = useState(false)
-  const [pos, setPos] = useState({ x: SPAWN.x, z: SPAWN.z, h: 0 })
   const [slow, setSlow] = useState(false)
   const [mapOpen, setMapOpen] = useState(false)
   // telemetry only (no gameplay effect): where the player is and which task they run
@@ -113,6 +113,9 @@ export default function World() {
   const districtId = life?.character.housing.districtId ?? 'surulere'
   const faith = life ? faithOf(life) : 'church'
   const district = useMemo<District>(() => districtFor(districtId, faith), [districtId, faith])
+  setHomeVariant(districtId) // the inside of your home follows your district
+  const SPAWN = spawnOf(district)
+  const [pos, setPos] = useState({ x: SPAWN.x, z: SPAWN.z, h: 0 })
   const age = life?.character.age ?? 6
   const ageBand = age < 12 ? 0 : age < 18 ? 1 : 2
   const modalOpen = !!g.sheet || life?.phase !== 'action' || (!!life?.quiz && !task) || (!!task && task.kind !== 'chores' && task.kind !== 'shop' && task.kind !== 'jog' && task.kind !== 'trip' && task.kind !== 'match') || !!destPick || !!coopPick || !!hotId || !!sleep || fade || mapOpen

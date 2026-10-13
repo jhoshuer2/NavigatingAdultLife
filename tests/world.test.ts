@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildDistrict, DISTRICTS, SPAWN, SHOP_SPOTS } from '../src/world/layout'
+import { buildDistrict, DISTRICTS, spawnOf, SHOP_SPOTS } from '../src/world/layout'
 import { HOME_CHORES } from '../src/world/interiors'
 import { buildNav, findPath, walkable, moveWithCollision } from '../src/world/nav'
 
@@ -8,6 +8,7 @@ describe('district layout and navigation', () => {
     it(`${id}: spawn and every place door are walkable and reachable`, () => {
       const d = buildDistrict(id)
       const nav = buildNav(d)
+      const SPAWN = spawnOf(d)
       expect(walkable(nav, SPAWN.x, SPAWN.z)).toBe(true)
       for (const p of d.places) {
         expect(walkable(nav, p.door.x, p.door.z), `${id} door ${p.id}`).toBe(true)
@@ -107,5 +108,27 @@ describe('home anchors', () => {
       expect(walkable(nav, a.ax, a.az), `approach ${a.id}`).toBe(true)
       expect(findPath(nav, def.spawn, { x: a.ax, z: a.az }), `path ${a.id}`).not.toBeNull()
     }
+  })
+})
+
+import { homeFor } from '../src/world/homes'
+describe('home floor plans for every district', () => {
+  for (const id of Object.keys(DISTRICTS)) {
+    it(`${id}: hotspots, people, chores, anchors and appliances are reachable and not inside furniture`, () => {
+      const { def, chores } = homeFor(id)
+      const nav = buildNavFor(interiorBlockers(def), def.bounds, 0.5)
+      expect(walkable(nav, def.spawn.x, def.spawn.z), 'spawn').toBe(true)
+      for (const h of def.hotspots) { expect(walkable(nav, h.x, h.z), `hotspot ${h.id}`).toBe(true); expect(findPath(nav, def.spawn, { x: h.x, z: h.z }), `path ${h.id}`).not.toBeNull() }
+      for (const p of def.people) { expect(walkable(nav, p.x, p.z), `person ${p.id}`).toBe(true); expect(findPath(nav, def.spawn, { x: p.x, z: p.z }), `path ${p.id}`).not.toBeNull() }
+      for (const c of chores) { expect(walkable(nav, c.x, c.z), `chore ${c.id}`).toBe(true); expect(findPath(nav, def.spawn, { x: c.x, z: c.z }), `path ${c.id}`).not.toBeNull() }
+      for (const a of def.anchors!) { expect(walkable(nav, a.ax, a.az), `anchor ${a.id}`).toBe(true); expect(findPath(nav, def.spawn, { x: a.ax, z: a.az }), `path ${a.id}`).not.toBeNull() }
+      // the appliances you can use exist in every plan
+      for (const k of ['bed', 'sofa', 'tvunit', 'cooker', 'fridge', 'table', 'sink', 'shower', 'toilet', 'desk', 'chair']) expect(def.objs.some((o) => o.kind === k), k).toBe(true)
+    })
+  }
+  it('the plans really differ from each other', () => {
+    const sig = (id: string) => JSON.stringify(homeFor(id).def.walls) + JSON.stringify(homeFor(id).def.objs.map((o) => o.rect))
+    const sigs = new Set(Object.keys(DISTRICTS).map(sig))
+    expect(sigs.size).toBe(Object.keys(DISTRICTS).length)
   })
 })

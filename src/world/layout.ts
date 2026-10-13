@@ -72,9 +72,32 @@ DISTRICTS.maitama = {
   names: { home: 'Your home', school: 'Maitama Premier School', market: 'Maitama Farmers Market', mamaput: 'Garden Kitchen', pitch: 'Estate Court', worship: 'Place of Worship', busstop: 'Maitama Cab Rank', office: 'Your Workplace', jobcentre: 'Recruitment Lounge', outing: 'Aso Rock View (Group Hike)' },
 }
 
+const hashStr = (s: string) => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) } return h >>> 0 }
+const PERMS: number[][] = [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]]
+
+/** Every district has its own street plan: the home, the place of worship and the gym trade places along the north side of the main road, and the buyka, the office and the job centre along the south side. */
+function shufflePlaces(places: Place[], districtId: string): Place[] {
+  const north = ['home', 'worship', 'gym'], south = ['mamaput', 'office', 'jobcentre']
+  const byId = new Map(places.map((p) => [p.id as string, p]))
+  const out = new Map<string, Place>(places.map((p) => [p.id as string, p]))
+  const clampX = (x0: number, w: number) => { const lo = x0 + w / 2 > 0 ? 33 : -WORLD.half + 2; return Math.max(lo, Math.min(WORLD.half - 2 - w, x0)) } // keep a lane free beside the market and the school
+  const assign = (ids: string[], front: 'z1' | 'z0', perm: number[]) => {
+    const slots = ids.map((id) => { const p = byId.get(id)!; return { cx: (p.rect.x1 + p.rect.x0) / 2, edge: front === 'z1' ? p.rect.z1 : p.rect.z0 } })
+    ids.forEach((id, i) => {
+      const p = byId.get(id)!, sl = slots[perm[i]]
+      const w = p.rect.x1 - p.rect.x0, dd = p.rect.z1 - p.rect.z0, oldCx = (p.rect.x1 + p.rect.x0) / 2
+      const x0 = clampX(sl.cx - w / 2, w)
+      const rect = front === 'z1' ? { x0, x1: x0 + w, z0: sl.edge - dd, z1: sl.edge } : { x0, x1: x0 + w, z0: sl.edge, z1: sl.edge + dd }
+      out.set(id, { ...p, rect, door: { x: x0 + w / 2 + (p.door.x - oldCx), z: front === 'z1' ? sl.edge + 2.5 : sl.edge - 2.5 } })
+    })
+  }
+  assign(north, 'z1', PERMS[hashStr(districtId + ':north') % 6]); assign(south, 'z0', PERMS[hashStr(districtId + ':south') % 6])
+  return places.map((p) => out.get(p.id as string)!)
+}
+
 export function placesFor(theme: DistrictTheme): Place[] {
   const n = theme.names
-  return [
+  return shufflePlaces([
     { id: 'home', name: n.home, icon: '🏠', blurb: 'Sleep, eat, family and the end of the year.', rect: { x0: -25, x1: -12, z0: -21, z1: -11 }, door: { x: -18.5, z: -8.5 }, zoneR: 3, activities: ['rest', 'familyTime', 'chores', 'treat'], color: 0xa8452a },
     { id: 'school', name: n.school, icon: '🏫', blurb: 'Pop quizzes, strict teachers and ten thousand uniforms.', rect: { x0: 10, x1: 29, z0: -27, z1: -15 }, door: { x: 19.5, z: -12.5 }, zoneR: 3.2, activities: ['study'], color: 0x2b3a8c },
     { id: 'market', name: n.market, icon: '🧺', blurb: 'Hustle, haggle, and buy things that actually help.', rect: { x0: 9, x1: 30, z0: 10, z1: 27 }, door: { x: 19.5, z: 8.5 }, zoneR: 4.5, activities: ['hustle', 'shop', 'treat'], color: 0xe6a817, open: true },
@@ -86,10 +109,12 @@ export function placesFor(theme: DistrictTheme): Place[] {
     { id: 'outing', name: n.outing, icon: theme.city === 'abuja' ? '⛰️' : '🏖️', blurb: theme.city === 'abuja' ? 'Hike up the hills with your friends. Abuja is built around them.' : 'Take your friends to the beach. This is Lagos weekend.', rect: { x0: 9, x1: 31, z0: -47, z1: -35 }, door: { x: 20, z: -32 }, zoneR: 6.5, activities: [theme.city === 'abuja' ? 'hike' : 'beach'], color: theme.city === 'abuja' ? 0x4a8a3a : 0x35b0d8, open: true },
     { id: 'gym', name: n.gym ?? `${theme.name} Fitness Gym`, icon: '🏋️', blurb: 'Treadmills, weights and mats behind glass walls, so the whole street can watch you sweat. Open from 5am.', rect: { x0: -44, x1: -31, z0: -19, z1: -9.5 }, door: { x: -37.5, z: -7 }, zoneR: 3, activities: ['exercise'], color: 0x1ec8b4 },
     { id: 'jobcentre', name: n.jobcentre, icon: '📝', blurb: 'CVs, aptitude tests and "who do you know?"', rect: { x0: -45, x1: -33, z0: 11, z1: 21 }, door: { x: -39, z: 8.5 }, zoneR: 3, activities: ['applyJob'], color: 0x0f7a4a },
-  ]
+  ], theme.id)
 }
 
-export const SPAWN = { x: -18.5, z: -6 }
+export const SPAWN = { x: -18.5, z: -6 } // where the first district starts you; every district now has its own, see spawnOf
+/** Where you start (and the home end of the street): just in front of your own front door. */
+export const spawnOf = (d: { places: Place[] }) => { const h = d.places.find((p) => p.id === 'home')!; return { x: h.door.x, z: h.door.z + 2.5 } }
 
 export interface Prop { kind: 'house' | 'tree' | 'lamp' | 'kiosk' | 'stall' | 'bus' | 'generator' | 'fence' | 'tall' | 'palm' | 'billboard' | 'flag' | 'wall' | 'gate'; rect: Rect; color: number; h: number; blocks: boolean; text?: string }
 
