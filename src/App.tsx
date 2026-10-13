@@ -17,7 +17,9 @@ function SoundPill({ enabled }: { enabled: boolean }) {
   const [st, setSt] = useState(audio.status())
   useEffect(() => { const iv = setInterval(() => setSt(audio.status()), 700); return () => clearInterval(iv) }, [])
   if (!enabled || st === 'running' || st === 'off') return null
-  return <button className="fixed left-1/2 -translate-x-1/2 z-[60] chip chip-gold !text-[13px] !py-1.5 !px-3 pop" style={{ top: 'calc(.5rem + var(--safe-t))' }} onClick={async () => { setSt(await audio.check()); audio.playMusic('menu') }}>🔇 Sound is off. Tap to turn it on</button>
+  // before the first tap the browser keeps every page silent; any tap starts the sound. 'suspended' means a tap did not manage it.
+  const text = st === 'waiting' ? '🔊 Tap anywhere to start the sound' : '🔇 Sound is blocked. Tap here to turn it on'
+  return <button className="fixed left-1/2 -translate-x-1/2 z-[60] chip chip-gold !text-[13px] !py-1.5 !px-3 pop" style={{ top: 'calc(.5rem + var(--safe-t))' }} onClick={async () => { setSt(await audio.check()); audio.playMusic('menu') }}>{text}</button>
 }
 
 export default function App() {

@@ -43,6 +43,11 @@ import { track, setAnalyticsContext } from '@platform/analytics'
 const FOOD_SCRIPT: Exchange[] = [{ npc: 'You look hungry. What would you like to eat?', options: [{ text: 'Rice and stew, please. Thank you!', tone: 'warm', reply: 'Sit down, it is coming. Wash your hands first.' }, { text: 'Whatever smells like love!', tone: 'funny', reply: 'Ha! Always so easy to please. Sit down.' }, { text: 'Anything.', tone: 'meh', reply: 'Anything is not a meal! Sit down, I will decide.' }] }]
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
+// World is rebuilt when you come back from the Dash. Requests left in the store from before (talk to Mama, start a match...) must
+// not fire a second time, so each request is acted on once, by its counter.
+const handledReq: Record<string, number> = {}
+const fresh = (key: string, r: { n: number } | null | undefined): boolean => { if (!r || handledReq[key] === r.n) return false; handledReq[key] = r.n; return true }
+
 export default function World() {
   const g = useGame()
   const { life, meta, walkReq, enterReq, hour } = g
@@ -279,7 +284,7 @@ export default function World() {
 
   // walk requests (from the Places list or the guidance card)
   useEffect(() => {
-    if (!walkReq || !rendRef.current) return
+    if (!walkReq || !rendRef.current || !fresh('walk', walkReq)) return
     const p = district.places.find((x) => x.id === walkReq.place)
     if (rendRef.current.inside) { rendRef.current.exitInterior(); setInside(null); setHotId(null) }
     if (p) rendRef.current.walkTo(p.door.x, p.door.z)
@@ -336,7 +341,7 @@ export default function World() {
     audio.sfx('click'); setFade(true); intent.current = null
     setTimeout(() => { r.exitInterior(); setInside(null); setHotId(null); setNearIn({ hotspot: null, person: null, exit: false }); setFade(false) }, 280)
   }
-  useEffect(() => { if (enterReq) enter(enterReq.place, enterReq.intent) /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [enterReq])
+  useEffect(() => { if (fresh('enter', enterReq) && enterReq) enter(enterReq.place, enterReq.intent) /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [enterReq])
 
   const talkInside = (pid: string) => {
     const info = rendRef.current?.personAt(pid); if (!info) return
@@ -375,7 +380,7 @@ export default function World() {
     setFade(true)
     setTimeout(() => { if (r.inside) { r.exitInterior(); setInside(null); setHotId(null) } setTask({ kind: 'penalty', act: actId }); setFade(false) }, 280)
   }
-  useEffect(() => { if (g.penaltyReq) startPenalty(g.penaltyReq.act) /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [g.penaltyReq])
+  useEffect(() => { if (fresh('penalty', g.penaltyReq) && g.penaltyReq) startPenalty(g.penaltyReq.act) /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [g.penaltyReq])
 
   const startMatch = () => {
     const r = rendRef.current; if (!r || fade) return
@@ -384,7 +389,7 @@ export default function World() {
     setFade(true)
     setTimeout(() => { if (r.inside) { r.exitInterior(); setInside(null); setHotId(null) } const pl = district.places.find((p) => p.id === 'pitch')!; r.placePlayer((pl.rect.x0 + pl.rect.x1) / 2 - 1.2, (pl.rect.z0 + pl.rect.z1) / 2, Math.PI / 2); setTask({ kind: 'match', actAs }); setFade(false) }, 280)
   }
-  useEffect(() => { if (g.matchReq) startMatch() /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [g.matchReq])
+  useEffect(() => { if (fresh('match', g.matchReq)) startMatch() /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [g.matchReq])
 
   const startJog = () => {
     const r = rendRef.current; if (!r || fade) return
@@ -392,7 +397,7 @@ export default function World() {
     setFade(true)
     setTimeout(() => { if (r.inside) { r.exitInterior(); setInside(null); setHotId(null) } setTask({ kind: 'jog' }); setFade(false) }, 280)
   }
-  useEffect(() => { if (g.jogReq) startJog() /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [g.jogReq])
+  useEffect(() => { if (fresh('jog', g.jogReq)) startJog() /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [g.jogReq])
 
   const startShop = () => {
     const r = rendRef.current; if (!r || fade) return
@@ -402,7 +407,7 @@ export default function World() {
     setFade(true)
     setTimeout(() => { if (r.inside) { r.exitInterior(); setInside(null); setHotId(null) } r.placePlayer(d.door.x, d.door.z + 1.2, Math.PI); setTask({ kind: 'shop' }); setFade(false) }, 280)
   }
-  useEffect(() => { if (g.startShopReq) startShop() /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [g.startShopReq])
+  useEffect(() => { if (fresh('shop', g.startShopReq)) startShop() /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [g.startShopReq])
 
   const startMarket = () => {
     const r = rendRef.current; if (!r || fade) return
@@ -411,7 +416,7 @@ export default function World() {
     setFade(true)
     setTimeout(() => { if (r.inside) { r.exitInterior(); setInside(null); setHotId(null) } setTask({ kind: 'market' }); setFade(false) }, 280)
   }
-  useEffect(() => { if (g.marketReq) startMarket() /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [g.marketReq])
+  useEffect(() => { if (fresh('market', g.marketReq)) startMarket() /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [g.marketReq])
 
   const beginOvertime = () => {
     const why = enabledAct('overtime'); if (why) { g.toast(why); return }
@@ -427,7 +432,7 @@ export default function World() {
     if (home.length) { pendingChores.current = go; setCoopPick(home); return }
     go()
   }
-  useEffect(() => { if (g.startChoresReq) beginChores() /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [g.startChoresReq])
+  useEffect(() => { if (fresh('chores', g.startChoresReq)) beginChores() /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [g.startChoresReq])
 
   const settingHere = (): Setting => { const p = rendRef.current?.inside; return p === 'home' ? 'home' : p === 'mamaput' ? 'mamaput' : p === 'school' ? 'school' : p === 'office' ? 'office' : near.place === 'pitch' ? 'pitch' : 'street' }
   const beginTalk = (kind: 'chat' | 'hang' | 'family' | 'food', role: NpcRole) => {
@@ -445,7 +450,7 @@ export default function World() {
     else { const me = r.position; r.addActor('buddy', { name: npc.name, gender: npc.gender, x: me.x + 1.6, z: me.z, heading: -Math.PI / 2 }); partner = { id: 'buddy', name: npc.name } }
     setTask({ kind: 'talk', partner, role, setting: settingHere(), rounds: kind === 'chat' ? 2 : kind === 'food' ? 1 : 3, script: kind === 'food' ? FOOD_SCRIPT : undefined, title: kind === 'food' ? `Asking ${npc.name} for food` : kind === 'chat' ? `Chatting with ${npc.name}` : kind === 'hang' ? `Hanging out with ${npc.name}` : `Time with ${npc.name}`, actId, hidden })
   }
-  useEffect(() => { if (g.talkReq) beginTalk(g.talkReq.kind, g.talkReq.role as NpcRole) /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [g.talkReq])
+  useEffect(() => { if (fresh('talk', g.talkReq) && g.talkReq) beginTalk(g.talkReq.kind, g.talkReq.role as NpcRole) /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [g.talkReq])
 
   const startHang = (dest: PlaceId) => {
     const r = rendRef.current; if (!r || !destPick || !life) return
