@@ -38,7 +38,7 @@ export function TitleArt({ className = '', drive = 'go', say }: { className?: st
             <rect x="8" y="78" width="314" height="16" fill="#1a0f55" />
             {[24, 82, 140, 198].map((x) => <rect key={x} x={x} y="34" width="48" height="36" rx="7" fill="#9fe3ff" stroke="#1a0f55" strokeWidth="4" />)}
             <rect x="256" y="34" width="52" height="40" rx="8" fill="#9fe3ff" stroke="#1a0f55" strokeWidth="4" />
-            <text x="22" y="112" fontFamily="'Lilita One', sans-serif" fontSize="17" fill="#1a0f55" letterSpacing="1">OYA ENTER! · CMS · OBALENDE</text>
+            <text x="22" y="112" fontFamily="'Lilita One', sans-serif" fontSize="17" fill="#1a0f55" letterSpacing="1">OYA ENTER! · LAGOS · ABUJA</text>
             <rect x="300" y="96" width="18" height="12" rx="4" fill="#fff3b0" />
             {[70, 250].map((cx) => <g key={cx}><circle cx={cx} cy="124" r="19" fill="#1a0f55" /><g className="wheel"><circle cx={cx} cy="124" r="9" fill="#ccc" /><path d={`M${cx - 9} 124h18M${cx} 115v18`} stroke="#555" strokeWidth="2.5" /></g></g>)}
             <circle className="puff" cx="6" cy="112" r="7" fill="#fff" opacity=".7" />
