@@ -47,6 +47,7 @@ interface Store {
   startMatch: () => void
   jogReq: { n: number } | null
   tripReq: { n: number } | null
+  birthday: { age: number } | null
   rideReq: { dest: PlaceId; n: number } | null
   startTrip: () => void
   startRide: (dest: PlaceId, fare: number) => void
@@ -78,6 +79,7 @@ interface Store {
   choose: (id: string) => void
   proceed: () => void
   nextYear: () => void
+  closeBirthday: () => void
   lifestyle: (l: Lifestyle) => void
   startDash: () => void
   finishDash: (r: MiniGameResult) => void
@@ -138,7 +140,7 @@ export const useGame = create<Store>((set, get) => {
   }
   const setMeta = (meta: MetaProfile) => { saveMeta(meta); set({ meta }); audio.configure(meta.settings); configureVoice({ on: meta.settings.sound && meta.settings.voice !== false, volume: meta.settings.volume }) }
   return {
-    screen: 'title', life: null, meta: defaultMeta(), sheet: null, toasts: [], quizFeedback: null, dashMode: 'foot', lastDash: null, endingRecorded: false, placeId: null, npcId: null, walkReq: null, hour: 8, day: 0, enterReq: null, taskActive: false, deliveredNow: null, talkReq: null, penaltyReq: null, marketReq: null, startChoresReq: null, startShopReq: null, jogReq: null, tripReq: null, rideReq: null, matchReq: null,
+    screen: 'title', life: null, meta: defaultMeta(), sheet: null, toasts: [], quizFeedback: null, dashMode: 'foot', lastDash: null, endingRecorded: false, placeId: null, npcId: null, walkReq: null, hour: 8, day: 0, enterReq: null, taskActive: false, deliveredNow: null, talkReq: null, penaltyReq: null, marketReq: null, startChoresReq: null, startShopReq: null, jogReq: null, tripReq: null, rideReq: null, birthday: null, matchReq: null,
     startMatch: () => set((st) => ({ matchReq: { n: (st.matchReq?.n ?? 0) + 1 }, sheet: null })),
     startRide: (dest, fare) => { const st = get(); let life = st.life; if (!life) return; if (fare) life = payCash(life, fare, 'Bus fare'); commit(life); set((s) => ({ rideReq: { dest, n: (s.rideReq?.n ?? 0) + 1 }, sheet: null })) },
     startTrip: () => set((st) => ({ tripReq: { n: (st.tripReq?.n ?? 0) + 1 }, sheet: null })),
@@ -221,7 +223,8 @@ export const useGame = create<Store>((set, get) => {
     endActions: () => { const life = get().life; if (life) { commit(finishActions(life)) } },
     choose: (id) => { const life = get().life; if (life) { track('story_choice_made', { event_id: life.activeEvent?.eventId ?? null, choice_id: id }); commit(chooseOption(life, id)) } },
     proceed: () => { const life = get().life; if (life) commit(continueAfterEvent(life)) },
-    nextYear: () => { const life = get().life; if (life) { commit(advanceYear(life)); set({ hour: 7 }) } },
+    nextYear: () => { const life = get().life; if (life) { commit(advanceYear(life)); set({ hour: 7 }); const l2 = get().life; if (l2 && l2.phase !== 'ended') set({ birthday: { age: l2.character.age } }) } },
+    closeBirthday: () => set({ birthday: null }),
     lifestyle: (l) => { const life = get().life; if (life) { commit(setLifestyle(life, l)); set({ sheet: null }) } },
     startDash: () => {
       const life = get().life; if (!life) return

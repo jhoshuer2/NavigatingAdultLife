@@ -413,3 +413,37 @@ export function DreamDoneModal() {
     </Modal>
   )
 }
+
+const MILESTONE: Record<number, string> = {
+  1: 'Your very first birthday!', 5: 'Big kid! Time for school.', 10: 'Double digits! You are ten!', 13: 'A teenager now. Watch out world!', 16: 'Sweet sixteen. Almost grown!',
+  18: 'You are an ADULT now! Life gets real from today.', 21: 'Twenty-one. The world is yours.', 30: 'Thirty! Dirty-thirty? No, thriving.', 40: 'Forty and fabulous. Life begins.', 50: 'Fifty years! Gold.', 60: 'Sixty! Elder status unlocked.', 70: 'Seventy. A living library.',
+}
+/** Shown after the year summary: the year turns over, you get a year older and the family celebrates. */
+export function BirthdayModal() {
+  const { life, birthday, closeBirthday } = useGame()
+  if (!life || !birthday) return null
+  const c = life.character, age = birthday.age
+  const who = (r: 'mother' | 'father' | 'sibling' | 'friend') => { const id = life.roles[r]; const n = id ? life.npcs[id] : undefined; return n && n.alive ? n : null }
+  const wishes = [
+    who('mother') && `${who('mother')!.name} (Mama): "Happy birthday, my dear! God bless you. I made your favourite."`,
+    who('father') && `${who('father')!.name} (Papa): "${age < 18 ? 'Another year taller. Make me proud.' : 'Time flies. I am proud of you.'}"`,
+    who('sibling') && `${who('sibling')!.name}: "Where is my share of the cake?"`,
+    who('friend') && `${who('friend')!.name}: "Happy birthday! Owanbe loading!"`,
+  ].filter(Boolean) as string[]
+  if (!wishes.length) wishes.push('Your neighbours sing off key outside. It still counts.')
+  const adult = age === 18
+  return (
+    <Modal wide>
+      <Confetti n={adult ? 90 : 60} />
+      <div className="text-center">
+        <div className="flex justify-center gap-2 text-4xl" aria-hidden="true">{['🎈', '🎉', '🎈'].map((e, i) => <span key={i} className="rise" style={{ animationDelay: `${i * 0.15}s` }}>{e}</span>)}</div>
+        <Ribbon className="mt-1">Happy Birthday!</Ribbon>
+        <div className="text-[84px] leading-none mt-2 pop" aria-hidden="true">🎂</div>
+        <h2 className="font-display text-[28px] text-white leading-tight mt-1" style={{ textShadow: '0 2px 0 rgba(0,0,0,.4)' }}>{c.nickname || c.name} is now {age}</h2>
+        {MILESTONE[age] && <div className="chip chip-gold !text-sm mt-2">{MILESTONE[age]}</div>}
+      </div>
+      <div className="hud-glass rounded-2xl p-3 mt-3 space-y-1.5 text-sm">{wishes.slice(0, 3).map((w, i) => <div key={i}>💌 {w}</div>)}</div>
+      <Btn variant="green" shine className="w-full mt-4 !text-xl" onClick={() => { audio.sfx('level'); closeBirthday() }}>Thank you! <Icon name="chevron" size={20} /></Btn>
+    </Modal>
+  )
+}

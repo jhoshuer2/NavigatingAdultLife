@@ -8,7 +8,7 @@ import { stageForAge } from '@engine/core/helpers'
 import { DREAM_BY_ID } from '@content/dreams'
 import { fmtTime, remainingSec } from '@platform/tokens'
 import { audio } from '@platform/audio'
-import { EventModal, QuizModal, SummaryModal, ShopModal, JobsModal, PickModal, QuestsModal, ProfileModal, LifestyleModal, PaywallModal, TutorialModal, DreamDoneModal } from '../modals'
+import { EventModal, QuizModal, SummaryModal, ShopModal, JobsModal, PickModal, QuestsModal, ProfileModal, LifestyleModal, PaywallModal, TutorialModal, DreamDoneModal, BirthdayModal } from '../modals'
 import { NpcModal, PlaceModal, PlacesModal, BusModal } from '../placeUi'
 import { wearOf } from '@content/items'
 const World = lazy(() => import('./World'))
@@ -143,6 +143,7 @@ function Modals({ lite }: { lite: boolean }) {
       {sheet === 'places' && <PlacesModal />}
       {sheet === 'bus' && <BusModal />}
       {sheet === 'dreamDone' && <DreamDoneModal />}
+      <BirthdayModal />
       {lite && !meta.seenTutorial && phase !== 'ended' && <TutorialModal />}
     </>
   )

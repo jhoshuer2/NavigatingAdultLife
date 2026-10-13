@@ -194,3 +194,6 @@ From about 7:30pm to 6am (`WorldRenderer.nightLevel`) owls (on rooftops, glowing
 
 ## Market catalog and "ask Mama to buy it"
 The market shows everything it sells (`shopItems` returns the whole range, with `canBuy` and `mum` per item; a Goods list lists it all, the first ten stand in the aisles). When you are under 18 and live with a parent, Mama (or Papa) comes along to the market. For anything you are too young to buy yourself, "Ask Mama to buy it" spends YOUR money (`act('shop', { byMum: true })`, `mumCanBuy`): she buys for the house (appliances such as the air conditioner arrive by loader free of charge, rice for the family) and for things you are nearly old enough for; for things far too adult she says no. New child items: football, story books, a bag of rice.
+
+## Birthday celebration
+After the year summary, "Next year" now shows a birthday screen (`BirthdayModal`): confetti, balloons, a cake, "Happy Birthday!", your new age, a milestone line at ages like 1, 5, 10, 13, 16, 18 (bigger confetti), 21, 30 and so on, and greetings from Mama, Papa, a sibling and a friend who are alive. It shows once per year and is skipped when the life ends.
