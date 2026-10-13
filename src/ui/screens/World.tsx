@@ -276,9 +276,9 @@ export default function World() {
   const needCoach = !!coachKey && guideOn && !!HOWTO[coachKey] && (meta.tips?.[coachKey] ?? 0) < 2
   const [coached, setCoached] = useState<unknown>(null)
   const holdTask = needCoach && coached !== task
-  // game time keeps counting while you walk about (1 game hour per real minute); it pauses in tasks, sleep, sheets, quizzes and events
+  // game time keeps counting like real time (1 game hour per real minute) whatever is on screen; only sleep (its own fast clock) and the end of a life stop it
   const clockBusy = useRef(false)
-  clockBusy.current = !!task || !!sleep || fade || !!g.sheet || !!holdTask || !life || life.phase !== 'action' || !!life.quiz || !!life.activeEvent
+  clockBusy.current = !!sleep || !life || life.phase === 'ended' // time keeps moving behind pop-ups, events, quizzes, tasks and the how-to cards; only sleeping (which has its own clock) and the end of a life stop it
   useEffect(() => {
     const iv = setInterval(() => { if (!document.hidden && !clockBusy.current) useGame.getState().tickClock(1 / 60) }, 1000)
     return () => clearInterval(iv)
