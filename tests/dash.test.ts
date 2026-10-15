@@ -73,3 +73,18 @@ describe('go-slow dash sim', () => {
     expect(roof).toBe(true); expect(up.hearts).toBe(3)
   })
 })
+
+import { createRival, stepRival, raceOutcome, RACE_SECS } from '../src/minigames/go-slow-dash/race'
+describe('racing Alfred ai', () => {
+  it('a runner who crashes out early loses to a computer runner who goes on to score more', () => {
+    const me = createDash({ seed: 31, mode: 'foot', hearts: 1, assist: false })
+    const rv = createRival({ seed: 31, mode: 'foot', hearts: 3, assist: false }, 0.95)
+    // I stand still and crash out; Alfred runs on to the end of the race
+    for (let i = 0; i < 60 * RACE_SECS && !me.over; i++) { stepDash(me, 1 / 60); stepRival(rv, 1 / 60) }
+    expect(me.over).toBe(true)
+    for (let i = 0; i < RACE_SECS * 60 && !rv.st.over && rv.st.t < RACE_SECS; i++) stepRival(rv, 1 / 60)
+    const o = raceOutcome(me, rv.st, false)
+    expect(o.rival).toBeGreaterThan(o.you)
+    expect(o.youWon).toBe(false)
+  })
+})

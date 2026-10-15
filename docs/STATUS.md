@@ -197,3 +197,6 @@ The market shows everything it sells (`shopItems` returns the whole range, with 
 
 ## Birthday celebration
 After the year summary, "Next year" now shows a birthday screen (`BirthdayModal`): confetti, balloons, a cake, "Happy Birthday!", your new age, a milestone line at ages like 1, 5, 10, 13, 16, 18 (bigger confetti), 21, 30 and so on, and greetings from Mama, Papa, a sibling and a friend who are alive. It shows once per year and is skipped when the life ends.
+
+## Race fix: running out of hearts first
+If you crash out while Alfred ai is still running, his run now continues to the end of the 90-second race (instantly, behind the result screen) and the scores are compared at the end, so you can only win if you are still ahead when his run is over. The result says "Alfred ai kept running after you crashed."

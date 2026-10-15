@@ -38,6 +38,7 @@ export default function Dash() {
   const [flash, setFlash] = useState(false)
   const rivalRef = useRef<Rival | null>(null)
   const [race, setRace] = useState<RaceOutcome | null>(null)
+  const [carried, setCarried] = useState(false)
   const [searchMsg, setSearchMsg] = useState('')
   const [count, setCount] = useState<string | null>(null)
   const [banner, setBanner] = useState<{ n: number; name: string; tip: string } | null>(null)
@@ -67,6 +68,10 @@ export default function Dash() {
     st.over = true
     const res = resultOf(st)
     if (rv) {
+      // you ran out of hearts first: Alfred ai carries on to the end of the race, so you can only win if you are still ahead when his run ends too
+      const carried = !rv.st.over && rv.st.t < RACE_SECS
+      setCarried(carried)
+      if (carried) for (let i = 0; i < RACE_SECS * 60 && !rv.st.over && rv.st.t < RACE_SECS; i++) stepRival(rv, 1 / 60)
       const o = raceOutcome(st, rv.st, timeUp)
       if (o.youWon) res.coins += 10 // winner's bonus
       setRace(o); (res as DashResult & { raceWon?: boolean }).raceWon = o.youWon
@@ -308,7 +313,7 @@ export default function Dash() {
             {race
               ? <div className={`font-display text-4xl -rotate-2 ${race.youWon ? 'text-green-400' : race.draw ? 'text-danfo' : 'text-red-400'}`}>{race.youWon ? 'YOU WIN! 🏆' : race.draw ? 'DRAW! 🤝' : `${RIVAL_NAME} wins 🤖`}</div>
               : <div className="font-display text-5xl text-red-400 -rotate-2">WAHALA!</div>}
-            {race && <div className="text-xs font-bold opacity-80 mt-1">{race.timeUp ? 'Time up. ' : ''}You {race.you.toLocaleString()} · {RIVAL_NAME} {race.rival.toLocaleString()}{race.youWon ? ' · +10 coin bonus' : ''}</div>}
+            {race && <div className="text-xs font-bold opacity-80 mt-1">{race.timeUp ? 'Time up. ' : carried ? `${RIVAL_NAME} kept running after you crashed. ` : ''}You {race.you.toLocaleString()} · {RIVAL_NAME} {race.rival.toLocaleString()}{race.youWon ? ' · +10 coin bonus' : ''}</div>}
             <div className="font-display text-6xl text-danfo leading-none mt-1">{result.score.toLocaleString()}</div>
             {result.score > (life?.dashBest ?? 0) && <div className="chip mt-1" style={{ background: '#2fd27b', color: '#06241a' }}>New best!</div>}
             <div className="grid grid-cols-2 gap-2 mt-3 text-sm">
