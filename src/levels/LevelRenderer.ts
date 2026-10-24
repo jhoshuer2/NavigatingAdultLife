@@ -5,7 +5,7 @@ import { buildToon, type Expression, type ToonParts, type ToonSpec } from '../wo
 import { animateHuman } from '../world/characters'
 import { MAMA_FOLAKE, BABA_TUNDE, neighbour } from '../world/castData'
 import { moveWithCollision } from '../world/nav'
-import type { LevelDef, Item, Spot, Hazard, Speaker } from './schema'
+import type { LevelDef, Item, Spot, Hazard, Speaker, ServeGuest } from './schema'
 import type { TaskRunner } from './TaskRunner'
 
 const lam = (c: string | number) => new THREE.MeshLambertMaterial({ color: c })
@@ -62,9 +62,17 @@ export class LevelRenderer {
   private moved = false
   onAction?: (label: string | null, dur: number) => void
   onFx?: (n: 'tap' | 'pop') => void
-  get busy() { return !!this.act || !!this.kickAnim }
+  get busy() { return !!this.act || !!this.kickAnim || this.busPhase === 'riding' }
   onNearby?: (n: Nearby | null) => void
   private lastNear = ''
+  /** serve task: the guests (drawn as characters that walk, sit and eat), their order labels and plates */
+  private guestObjs = new Map<string, { parts: ToonParts; label: THREE.Sprite; plate: THREE.Object3D; g: ServeGuest; task: number }>()
+  private carryMesh?: { id: string; o: THREE.Object3D }
+  /** ride task: the bus and where it is in its journey */
+  private bus?: THREE.Group
+  private busX = 0
+  private busPhase: 'away' | 'arriving' | 'waiting' | 'riding' | 'dropped' = 'away'
+  private busT = 0
 
   constructor(private canvas: HTMLCanvasElement, private level: LevelDef, spec: ToonSpec, startTask = 0) {
     this.r = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false })
@@ -102,6 +110,15 @@ export class LevelRenderer {
     }
     if (L.sceneKind === 'home') this.buildHomeDeco(); else if (L.sceneKind === 'pitch') this.buildPitchDeco(); else this.buildSceneDeco()
     for (const c of L.crowd ?? []) { if (L.sceneKind === 'scene') { const i = this.crowdParts.length; const sp = { ...neighbour(i + 5), accessories: [] as never[] }; const t = buildToon(sp); t.group.position.set(c.x, 0, c.z); t.group.rotation.y = c.rot; this.scene.add(t.group); this.crowdParts.push(t) } }
+    for (const [ti, sv] of Object.entries(L.serves ?? {})) for (const g of sv.guests) {
+      const i = this.guestObjs.size, sp = { ...neighbour(i + 9), accessories: [] as never[] }, parts = buildToon(sp)
+      parts.group.position.set(g.x, 0, g.z); parts.group.visible = false; this.scene.add(parts.group)
+      const label = this.label(g.order, 1.7); label.position.set(g.x, 2.7, g.z); label.visible = false; this.scene.add(label)
+      const plate = new THREE.Group(); const pl = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.04, 14), lam('#fbf8f0')); const fd = new THREE.Mesh(new THREE.SphereGeometry(0.2, 10, 6), lam(L.items.find((x) => x.id === g.dish)?.color ?? '#c4562a')); fd.position.y = 0.1; plate.add(pl, fd)
+      plate.position.set(g.table.x, 0.86, g.table.z); plate.visible = false; this.scene.add(plate)
+      this.guestObjs.set(g.id, { parts, label, plate, g, task: Number(ti) })
+    }
+    if (L.rides) this.buildBus()
     // spots keep an invisible anchor so the scene can wobble them when the player gets close
     for (const s of L.spots) { const g = new THREE.Group(); g.position.set(s.x, 0, s.z); this.scene.add(g); this.spotMeshes.set(s.id, g) }
     for (const it of L.items) { const o = this.itemMesh(it); o.position.set(it.x, this.itemY(it), it.z); this.scene.add(o); this.itemMeshes.set(it.id, o) }
@@ -206,6 +223,14 @@ export class LevelRenderer {
       g.position.set(-11 + i * 1.5, 0, -6.9 - (i % 2) * 0.8); this.scene.add(g) }
   }
 
+  private buildBus() {
+    const g = new THREE.Group(), add = (w: number, h: number, d: number, c: string, x: number, y: number, z: number) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), lam(c)); m.position.set(x, y, z); g.add(m) }
+    add(4.6, 1.5, 1.8, '#f5b91c', 0, 1.15, 0); add(4.62, 0.25, 1.82, '#1c1b22', 0, 0.7, 0); add(4.4, 0.55, 1.84, '#9ecbe6', 0, 1.55, 0); add(0.12, 0.55, 1.5, '#9ecbe6', 2.3, 1.5, 0)
+    for (const x of [-1.5, 1.5]) for (const z of [-0.9, 0.9]) { const w = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.36, 0.2, 10), lam('#1c1b22')); w.rotation.x = Math.PI / 2; w.position.set(x, 0.36, z); g.add(w) }
+    const l = this.label('BUS', 1.4); l.position.set(0, 2.5, 0); g.add(l)
+    g.visible = false; this.scene.add(g); this.bus = g
+  }
+
   private label(text: string, w = 2.2): THREE.Sprite {
     const c = document.createElement('canvas'); c.width = 256; c.height = 96
     const g = c.getContext('2d')!; g.fillStyle = '#1c1b22'; g.fillRect(4, 8, 248, 80); g.fillStyle = '#f5b91c'; g.fillRect(10, 14, 236, 68); g.fillStyle = '#1c1b22'
@@ -237,6 +262,7 @@ export class LevelRenderer {
         case 'road': { this.box(w, 0.04, dd, col === '#a87a50' ? '#3d3d46' : col, d.x, 0.0, d.z); for (let x = d.x - w / 2 + 1; x < d.x + w / 2 - 1; x += 3) this.box(1.4, 0.02, 0.14, '#f4f1e6', x, 0.04, d.z); break }
         case 'rug': this.box(w, 0.03, dd, col, d.x, 0.02, d.z); break
         case 'crate': this.box(w, h, dd, col, d.x, h / 2, d.z); break
+        case 'chair': { this.box(0.7, 0.1, 0.7, col, d.x, 0.5, d.z); this.box(0.7, 0.8, 0.1, col, d.x, 0.95, d.z - 0.3); for (const sx of [-1, 1]) for (const sz of [-1, 1]) this.box(0.08, 0.5, 0.08, '#44444e', d.x + sx * 0.3, 0.25, d.z + sz * 0.3); break }
       }
     }
   }
@@ -316,7 +342,7 @@ export class LevelRenderer {
     const m = Math.hypot(mx, mz); if (m > 1) { mx /= m; mz /= m }
     const actState = this.act ? this.stepAct(dt) : null
     if (this.kickAnim) this.stepKick(dt)
-    const moving = !stumbling && !this.act && !this.kickAnim && m > 0.12 && !(run?.finished)
+    const moving = !stumbling && !this.act && !this.kickAnim && this.busPhase !== 'riding' && m > 0.12 && !(run?.finished)
     if (moving) {
       const sp = 4.6 * dt
       const n = moveWithCollision(L.blockers, this.px, this.pz, mx * sp, mz * sp, L.bounds)
@@ -340,7 +366,8 @@ export class LevelRenderer {
       const idx = run.idx
       for (const it of L.items) {
         const o = this.itemMeshes.get(it.id)!
-        const here = it.task === idx && !run.finished && !run.collected.includes(it.id) && !(run.task.kind === 'choose' && run.choice)
+        const gd = run.serve?.guests.find((x) => x.dish === it.id)
+        const here = it.task === idx && !run.finished && !run.collected.includes(it.id) && !(run.task.kind === 'choose' && run.choice) && (!gd || (run.guests[gd.id] < 2 && run.carry !== it.id))
         o.visible = here
         if (here && !(this.act && this.act.id === it.id)) { o.position.y = this.itemY(it) + Math.sin(this.t * 3 + it.x) * 0.06; o.rotation.y = this.t * 1.5 }
       }
@@ -361,8 +388,10 @@ export class LevelRenderer {
       if (this.ball) { this.ball.visible = reach; if (reach) { this.ball.position.set(this.px + Math.sin(this.facing) * 0.85, 0.24 + Math.abs(Math.sin(this.t * 9)) * 0.06, this.pz + Math.cos(this.facing) * 0.85); this.ball.rotation.x += dt * 10 } }
       // the marker ring: always on a goal area (walk-to and run-to tasks) and on the penalty spot; after 15 s without progress on the area of the next step
       const area = run.task.kind === 'hold' ? L.holds?.[idx] ?? null : run.goalArea
+      const nx = run.task.kind === 'serve' ? run.serveNext() : null
+      const rideMark = run.task.kind === 'ride' && L.rides?.[idx] && this.busPhase !== 'riding' ? { x: L.rides[idx].stop.x, z: L.rides[idx].stop.z, r: 1.5 } : null
       const kickMark = run.task.kind === 'kick' && L.kick ? { x: L.kick.x, z: L.kick.z, r: 0.9 } : null
-      const mark = !run.finished ? ((run.task.kind === 'goto' || run.task.kind === 'reach' || run.task.kind === 'hold') && area ? area : kickMark) : null
+      const mark = !run.finished ? (rideMark ?? (nx ? { x: nx.x, z: nx.z, r: 1.2 } : null) ?? ((run.task.kind === 'goto' || run.task.kind === 'reach' || run.task.kind === 'hold' || run.task.kind === 'ride') && area ? area : kickMark)) : null
       this.ring.visible = !!mark || run.guideOn
       if (mark || run.guideOn) {
         const ga = mark ?? L.guideAreas[idx]; let gx = ga.x, gz = ga.z, gr = ga.r
@@ -373,6 +402,8 @@ export class LevelRenderer {
       if (this.buzz.visible) { const k = (this.t * 1.6) % 1; this.buzz.scale.setScalar(1 + k * 1.6); (this.buzz.material as THREE.MeshBasicMaterial).opacity = 0.9 - k * 0.9 }
       this.reportNearby(run)
     }
+    this.stepGuests(dt)
+    this.stepBus(dt)
     // camera behind and above, a little ahead of where the player is heading
     const tx = this.px, tz = this.pz
     const wide = this.cam.aspect < 0.8
@@ -409,10 +440,12 @@ export class LevelRenderer {
   /** Play the action for what the player is next to; `done` runs when the animation ends (that is when the task rule is applied). */
   perform(n: Nearby, done: () => void): void {
     if (this.act) return
-    const src = n.kind === 'spot' ? this.level.spots.find((x) => x.id === n.id) : this.level.items.find((x) => x.id === n.id)
+    const go = n.id.startsWith('g:') ? this.guestObjs.get(n.id.slice(2)) : undefined
+    const gp = go ? { x: go.parts.group.position.x, z: go.parts.group.position.z } : null
+    const src = gp ?? (n.kind === 'spot' ? this.level.spots.find((x) => x.id === n.id) : this.level.items.find((x) => x.id === n.id))
     if (!src) { done(); return }
-    const kind: ActKind = n.kind === 'item' ? 'take' : n.id === 'laundry' ? 'dig' : 'search'
-    this.act = { kind, x: src.x, z: src.z, id: n.id, label: actLabel(kind, n.id), t: 0, dur: ACT_DUR[kind], walk: 0, done, beat: 0 }
+    const kind: ActKind = n.kind === 'item' || go ? 'take' : n.id === 'laundry' ? 'dig' : 'search'
+    this.act = { kind, x: src.x, z: src.z, id: n.id, label: go ? (n.label.startsWith('Seat') ? 'Showing them to a seat…' : 'Serving the plate…') : actLabel(kind, n.id), t: 0, dur: ACT_DUR[kind], walk: 0, done, beat: 0 }
     this.onAction?.(this.act.label, this.act.dur)
   }
 
@@ -445,7 +478,7 @@ export class LevelRenderer {
       else { const f = this.furn.get(a.id === 'drawer' ? 'drawers' : 'bedside'); if (f) f.position.x += Math.sin(a.t * 30) * 0.004 }
     } else {
       const o = this.itemMeshes.get(a.id)
-      if (o && k > 0.35) { const u = Math.min(1, (k - 0.35) / 0.55); o.position.set(a.x + (this.px - a.x) * u, this.itemY(this.level.items.find((i) => i.id === a.id)!) * (1 - u) + 0.9 * u, a.z + (this.pz - a.z) * u); o.scale.setScalar(1 - 0.75 * u) }
+      if (o && k > 0.35 && !this.runner?.serve) { const u = Math.min(1, (k - 0.35) / 0.55); o.position.set(a.x + (this.px - a.x) * u, this.itemY(this.level.items.find((i) => i.id === a.id)!) * (1 - u) + 0.9 * u, a.z + (this.pz - a.z) * u); o.scale.setScalar(1 - 0.75 * u) }
     }
     if (a.t >= a.dur) this.finishAct()
     return 'acting'
@@ -479,12 +512,71 @@ export class LevelRenderer {
       if (run.task.kind === 'find' && !run.found) for (const s of L.spots) if (s.task === idx) consider(s, 'spot')
       if (run.task.kind === 'collect' || run.task.kind === 'sequence') for (const it of L.items) if (it.task === idx && !run.collected.includes(it.id)) consider(it, 'item')
       if (run.task.kind === 'choose' && !run.choice) for (const it of L.items) if (it.task === idx) consider(it, 'item')
+      if (run.task.kind === 'serve') {
+        for (const g of run.serve?.guests ?? []) { const st = run.guests[g.id]; const o = this.guestObjs.get(g.id)!; const at = o.parts.group.position
+          if (st === 0) consider({ id: `g:${g.id}`, x: at.x, z: at.z, label: `Seat ${g.name}` } as unknown as Spot, 'spot')
+          else if (st === 1 && run.carry) consider({ id: `g:${g.id}`, x: at.x, z: at.z, label: run.carry === g.dish ? `Serve ${g.name}` : `Give to ${g.name}` } as unknown as Spot, 'spot') }
+        if (!run.carry) for (const it of L.items) if (it.task === idx) { const g = run.serve?.guests.find((x) => x.dish === it.id); if (g && run.guests[g.id] === 1) consider(it, 'item') }
+      }
+      if (run.task.kind === 'ride' && this.busPhase === 'waiting') { const r = L.rides?.[idx]; if (r && Math.hypot(this.px - r.stop.x, this.pz - r.stop.z) < 3.4) best = { kind: 'spot', id: 'bus', label: `Board the bus to ${r.to}` } }
       if (run.task.kind === 'kick' && L.kick && !this.kickAnim && Math.hypot(L.kick.x - this.px, L.kick.z - this.pz) < 1.3) best = { kind: 'spot', id: 'kick', label: L.kick.pass ? 'Pass!' : 'Kick!' }
     }
     if (this.act) best = null
     const key = best ? `${(best as Nearby).kind}:${(best as Nearby).id}` : ''
     if (key !== this.lastNear) { this.lastNear = key; this.onNearby?.(best) }
   }
+
+  /** guests walk to their chair, sit, eat, and keep their seat afterwards; the order label hovers until they are served */
+  private stepGuests(dt: number) {
+    const run = this.runner; if (!run || this.guestObjs.size === 0) return
+    for (const o of this.guestObjs.values()) {
+      const { g, parts } = o
+      const active = run.idx === o.task, after = run.idx > o.task || (run.finished && run.idx === o.task)
+      const st = active ? run.guests[g.id] ?? 0 : after ? 3 : -1
+      parts.group.visible = st >= 0
+      if (st < 0) { o.label.visible = false; o.plate.visible = false; continue }
+      const to = st >= 1 ? g.seat : g, p = parts.group.position
+      const dx = to.x - p.x, dz = to.z - p.z, d = Math.hypot(dx, dz)
+      const walking = d > 0.08
+      if (walking) { const sp = Math.min(d, 3.2 * dt); p.x += (dx / d) * sp; p.z += (dz / d) * sp; parts.group.rotation.y = Math.atan2(dx, dz); animateHuman(parts, this.t + g.x, true, 0.9) }
+      else if (st >= 1) { // seated, facing the table
+        parts.group.rotation.y = Math.atan2(g.table.x - p.x, g.table.z - p.z); parts.legL.rotation.x = parts.legR.rotation.x = -1.4; parts.body.position.y = -0.42
+        const eating = st === 2; parts.armR.rotation.x = eating ? -1.2 + Math.sin(this.t * 7) * 0.5 : 0; parts.armL.rotation.x = eating ? -0.6 : 0
+        if (st === 3) parts.body.position.y = -0.42 + Math.abs(Math.sin(this.t * 3 + g.z)) * 0.03
+      } else { animateHuman(parts, this.t, false); parts.armR.rotation.x = Math.sin(this.t * 4 + g.z) * 0.9 - 1.6 } // waiting: waves at you
+      o.label.visible = st === 1 || st === 0; o.label.position.set(p.x, 2.7, p.z)
+      o.plate.visible = st === 2
+    }
+    // what you are carrying rides in front of you
+    const c = run.carry
+    if (this.carryMesh && this.carryMesh.id !== c) { this.scene.remove(this.carryMesh.o); this.carryMesh = undefined }
+    if (c && !this.carryMesh) { const it = this.level.items.find((x) => x.id === c); if (it) { const o = this.itemMesh(it); this.scene.add(o); this.carryMesh = { id: c, o } } }
+    if (this.carryMesh) { const o = this.carryMesh.o; o.visible = true; o.scale.setScalar(1); o.rotation.set(0, 0, 0); o.position.set(this.px + Math.sin(this.facing) * 0.55, 1.15, this.pz + Math.cos(this.facing) * 0.55); if (!this.act) this.me.armR.rotation.x = this.me.armL.rotation.x = -1.3 }
+  }
+
+  /** the bus pulls up when you get near the stop, waits, carries you across town and drives off */
+  private stepBus(dt: number) {
+    const run = this.runner, bus = this.bus; if (!bus || !run) return
+    const r = this.level.rides?.[run.idx], on = !!r && run.task.kind === 'ride' && !run.finished
+    if (!on) { if (this.busPhase === 'dropped') { this.busX += 11 * dt; bus.position.x = this.busX; this.busT += dt; if (this.busT > 4) { bus.visible = false; this.busPhase = 'away' } } else { bus.visible = false; this.busPhase = 'away'; this.me.group.visible = true } return }
+    const stopX = r.stop.x + 1.4
+    if (this.busPhase === 'dropped') { this.busPhase = 'away' }
+    bus.visible = true; bus.position.set(this.busX, 0, r.busZ)
+    if (this.busPhase === 'away') {
+      if (!bus.userData.started) { this.busX = r.stop.x - 34; bus.userData.started = true }
+      if (Math.hypot(this.px - r.stop.x, this.pz - r.stop.z) < 9) { this.busPhase = 'arriving'; this.onFx?.('pop') }
+    } else if (this.busPhase === 'arriving') {
+      const rem = stopX - this.busX; this.busX += Math.min(rem, Math.max(1.2, rem * 1.6) * dt) * (rem > 0 ? 1 : 0)
+      if (rem < 0.08) { this.busX = stopX; this.busPhase = 'waiting'; this.onFx?.('pop') }
+    } else if (this.busPhase === 'riding') {
+      const dest = run.goalArea; const tx = dest ? dest.x - 1.2 : this.busX
+      this.busX += Math.min(Math.max(0, tx - this.busX), 9 * dt); this.px = this.busX; this.pz = r.busZ; this.me.group.visible = false
+      if (this.busX >= tx - 0.01 && dest) { this.me.group.visible = true; this.px = dest.x; this.pz = dest.z; this.busPhase = 'dropped'; this.busT = 0; bus.userData.started = false; this.onFx?.('pop') }
+    }
+  }
+
+  /** the Board button: you climb on and the camera rides along */
+  boardBus() { if (this.busPhase === 'waiting') { this.busPhase = 'riding'; this.target = null; this.onFx?.('pop') } }
 
   dispose() {
     cancelAnimationFrame(this.raf); this.ro?.disconnect()

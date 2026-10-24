@@ -109,6 +109,7 @@ export default function LevelPlay() {
   const act = useCallback(() => {
     const rn = runner.current, sc = scene.current
     if (!rn || !sc || !near || paused || sc.busy) return
+    if (near.id === 'bus') { sc.boardBus(); return }
     if (near.id === 'kick') { const v = needleRef.current, ok = Math.abs(v - 0.5) < rn.kickBand; sc.kickBall(ok, v, () => rn.kickResult(ok)); return }
     sc.perform(near, () => rn.interact(near.id))
   }, [near, paused])
@@ -140,7 +141,7 @@ export default function LevelPlay() {
   const speakerSpec = (w: Line['who']) => (w === 'folake' ? MAMA_FOLAKE : w === 'tunde' ? BABA_TUNDE : w === 'neighbour' ? NEIGHBOUR : w === 'helper' ? HELPER : spec)
   const speakerName = (w: Line['who']) => (w === 'folake' ? 'Mama Folake' : w === 'tunde' ? 'Baba Tunde' : w === 'neighbour' ? 'The Neighbour' : w === 'helper' ? 'The Helper' : spec.name)
   const collectInfo = !rn || !task ? '' : task.kind === 'collect' ? (rn.budgetLeft !== null ? ` (${rn.collected.length}/${level.budgets?.[rn.idx]?.need} · ₦${rn.budgetLeft} left)` : ` (${rn.collected.length}/${level.items.filter((i) => i.task === rn.idx).length})`)
-    : task.kind === 'kick' ? ` (${rn.goals}/${level.kick?.goals ?? 3})` : task.kind === 'hold' ? ` (${Math.floor(rn.holdT)}/${rn.holdNeed} s)` : task.kind === 'sequence' ? ` (${rn.seqPos}/${level.sequences?.[rn.idx]?.length ?? 0})` : ''
+    : task.kind === 'kick' ? ` (${rn.goals}/${level.kick?.goals ?? 3})` : task.kind === 'hold' ? ` (${Math.floor(rn.holdT)}/${rn.holdNeed} s)` : task.kind === 'sequence' ? ` (${rn.seqPos}/${level.sequences?.[rn.idx]?.length ?? 0})` : task.kind === 'serve' ? ` (${rn.fed}/${rn.serve?.guests.length ?? 0} fed)` : ''
   const onStick = (e: React.PointerEvent<HTMLDivElement>, end = false) => {
     const el = e.currentTarget.getBoundingClientRect()
     if (end) { stick.current = { x: 0, z: 0 }; setKnob({ x: 0, y: 0 }); sync(); return }

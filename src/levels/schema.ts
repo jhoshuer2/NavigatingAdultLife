@@ -2,7 +2,7 @@
 // failure and recovery rules written down.
 import type { Expression } from '../world/toon'
 
-export type TaskKind = 'find' | 'collect' | 'choose' | 'reach' | 'goto' | 'kick' | 'hold' | 'sequence'
+export type TaskKind = 'find' | 'collect' | 'choose' | 'reach' | 'goto' | 'kick' | 'hold' | 'sequence' | 'serve' | 'ride'
 export type Speaker = 'folake' | 'tunde' | 'player' | 'neighbour' | 'helper'
 
 export interface Line { who: Speaker; text: string; expr?: Expression }
@@ -42,7 +42,11 @@ export interface Rect { x0: number; x1: number; z0: number; z1: number }
 export interface Furn { name: string; rect: Rect; h: number; color: string }
 
 export interface Hazard { x: number; z0: number; z1: number; speed: number; phase: number; name: 'slippers' | 'mop' | 'dummy' | 'walker' | 'cart' | 'chair'; color: string }
-export interface Deco { kind: 'awning' | 'tree' | 'lamp' | 'sign' | 'stall' | 'wall' | 'window' | 'road' | 'rug' | 'crate'; x: number; z: number; w?: number; d?: number; h?: number; color?: string; label?: string }
+export interface Deco { kind: 'awning' | 'tree' | 'lamp' | 'sign' | 'stall' | 'wall' | 'window' | 'road' | 'rug' | 'crate' | 'chair'; x: number; z: number; w?: number; d?: number; h?: number; color?: string; label?: string }
+/** a guest in a serve task: waits at (x, z), is seated at `seat`, eats from a plate on `table`, and wants the dish whose item id is `dish` */
+export interface ServeGuest { id: string; name: string; order: string; dish: string; x: number; z: number; seat: { x: number; z: number }; table: { x: number; z: number } }
+/** a bus ride: walk to `stop`, wait for the bus on the road at `busZ`, board, and be dropped in the task's goto area */
+export interface Ride { stop: { x: number; z: number }; busZ: number; from: string; to: string }
 export interface Theme { ground: string; ground2?: string; floors: (Rect & { color: string })[]; deco: Deco[]; fence?: boolean }
 export interface LevelDef {
   id: string
@@ -54,6 +58,10 @@ export interface LevelDef {
   budgets?: Record<number, { budget: number; need: number }>
   /** sequence tasks: the item ids in the order they must be taken */
   sequences?: Record<number, string[]>
+  /** serve tasks: seat each guest, bring them the dish they ordered, let them eat. `eatSecs` is how long a meal takes */
+  serves?: Record<number, { eatSecs?: number; guests: ServeGuest[] }>
+  /** ride tasks: the bus journey (the destination is the task's goto area) */
+  rides?: Record<number, Ride>
   /** hold tasks: stand in the area for this long */
   holds?: Record<number, { x: number; z: number; r: number; secs: number }>
   /** a badge awarded on the result screen (optional) */

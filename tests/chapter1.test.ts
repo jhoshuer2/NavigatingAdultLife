@@ -16,7 +16,7 @@ function solve(L: LevelDef): TaskRunner {
   while (!r.finished && guard++ < 40) {
     const t = r.task, idx = r.idx
     const items = L.items.filter((i) => i.task === idx)
-    if (t.kind === 'goto' || t.kind === 'reach') { const a = r.goalArea; if (a) r.update(0.1, a.x, a.z); else r.update(0.1, L.exitX + 0.1, 0) }
+    if (t.kind === 'goto' || t.kind === 'reach' || t.kind === 'ride') { const a = r.goalArea; if (a) r.update(0.1, a.x, a.z); else r.update(0.1, L.exitX + 0.1, 0) }
     else if (t.kind === 'find') r.interact(L.spots.find((s) => s.task === idx && s.right)!.id)
     else if (t.kind === 'collect') {
       const bud = L.budgets?.[idx]
@@ -25,6 +25,7 @@ function solve(L: LevelDef): TaskRunner {
     }
     else if (t.kind === 'choose') r.interact(items[0].id)
     else if (t.kind === 'sequence') for (const id of L.sequences![idx]) r.interact(id)
+    else if (t.kind === 'serve') { for (const g of L.serves![idx].guests) { r.interact(`g:${g.id}`); r.interact(g.dish); r.interact(`g:${g.id}`) } r.update(L.serves![idx].eatSecs ?? 3, 0, 0) }
     else if (t.kind === 'hold') { const h = L.holds![idx]; r.update(h.secs + 1, h.x, h.z) }
     else if (t.kind === 'kick') for (let i = 0; i < L.kick!.goals; i++) r.kickResult(true)
   }
@@ -56,6 +57,8 @@ describe('chapter 1 and 2: every level', () => {
           if (t.kind === 'find') { expect(L.spots.filter((s) => s.task === i && s.right).length, t.id).toBe(1); expect(L.spots.filter((s) => s.task === i).length).toBeGreaterThanOrEqual(2) }
           if (t.kind === 'collect' && !L.budgets?.[i]) expect(L.items.filter((x) => x.task === i).length).toBeGreaterThanOrEqual(2)
           if (t.kind === 'sequence') { const ord = L.sequences![i]; expect(ord.length).toBeGreaterThanOrEqual(3); for (const id of ord) expect(L.items.some((x) => x.id === id && x.task === i), id).toBe(true) }
+          if (t.kind === 'ride') { expect(L.rides?.[i], t.id).toBeTruthy(); expect(L.gotoAreas?.[i], t.id).toBeTruthy() }
+          if (t.kind === 'serve') for (const g of L.serves![i].guests) { expect(L.items.some((x) => x.id === g.dish && x.task === i), g.id).toBe(true); for (const q of [g, g.seat]) expect(inside(L, q.x, q.z), `${g.id} at ${q.x},${q.z}`).toBe(false) }
           if (t.kind === 'goto' || t.kind === 'reach') expect(L.gotoAreas?.[i] || L.variants || t.kind === 'reach', t.id).toBeTruthy()
         })
         for (const it of L.items) expect(it.x > L.bounds.x0 && it.x < L.bounds.x1 && it.z > L.bounds.z0 && it.z < L.bounds.z1).toBe(true)

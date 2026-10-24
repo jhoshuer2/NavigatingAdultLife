@@ -39,7 +39,7 @@ export class TaskRunner {
   buzzing = false
   /** seconds since the player last made progress in this task; after 15 the scene shows a soft guide ring */
   sinceProgress = 0
-  get guideOn() { return this.sinceProgress > 15 && !this.finished && this.task.kind !== 'reach' && this.task.kind !== 'goto' && this.task.kind !== 'kick' && this.task.kind !== 'hold' }
+  get guideOn() { return this.sinceProgress > 15 && !this.finished && this.task.kind !== 'reach' && this.task.kind !== 'goto' && this.task.kind !== 'kick' && this.task.kind !== 'hold' && this.task.kind !== 'ride' }
   /** penalty task: goals so far, and how wide the green zone is (a few misses widen it a little so nobody is stuck) */
   goals = 0
   misses = 0
@@ -52,6 +52,20 @@ export class TaskRunner {
   spent = 0
   holdT = 0
   seqPos = 0
+  /** serve task: each guest is 0 waiting, 1 seated, 2 eating, 3 fed; `carry` is the dish item in your hands */
+  guests: Record<string, number> = {}
+  eatT: Record<string, number> = {}
+  carry: string | null = null
+  get serve() { return this.level.serves?.[this.idx] }
+  get fed() { return this.serve ? this.serve.guests.filter((g) => this.guests[g.id] === 3).length : 0 }
+  /** where the next step of a serve task is: seat a waiting guest, fetch the dish of a seated one, or deliver what you carry */
+  serveNext(): { x: number; z: number } | null {
+    const sv = this.serve; if (!sv) return null
+    if (this.carry) { const g = sv.guests.find((x) => x.dish === this.carry); return g ? g.seat : null }
+    const w = sv.guests.find((g) => this.guests[g.id] === 0); if (w) return { x: w.x, z: w.z }
+    const sg = sv.guests.find((g) => this.guests[g.id] === 1); const it = sg && this.level.items.find((i) => i.id === sg.dish)
+    return it ? { x: it.x, z: it.z } : null
+  }
   get budgetLeft() { const b = this.level.budgets?.[this.idx]; return b ? b.budget - this.spent : null }
   get holdNeed() { return this.level.holds?.[this.idx]?.secs ?? 0 }
   get hazards() { return this.variant?.hazards ?? this.level.hazards }
@@ -70,6 +84,8 @@ export class TaskRunner {
   private begin() {
     this.sinceProgress = 0
     this.wrong = 0; this.found = false; this.collected = []; this.buzzing = false; this.choice = null; this.goals = 0; this.misses = 0; this.spent = 0; this.holdT = 0; this.seqPos = 0
+    this.guests = {}; this.eatT = {}; this.carry = null
+    for (const g of this.serve?.guests ?? []) this.guests[g.id] = 0
     if (this.task.kind === 'reach') this.timeLeft = this.timeLimit
     this.h.taskStarted(this.idx)
     const flag = this.progress.flags[this.task.flag ?? this.flagKey]
@@ -103,6 +119,8 @@ export class TaskRunner {
         this.seqPos++; this.collected.push(id); this.h.sfx?.('pick'); this.h.toast(`${this.seqPos}/${order.length}`)
         if (this.seqPos >= order.length) this.complete(); else this.h.changed()
       } else { this.mistakes++; this.seqPos = 0; this.collected = []; this.h.sfx?.('nope'); this.h.toast('Wrong order! Start again'); this.h.changed() }
+    } else if (t.kind === 'serve') {
+      this.serveInteract(id)
     } else if (t.kind === 'choose') {
       const it = id === 'none' ? null : this.level.items.find((x) => x.id === id && x.task === this.idx)
       if (id !== 'none' && !it) return
@@ -110,6 +128,23 @@ export class TaskRunner {
       this.progress = setFlag(this.progress, this.flagKey, this.choice ?? 'none')
       this.h.sfx?.('pick'); this.complete()
     }
+  }
+
+  private serveInteract(id: string): void {
+    const sv = this.serve; if (!sv) return
+    if (id.startsWith('g:')) {
+      const g = sv.guests.find((x) => x.id === id.slice(2)); if (!g) return
+      const st = this.guests[g.id]
+      if (st === 0) { this.guests[g.id] = 1; this.h.sfx?.('pick'); this.h.toast(`${g.name} sits down and wants ${g.order}`) }
+      else if (st === 1 && this.carry === g.dish) { this.guests[g.id] = 2; this.eatT[g.id] = 0; this.carry = null; this.h.sfx?.('ring'); this.h.toast(`${g.name} starts eating`) }
+      else if (st === 1 && this.carry) { this.mistakes++; this.h.sfx?.('nope'); this.h.toast(`Not that one! ${g.name} ordered ${g.order}`); this.carry = null }
+      else return
+    } else {
+      const it = this.level.items.find((x) => x.id === id && x.task === this.idx); const g = sv.guests.find((x) => x.dish === id)
+      if (!it || !g || this.carry === id || this.guests[g.id] >= 2) return
+      this.carry = id; this.h.sfx?.('pick'); this.h.toast(`Carrying ${g.order}`)
+    }
+    this.h.changed()
   }
 
   /** called every frame with the player position */
@@ -122,7 +157,16 @@ export class TaskRunner {
       if (before > 0 && this.timeLeft === 0) { this.h.taskFailed(this.idx, 'timer'); this.h.toast('Late! Keep going, the door is still there'); this.h.changed() }
       const area = this.goalArea
       if (area ? Math.hypot(px - area.x, _pz - area.z) < area.r : px >= this.level.exitX) this.complete()
-    } else if (this.task.kind === 'goto') {
+    } else if (this.task.kind === 'serve') {
+      const sv = this.serve
+      if (sv) {
+        for (const g of sv.guests) if (this.guests[g.id] === 2) {
+          this.eatT[g.id] = (this.eatT[g.id] ?? 0) + dt
+          if (this.eatT[g.id] >= (sv.eatSecs ?? 3)) { this.guests[g.id] = 3; this.sinceProgress = 0; this.h.sfx?.('pick'); this.h.toast(`${g.name} loved it. ${this.fed}/${sv.guests.length}`); this.h.changed() }
+        }
+        if (this.fed === sv.guests.length) this.complete()
+      }
+    } else if (this.task.kind === 'goto' || this.task.kind === 'ride') {
       const g = this.goalArea
       if (g && Math.hypot(px - g.x, _pz - g.z) < g.r) this.complete()
     } else if (this.task.kind === 'hold') {

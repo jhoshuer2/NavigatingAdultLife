@@ -15,6 +15,8 @@ const DEFAULTS: Record<TaskKind, { failure: string; recovery: string; feedback: 
   reach: { failure: 'Clipping something costs 3 seconds.', recovery: 'A quick get-up, then you keep going. The level never restarts.', feedback: 'A timer on screen and a bump sound when you clip something.', controls: 'Move with the stick, arrow keys or by tapping the ground.' },
   kick: { failure: 'None.', recovery: 'Misses widen the target a little.', feedback: 'The ball flies.', controls: 'Tap Kick when the needle is in the green.' },
   hold: { failure: 'None. Stepping out only slows the progress.', recovery: 'Step back into the ring and the count carries on.', feedback: 'A seconds counter fills while you wait.', controls: 'Stand inside the ring.' },
+  serve: { failure: 'A wrong plate is politely sent back; nothing is lost.', recovery: 'Each guest shows what they ordered above their head, and the Hint button says the next step.', feedback: 'Guests sit, the plate lands on the table and they eat; a counter shows how many are fed.', controls: 'Walk to a guest to seat them, take their dish from the counter, then bring it to them.' },
+  ride: { failure: 'None. Miss the bus and the next one comes.', recovery: 'Walking to the destination works too, only slower.', feedback: 'The bus pulls up, you board and the city rolls by.', controls: 'Walk to the bus stop, wait for the bus and tap Board the bus.' },
   sequence: { failure: 'Taking things in the wrong order sends you back to the start of the list.', recovery: 'Try again; the Hint button repeats the order.', feedback: 'A counter shows how far you are; a funny line for a wrong order.', controls: 'Walk to each item and tap the action button, in the right order.' },
 }
 
@@ -32,13 +34,13 @@ interface LOpts {
   ch?: string; kind?: 'scene' | 'pitch'; kit?: boolean; kick?: LevelDef['kick']
   n: number; title: string; intro: string; tasks: TaskDef[]; theme: Theme; furniture: Furn[]; spawn: { x: number; z: number }; resume?: { x: number; z: number }
   spots?: Spot[]; items?: Item[]; guide: { x: number; z: number; r: number }[]; goto?: ({ x: number; z: number; r: number } | null)[]
-  hazards?: Hazard[]; variants?: LevelDef['variants']; budgets?: LevelDef['budgets']; sequences?: LevelDef['sequences']; holds?: LevelDef['holds']
+  hazards?: Hazard[]; variants?: LevelDef['variants']; budgets?: LevelDef['budgets']; sequences?: LevelDef['sequences']; holds?: LevelDef['holds']; serves?: LevelDef['serves']; rides?: LevelDef['rides']; bounds?: Rect
   crowd?: LevelDef['crowd']; npcs: LevelDef['npcs']; endBeat: LevelDef['endBeat']; endBeats?: LevelDef['endBeats']; choiceLabel?: string; timeLimit?: number; badge?: string
   starRules?: LevelDef['starRules']; next: string | null
 }
 export const L = (o: LOpts): LevelDef => ({
   id: `${o.ch ?? 'ch1'}.l${o.n}`, sceneKind: o.kind ?? 'scene', kit: o.kit, kick: o.kick, chapter: o.ch ?? 'ch1', title: o.title, subtitle: `Level ${o.n}`, intro: o.intro, tasks: o.tasks, theme: o.theme,
-  bounds: B, blockers: o.furniture.map((f) => f.rect), furniture: o.furniture, spawn: o.spawn, spawnAfterFirst: o.resume ?? o.spawn,
+  bounds: o.bounds ?? B, serves: o.serves, rides: o.rides, blockers: o.furniture.map((f) => f.rect), furniture: o.furniture, spawn: o.spawn, spawnAfterFirst: o.resume ?? o.spawn,
   spots: o.spots ?? [], items: o.items ?? [], guideAreas: o.guide, gotoAreas: o.goto, hazards: o.hazards ?? [], variants: o.variants, budgets: o.budgets, sequences: o.sequences, holds: o.holds,
   crowd: o.crowd, npcs: o.npcs, endBeat: o.endBeat, endBeats: o.endBeats, choiceLabel: o.choiceLabel ?? 'choice', exitX: 0, timeLimit: o.timeLimit ?? 20, next: o.next, badge: o.badge,
   starRules: o.starRules ?? ['Finish the level', 'Finish with the clock on your side', 'Finish on time with 2 mistakes or fewer'],
