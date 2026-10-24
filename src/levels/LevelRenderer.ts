@@ -5,7 +5,8 @@ import { buildToon, type Expression, type ToonParts, type ToonSpec } from '../wo
 import { animateHuman } from '../world/characters'
 import { MAMA_FOLAKE, BABA_TUNDE, neighbour } from '../world/castData'
 import { moveWithCollision } from '../world/nav'
-import type { LevelDef, Item, Spot, Hazard, Speaker, ServeGuest } from './schema'
+import { STREET } from './street'
+import type { Deco, LevelDef, Item, Spot, Hazard, Speaker, ServeGuest } from './schema'
 import type { TaskRunner } from './TaskRunner'
 
 const lam = (c: string | number) => new THREE.MeshLambertMaterial({ color: c })
@@ -108,7 +109,7 @@ export class LevelRenderer {
       const r = f.rect
       this.furn.set(f.name, this.box(r.x1 - r.x0, f.h, r.z1 - r.z0, f.color, (r.x0 + r.x1) / 2, f.h / 2, (r.z0 + r.z1) / 2))
     }
-    if (L.sceneKind === 'home') this.buildHomeDeco(); else if (L.sceneKind === 'pitch') this.buildPitchDeco(); else this.buildSceneDeco()
+    if (L.sceneKind === 'home') this.buildHomeDeco(); else if (L.sceneKind === 'pitch') { this.buildPitchDeco(); if (L.rides) this.buildPitchStreet() } else this.buildSceneDeco()
     for (const c of L.crowd ?? []) { if (L.sceneKind === 'scene') { const i = this.crowdParts.length; const sp = { ...neighbour(i + 5), accessories: [] as never[] }; const t = buildToon(sp); t.group.position.set(c.x, 0, c.z); t.group.rotation.y = c.rot; this.scene.add(t.group); this.crowdParts.push(t) } }
     for (const [ti, sv] of Object.entries(L.serves ?? {})) for (const g of sv.guests) {
       const i = this.guestObjs.size, sp = { ...neighbour(i + 9), accessories: [] as never[] }, parts = buildToon(sp)
@@ -172,7 +173,7 @@ export class LevelRenderer {
   }
 
   private buildPitchShell() {
-    const b = this.level.bounds
+    const b = this.level.rides ? { x0: -12.4, x1: 12.4, z0: -6, z1: 6 } : this.level.bounds // a bus ride adds a street beyond the gate; the pitch itself stays the same size
     this.box(60, 0.1, 40, '#9a8a6a', 0, -0.25, 0) // dusty ground around the pitch
     this.box(b.x1 - b.x0 + 4, 0.1, b.z1 - b.z0 + 3, '#5fae4f', 0, -0.05, 0) // grass
     for (let i = 0; i < 8; i++) this.box((b.x1 - b.x0 + 4) / 8, 0.02, b.z1 - b.z0 + 3, i % 2 ? '#6bb95a' : '#5fae4f', b.x0 - 2 + ((b.x1 - b.x0 + 4) / 8) * (i + 0.5), 0.0, 0) // mowing stripes
@@ -248,8 +249,17 @@ export class LevelRenderer {
     if (T.fence) { const fc = '#f3e7cf'; this.box(b.x1 - b.x0 + 1, 0.8, 0.2, fc, 0, 0.4, b.z0 - 0.1); this.box(b.x1 - b.x0 + 1, 0.8, 0.2, fc, 0, 0.4, b.z1 + 0.1); this.box(0.2, 0.8, b.z1 - b.z0, fc, b.x0 - 0.1, 0.4, 0); this.box(0.2, 0.8, b.z1 - b.z0, fc, b.x1 + 0.1, 0.4, 0) }
   }
 
-  private buildSceneDeco() {
-    for (const d of this.level.theme!.deco) {
+  /** the street a bus ride starts on, west of the fenced pitch */
+  private buildPitchStreet() {
+    const f = STREET.floor
+    this.box(-12.6 - f.x0, 0.1, f.z1 - f.z0, f.color, (f.x0 - 12.6) / 2, -0.03, (f.z0 + f.z1) / 2)
+    this.buildDeco(STREET.deco.map((d) => d.kind === 'road' ? { ...d, x: -23.7, w: 21.4 } : d.kind === 'wall' ? { ...d, x: -23.5, w: 21 } : d))
+  }
+
+  private buildSceneDeco() { this.buildDeco(this.level.theme!.deco) }
+
+  private buildDeco(list: Deco[]) {
+    for (const d of list) {
       const w = d.w ?? 2, dd = d.d ?? 2, h = d.h ?? 1, col = d.color ?? '#a87a50'
       switch (d.kind) {
         case 'awning': { const roof = this.box(w, 0.1, dd, col, d.x, 2.6, d.z); const rm = roof.material as THREE.MeshStandardMaterial; rm.transparent = true; rm.opacity = 0.28; rm.depthWrite = false; for (const sx of [-1, 1]) for (const sz of [-1, 1]) this.box(0.1, 2.6, 0.1, '#1c1b22', d.x + sx * (w / 2 - 0.1), 1.3, d.z + sz * (dd / 2 - 0.1)); break }

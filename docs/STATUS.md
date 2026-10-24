@@ -264,3 +264,8 @@ Feedback: levels felt like walk, tap, repeat. Two new acted-out task kinds (engi
 - **Serve**: ch1 L7 (seat three visitors, tea, snack and water), ch1 L9 (party guests: jollof, cake, drink), ch4 L5 (seat the picky customer, serve the remade dish), ch4 L8 (seat the critic, serve his dish). `serves[n].from` makes guests stand about from an earlier task, so "walk to the critic" has someone to walk to.
 - All played end to end through the real Interact button in headless Chrome.
 - Deliberately not converted: football drills and penalties (ch2), cooking and plating steps, counting money, covering goods, choices, find/hold tasks. They are not serving or travel and the older task types suit them. Chapter 2 is football-only, so it has no bus.
+
+## Chapter 2 Level 1: bus ride to the trial
+- New first task `ch2.l1.t0` ("Take the bus to the trial"): bus stop at x = -30, dropped at the pitch gate (-13.8, 0.8), then the registration walk, kit, boots and sprint as before (old task ids kept, so saved points stay valid; indices shifted by one).
+- Pitch levels can now have a street: `LevelRenderer.buildPitchStreet` builds it west of the fence when `rides` is set. Street data moved to `src/levels/street.ts` (still re-exported from `chapter1b.ts`).
+- Other Chapter 2 levels have no bus ride.

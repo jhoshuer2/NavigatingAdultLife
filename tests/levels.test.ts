@@ -125,10 +125,11 @@ describe('chapter 2 level 1 (Trial Day)', () => {
     const { LEVEL_C2L1: L } = await import('../src/levels/chapter2')
     for (const t of L.tasks) for (const f of TASK_FIELDS) expect((t as any)[f], `${t.id}.${f}`).toBeTruthy()
     const r = new TaskRunner(L, emptyProgress(), hooks())
-    r.update(0.1, L.gotoAreas![0]!.x, L.gotoAreas![0]!.z); expect(r.idx).toBe(1)
+    expect(r.task.kind).toBe('ride'); r.update(0.1, L.gotoAreas![0]!.x, L.gotoAreas![0]!.z); expect(r.idx).toBe(1) // the bus drops you at the gate
+    r.update(0.1, L.gotoAreas![1]!.x, L.gotoAreas![1]!.z); expect(r.idx).toBe(2) // then the registration desk
     for (const id of ['bib', 'shinpads', 'water']) r.interact(id)
-    r.interact('striker'); expect(r.progress.flags['ch2.l1.item']).toBe('striker'); expect(r.idx).toBe(3)
-    r.update(1, L.exitX + 0.1, 0); expect(r.finished).toBe(true); expect(r.progress.points).toBe(4)
+    r.interact('striker'); expect(r.progress.flags['ch2.l1.item']).toBe('striker'); expect(r.idx).toBe(4)
+    r.update(1, L.exitX + 0.1, 0); expect(r.finished).toBe(true); expect(r.progress.points).toBe(5)
   })
   it('hazards stay inside the pitch and items are not inside furniture', async () => {
     const { LEVEL_C2L1: L } = await import('../src/levels/chapter2')

@@ -1,5 +1,6 @@
 // Chapter 2, "Trial Day": the player is a young footballer at an open trial. Only Level 1 exists so far (same rule as chapter 1: one level first, test it).
 import type { LevelDef, TaskDef, Rect, Furn, Hazard, Line } from './schema'
+import { STREET_BOUNDS } from './street'
 const say = (who: Line['who'], text: string, expr?: Line['expr']): Line => ({ who, text, expr })
 
 const R = (x0: number, x1: number, z0: number, z1: number): Rect => ({ x0, x1, z0, z1 })
@@ -15,6 +16,15 @@ const FURNITURE: Furn[] = [
 ]
 
 const tasks: TaskDef[] = [
+  {
+    id: 'ch2.l1.t0', kind: 'ride', title: 'Take the bus to the trial', purpose: 'The trial ground is across town: wait at the stop, board the bus and ride there.',
+    objective: 'Take the bus to the trial ground', controls: 'Walk to the bus stop, wait for the bus and tap Board the bus.',
+    success: 'You get off at the gate of the trial ground.', failure: 'None. Miss the bus and the next one comes.', recovery: 'Walking to the gate works too, only slower.',
+    feedback: 'The bus pulls up, you board and the city rolls by.', reward: '1 point the first time.', persistence: 'Saved when you get off the bus.',
+    intro: [{ who: 'folake', text: 'Trial day! The bus stop is just up the road. Do not miss it, and do not forget your boots. You have no boots. Take the bus!', expr: 'worried' }],
+    done: [{ who: 'helper', text: 'Hundreds of hopefuls, and every one of them got the same bus as you.', expr: 'cheeky' }],
+    hint: 'Walk to the BUS STOP sign, wait for the yellow bus and tap Board the bus.',
+  },
   {
     id: 'ch2.l1.t1', kind: 'goto', title: 'Find the registration', purpose: 'Teach walking through a busy place toward a marked goal.',
     objective: 'Walk to the registration desk', controls: 'Move with the stick, arrow keys or by tapping the pitch.',
@@ -57,22 +67,23 @@ export const LEVEL_C2L1: LevelDef = {
   id: 'ch2.l1',  sceneKind: 'pitch', kit: true, chapter: 'ch2', title: 'Arrival at the Pitch', subtitle: 'Level 1',
   intro: 'Today is your trial. Hundreds of hopefuls, one coach with a whistle, and your number is not even on your shirt yet.',
   tasks,
-  bounds: R(-12.4, 12.4, -6, 6),
+  bounds: STREET_BOUNDS,
   blockers: FURNITURE.map((f) => f.rect),
   furniture: FURNITURE,
-  spawn: { x: -10.8, z: 1 },
+  rides: { 0: { stop: { x: -30, z: 1.8 }, busZ: 4.4, from: 'home', to: 'the trial ground' } },
+  spawn: { x: -32, z: 0.4 },
   spawnAfterFirst: { x: -4.5, z: -1.5 },
   spots: [],
   items: [
-    { id: 'bib', task: 1, x: -1.5, z: 4.1, label: 'Take the bib', color: '#f5b91c', shape: 'bib' },
-    { id: 'shinpads', task: 1, x: 1.5, z: -4.4, label: 'Take the shin pads', color: '#fbf8f0', shape: 'shinpad' },
-    { id: 'water', task: 1, x: 3.7, z: 4.1, label: 'Take the water', color: '#6a8ab8', shape: 'bottle' },
-    { id: 'striker', task: 2, x: 5.6, z: 4.35, label: 'Take the Striker boots', color: '#f5b91c', shape: 'boots' },
-    { id: 'winger', task: 2, x: 6.3, z: 4.35, label: 'Take the Winger boots', color: '#2b6ad0', shape: 'boots' },
-    { id: 'defender', task: 2, x: 7.0, z: 4.35, label: 'Take the Defender boots', color: '#1c1b22', shape: 'boots' },
+    { id: 'bib', task: 2, x: -1.5, z: 4.1, label: 'Take the bib', color: '#f5b91c', shape: 'bib' },
+    { id: 'shinpads', task: 2, x: 1.5, z: -4.4, label: 'Take the shin pads', color: '#fbf8f0', shape: 'shinpad' },
+    { id: 'water', task: 2, x: 3.7, z: 4.1, label: 'Take the water', color: '#6a8ab8', shape: 'bottle' },
+    { id: 'striker', task: 3, x: 5.6, z: 4.35, label: 'Take the Striker boots', color: '#f5b91c', shape: 'boots' },
+    { id: 'winger', task: 3, x: 6.3, z: 4.35, label: 'Take the Winger boots', color: '#2b6ad0', shape: 'boots' },
+    { id: 'defender', task: 3, x: 7.0, z: 4.35, label: 'Take the Defender boots', color: '#1c1b22', shape: 'boots' },
   ],
-  guideAreas: [{ x: -5.5, z: -2.2, r: 1.8 }, { x: 0, z: 0, r: 4 }, { x: 6.3, z: 3.2, r: 1.8 }, { x: 11.2, z: 0, r: 1.6 }],
-  gotoAreas: [{ x: -5.5, z: -2.4, r: 1.7 }, null, null, null],
+  guideAreas: [{ x: -30, z: 1.8, r: 2 }, { x: -5.5, z: -2.2, r: 1.8 }, { x: 0, z: 0, r: 4 }, { x: 6.3, z: 3.2, r: 1.8 }, { x: 11.2, z: 0, r: 1.6 }],
+  gotoAreas: [{ x: -13.8, z: 0.8, r: 1.4 }, { x: -5.5, z: -2.4, r: 1.7 }, null, null, null],
   hazards: [
     { x: 8.4, z0: -4.2, z1: 3.0, speed: 2.5, phase: 0, name: 'dummy', color: '#e07a1f' },
     { x: 10.0, z0: -4.2, z1: 2.4, speed: 3.0, phase: 1.5, name: 'dummy', color: '#2f5a3a' },
