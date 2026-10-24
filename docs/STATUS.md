@@ -258,3 +258,9 @@ Feedback: levels felt like walk, tap, repeat. Two new acted-out task kinds (engi
 - Used in: ch4 L4 (Rush Hour: bus to work, then seat and serve three guests), ch4 L1 (bus to work), ch3 L1 (bus to the market), ch3 L3 (serve three shoppers), ch1 L5 (serve three customers).
 - `STREET`/`withStreet` in `chapter1b.ts` add a town street with a bus stop west of any scene.
 - Not done: other levels still use the older walk-and-tap tasks; chapter 2 (Trial Day) has no bus ride yet.
+
+## Serve and ride tasks, second batch
+- **Rides** (first task is now a bus journey): ch1 L4 (to the square), ch1 L9 (to the party), ch3 L7 (to the competitor's market).
+- **Serve**: ch1 L7 (seat three visitors, tea, snack and water), ch1 L9 (party guests: jollof, cake, drink), ch4 L5 (seat the picky customer, serve the remade dish), ch4 L8 (seat the critic, serve his dish). `serves[n].from` makes guests stand about from an earlier task, so "walk to the critic" has someone to walk to.
+- All played end to end through the real Interact button in headless Chrome.
+- Deliberately not converted: football drills and penalties (ch2), cooking and plating steps, counting money, covering goods, choices, find/hold tasks. They are not serving or travel and the older task types suit them. Chapter 2 is football-only, so it has no bus.

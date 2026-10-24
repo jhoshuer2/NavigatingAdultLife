@@ -66,7 +66,7 @@ export class LevelRenderer {
   onNearby?: (n: Nearby | null) => void
   private lastNear = ''
   /** serve task: the guests (drawn as characters that walk, sit and eat), their order labels and plates */
-  private guestObjs = new Map<string, { parts: ToonParts; label: THREE.Sprite; plate: THREE.Object3D; g: ServeGuest; task: number }>()
+  private guestObjs = new Map<string, { parts: ToonParts; label: THREE.Sprite; plate: THREE.Object3D; g: ServeGuest; task: number; from?: number }>()
   private carryMesh?: { id: string; o: THREE.Object3D }
   /** ride task: the bus and where it is in its journey */
   private bus?: THREE.Group
@@ -116,7 +116,7 @@ export class LevelRenderer {
       const label = this.label(g.order, 1.7); label.position.set(g.x, 2.7, g.z); label.visible = false; this.scene.add(label)
       const plate = new THREE.Group(); const pl = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.04, 14), lam('#fbf8f0')); const fd = new THREE.Mesh(new THREE.SphereGeometry(0.2, 10, 6), lam(L.items.find((x) => x.id === g.dish)?.color ?? '#c4562a')); fd.position.y = 0.1; plate.add(pl, fd)
       plate.position.set(g.table.x, 0.86, g.table.z); plate.visible = false; this.scene.add(plate)
-      this.guestObjs.set(g.id, { parts, label, plate, g, task: Number(ti) })
+      this.guestObjs.set(g.id, { parts, label, plate, g, task: Number(ti), from: sv.from })
     }
     if (L.rides) this.buildBus()
     // spots keep an invisible anchor so the scene can wobble them when the player gets close
@@ -532,7 +532,7 @@ export class LevelRenderer {
     for (const o of this.guestObjs.values()) {
       const { g, parts } = o
       const active = run.idx === o.task, after = run.idx > o.task || (run.finished && run.idx === o.task)
-      const st = active ? run.guests[g.id] ?? 0 : after ? 3 : -1
+      const st = active ? run.guests[g.id] ?? 0 : after ? 3 : o.from !== undefined && run.idx >= o.from && run.idx < o.task ? 0 : -1
       parts.group.visible = st >= 0
       if (st < 0) { o.label.visible = false; o.plate.visible = false; continue }
       const to = st >= 1 ? g.seat : g, p = parts.group.position
