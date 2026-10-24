@@ -223,3 +223,6 @@ Popups moved to edge strips (Rush and Level 1); tasks are acted out (walk up, di
 ### One look everywhere
 All screens use the cream, orange and green palette (tokens in `src/ui/index.css`, constants in `src/ui/theme.ts`): buttons, cards, tiles, chips, ribbons, sheets, toasts, Settings, Trophies, Shop, Lives and every Rush overlay. The old purple gradient is retired. The unreachable open-world HUD (`World.tsx`, `Play.tsx`) inherits the new tokens but was not restyled or tested.
 The old open-world screens (Create, World HUD and dock, place/NPC/profile/menu sheets, events, Ending, Trophies, Shop, task panels, city art, icons) were also moved to the palette (purple and magenta hexes replaced, white text and overlays flipped to ink on cream). To look at them: `?debug=1&screen=create|play|ending|history|unlocks|achievements` (starts a random life if none exists).
+
+### Chapter select (eFootball-style)
+Home's story card is now a generic "Chapters" card leading to a sideways row of chapter cards (`Chapters` in `src/ui/screens/V2.tsx`, data in `src/levels/chapters.ts`, unlock rule `chapterState` in `src/levels/progress.ts`). The open chapter has Start/Continue; the others are dimmed with a lock until every level of the chapter before them has stars (chapters 2 to 10 are placeholders). `?debug=1&unlockall=1` opens them all for testing.

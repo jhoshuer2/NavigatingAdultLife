@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useGame } from './store'
 import { Toasts } from './ui/components'
-import { Home, LevelIntro, LevelResult, Leaderboard } from './ui/screens/V2'
+import { Home, Chapters, LevelIntro, LevelResult, Leaderboard } from './ui/screens/V2'
 import { Create } from './ui/screens/Create'
 import { Play } from './ui/screens/Play'
 import { Ending } from './ui/screens/Ending'
@@ -52,6 +52,7 @@ export default function App() {
       <Toasts items={toasts} />
       <SoundPill enabled={meta.settings.sound} />
       {screen === 'home' && <Home />}
+      {screen === 'chapters' && <Chapters />}
       {screen === 'levelIntro' && <LevelIntro />}
       {screen === 'levelPlay' && <Suspense fallback={<div className="p-8 text-center font-display text-3xl">Loading…</div>}><LevelPlay key={levelNonce} /></Suspense>}
       {screen === 'levelResult' && <LevelResult />}

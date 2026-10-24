@@ -49,3 +49,12 @@ export function recordRush(p: ChapterProgress, r: { distance: number; won?: bool
   const pts = (r.distance > p.rush.best && r.distance >= 100 ? 1 : 0) + (r.won && p.rush.wins === 0 ? 1 : 0)
   return { points: pts, progress: { ...p, points: p.points + pts, rush: { best, plays: p.rush.plays + 1, wins: p.rush.wins + (r.won ? 1 : 0), points: p.rush.points + pts } } }
 }
+
+export type ChapterStatus = 'active' | 'locked' | 'done'
+/** A chapter is done when every one of its levels has stars. Chapter 1 is always open; any other opens when the chapter before it is done. */
+export function chapterState(p: ChapterProgress, chapters: { id: string; levels: string[]; totalLevels: number }[], index: number, unlockAll = false): ChapterStatus {
+  const done = (i: number) => { const c = chapters[i]; return c.levels.length >= c.totalLevels && c.levels.every((l) => (p.stars[l] ?? 0) > 0) }
+  if (done(index)) return 'done'
+  if (unlockAll || index === 0 || done(index - 1)) return 'active'
+  return 'locked'
+}

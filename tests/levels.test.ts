@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { emptyProgress, completeTask, finishLevel, recordRush } from '../src/levels/progress'
+import { emptyProgress, completeTask, finishLevel, recordRush, chapterState } from '../src/levels/progress'
 import { TaskRunner, type RunnerHooks } from '../src/levels/TaskRunner'
 import { LEVEL1 } from '../src/levels/chapter1'
 import { TASK_FIELDS } from '../src/levels/schema'
@@ -36,6 +36,23 @@ describe('chapter progress', () => {
     let r = recordRush(p, { distance: 120, won: true }); expect(r.points).toBe(2); p = r.progress
     r = recordRush(p, { distance: 90, won: true }); expect(r.points).toBe(0); p = r.progress
     r = recordRush(p, { distance: 150 }); expect(r.points).toBe(1)
+  })
+})
+
+describe('chapter select', () => {
+  const chs = [{ id: 'a', levels: ['a1', 'a2'], totalLevels: 2 }, { id: 'b', levels: ['b1'], totalLevels: 1 }, { id: 'c', levels: [], totalLevels: 9 }]
+  it('opens chapter 1, locks the rest, and unlocks the next only when every level has stars', () => {
+    let p = emptyProgress()
+    expect(chs.map((_, i) => chapterState(p, chs, i))).toEqual(['active', 'locked', 'locked'])
+    p = finishLevel(p, 'a1', 2, null); expect(chapterState(p, chs, 1)).toBe('locked')
+    p = finishLevel(p, 'a2', 1, null); expect(chs.map((_, i) => chapterState(p, chs, i))).toEqual(['done', 'active', 'locked'])
+  })
+  it('the real chapter list keeps chapter 2 locked while chapter 1 has only one of nine levels, and the debug flag opens all', async () => {
+    const { CHAPTERS } = await import('../src/levels/chapters')
+    expect(CHAPTERS.length).toBe(10)
+    let p = emptyProgress(); p = finishLevel(p, 'ch1.l1', 3, null)
+    expect(chapterState(p, CHAPTERS, 1)).toBe('locked')
+    expect(chapterState(p, CHAPTERS, 5, true)).toBe('active')
   })
 })
 

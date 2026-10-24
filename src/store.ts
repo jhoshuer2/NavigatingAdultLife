@@ -15,7 +15,7 @@ import { randomConfig } from '@engine/bot'
 import { makeRng } from '@engine/core/rng'
 import { ACTIVITY_HOURS } from './world/time'
 
-export type Screen = 'home' | 'levelIntro' | 'levelPlay' | 'levelResult' | 'rushLobby' | 'rushPlay' | 'leaderboard' | 'title' | 'create' | 'play' | 'ending' | 'achievements' | 'unlocks' | 'settings' | 'dash' | 'history'
+export type Screen = 'home' | 'chapters' | 'levelIntro' | 'levelPlay' | 'levelResult' | 'rushLobby' | 'rushPlay' | 'leaderboard' | 'title' | 'create' | 'play' | 'ending' | 'achievements' | 'unlocks' | 'settings' | 'dash' | 'history'
 export type Sheet = null | 'shop' | 'jobs' | 'quests' | 'profile' | 'pick-social' | 'pick-family' | 'lifestyle' | 'paywall' | 'place' | 'npc' | 'places' | 'dreamDone' | 'bus'
 
 import type { PlaceId } from './world/layout'
