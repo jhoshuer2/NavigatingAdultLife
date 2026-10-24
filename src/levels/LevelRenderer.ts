@@ -53,6 +53,12 @@ export class LevelRenderer {
   private fx: { m: THREE.Mesh; v: THREE.Vector3; life: number }[] = []
   private phoneMesh!: THREE.Group
   private clothes = ['#c4562a', '#f5b91c', '#2f5a3a', '#fbf8f0', '#6a8ab8']
+  private ring!: THREE.Mesh
+  private strips: THREE.Mesh[] = []
+  private target: { x: number; z: number } | null = null
+  private ray = new THREE.Raycaster()
+  onFirstMove?: () => void
+  private moved = false
   onAction?: (label: string | null, dur: number) => void
   onFx?: (n: 'tap' | 'pop') => void
   get busy() { return !!this.act }
@@ -115,6 +121,12 @@ export class LevelRenderer {
     // spots keep an invisible anchor so the scene can wobble them when the player gets close
     for (const s of L.spots) { const g = new THREE.Group(); g.position.set(s.x, 0, s.z); this.scene.add(g); this.spotMeshes.set(s.id, g) }
     for (const it of L.items) { const o = this.itemMesh(it); o.position.set(it.x, this.itemY(it), it.z); this.scene.add(o); this.itemMeshes.set(it.id, o) }
+    this.ring = new THREE.Mesh(new THREE.RingGeometry(0.9, 1, 40), new THREE.MeshBasicMaterial({ color: '#f5b91c', transparent: true, opacity: 0.7, side: THREE.DoubleSide }))
+    this.ring.rotation.x = -Math.PI / 2; this.ring.position.y = 0.05; this.ring.visible = false; this.scene.add(this.ring)
+    for (const h of HAZARDS) { // faint path of each sliding hazard, so the last task is fair on the first try
+      const st = new THREE.Mesh(new THREE.PlaneGeometry(0.9, h.z1 - h.z0), new THREE.MeshBasicMaterial({ color: '#e07a1f', transparent: true, opacity: 0.22 }))
+      st.rotation.x = -Math.PI / 2; st.position.set(h.x, 0.03, (h.z0 + h.z1) / 2); st.visible = false; this.scene.add(st); this.strips.push(st)
+    }
     this.phoneMesh = new THREE.Group()
     const scr = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.32, 0.045), new THREE.MeshBasicMaterial({ color: '#9ecbe6' })); scr.position.z = 0.005
     this.phoneMesh.add(new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.38, 0.04), lam('#1c1b22')), scr)
@@ -153,6 +165,16 @@ export class LevelRenderer {
     this.cam.updateProjectionMatrix()
   }
 
+  /** a tap on the scene: walk there (the stick and keys take over again as soon as they are used) */
+  moveTo(clientX: number, clientY: number) {
+    const r = this.canvas.getBoundingClientRect()
+    this.ray.setFromCamera(new THREE.Vector2(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1), this.cam)
+    const o = this.ray.ray.origin, d = this.ray.ray.direction
+    if (d.y >= -0.01) return
+    const k = -o.y / d.y
+    this.target = { x: Math.max(this.level.bounds.x0, Math.min(this.level.bounds.x1, o.x + d.x * k)), z: Math.max(this.level.bounds.z0, Math.min(this.level.bounds.z1, o.z + d.z * k)) }
+  }
+
   setExpression(who: 'folake' | 'tunde' | 'player', e: Expression) { (who === 'folake' ? this.folake : who === 'tunde' ? this.tunde : this.me).setExpression(e) }
   hazardPos(i: number, t = this.t) { return { x: HAZARDS[i].x, z: hazardZ(HAZARDS[i], t) } }
 
@@ -168,14 +190,21 @@ export class LevelRenderer {
     const stumbling = this.stumbleT > 0
     if (stumbling) this.stumbleT -= dt
     let mx = this.input.x, mz = this.input.z
+    if (Math.hypot(mx, mz) > 0.12) this.target = null
+    else if (this.target && !this.act) {
+      const tx = this.target.x - this.px, tz = this.target.z - this.pz, td = Math.hypot(tx, tz)
+      if (td < 0.25) this.target = null; else { mx = tx / td; mz = tz / td }
+    }
     const m = Math.hypot(mx, mz); if (m > 1) { mx /= m; mz /= m }
     const actState = this.act ? this.stepAct(dt) : null
     const moving = !stumbling && !this.act && m > 0.12 && !(run?.finished)
     if (moving) {
       const sp = 4.6 * dt
       const n = moveWithCollision(L.blockers, this.px, this.pz, mx * sp, mz * sp, L.bounds)
+      if (this.target && Math.hypot(n.x - this.px, n.z - this.pz) < sp * 0.15) this.target = null // blocked by furniture: stop
       this.px = n.x; this.pz = n.z
       this.facing = Math.atan2(mx, mz)
+      if (!this.moved) { this.moved = true; this.onFirstMove?.() }
     }
     const dr = ((this.facing - this.me.group.rotation.y + Math.PI * 3) % (Math.PI * 2)) - Math.PI
     this.me.group.rotation.y += dr * Math.min(1, dt * 14)
@@ -203,9 +232,17 @@ export class LevelRenderer {
           const z = hazardZ(HAZARDS[i], this.t); g.position.set(HAZARDS[i].x, 0, z)
           if (!stumbling && Math.hypot(this.px - HAZARDS[i].x, this.pz - z) < 0.85) {
             this.stumbleT = 1.1; run.stumble()
-            const n = moveWithCollision(L.blockers, this.px, this.pz, -1.3, 0, L.bounds); this.px = n.x; this.pz = n.z
+            const n = moveWithCollision(L.blockers, this.px, this.pz, -0.7, 0, L.bounds); this.px = n.x; this.pz = n.z
           }
         }
+      }
+      for (const st of this.strips) st.visible = reach
+      // soft guide ring on the area of the next step after 15 s without progress
+      this.ring.visible = run.guideOn
+      if (run.guideOn) {
+        const ga = L.guideAreas[idx]; let gx = ga.x, gz = ga.z, gr = ga.r
+        if (run.task.kind === 'collect') { const nx = L.items.find((i) => i.task === idx && !run.collected.includes(i.id)); if (nx) { gx = nx.x; gz = nx.z; gr = 1.1 } }
+        const k = (this.t * 1.2) % 1; this.ring.position.set(gx, 0.05, gz); this.ring.scale.setScalar(gr * (0.9 + k * 0.15)); (this.ring.material as THREE.MeshBasicMaterial).opacity = 0.75 - k * 0.5
       }
       this.buzz.visible = run.buzzing && idx === 0 && !run.found
       if (this.buzz.visible) { const k = (this.t * 1.6) % 1; this.buzz.scale.setScalar(1 + k * 1.6); (this.buzz.material as THREE.MeshBasicMaterial).opacity = 0.9 - k * 0.9 }
@@ -249,6 +286,7 @@ export class LevelRenderer {
     a.t += dt; a.beat += dt
     if (a.beat > 0.28 && a.kind !== 'take') { a.beat = 0; this.onFx?.('tap') }
     const k = Math.min(1, a.t / a.dur)
+    if (a.kind === 'take' && k > 0.35 && !a.phone) { a.phone = true; this.onFx?.('pop') }
     if (a.kind === 'dig') {
       if (Math.random() < dt * 14) this.spawnCloth(a.x + (Math.random() - 0.5) * 1.2, a.z + (Math.random() - 0.5) * 1.0)
       const lm = this.furn.get('laundry'); if (lm) { lm.position.x = a.x + Math.sin(a.t * 38) * 0.05; lm.scale.y = 1 - 0.35 * Math.sin(Math.min(1, k * 1.4) * Math.PI / 2) }
@@ -279,8 +317,9 @@ export class LevelRenderer {
   /** the pose while acting: leaning over, arms busy */
   private actPose(a: Act) {
     const me = this.me, t = a.t
-    if (a.kind === 'dig') { me.body.rotation.x = 0.85; me.armL.rotation.x = -1.6 + Math.sin(t * 22) * 0.7; me.armR.rotation.x = -1.6 - Math.sin(t * 22) * 0.7; if (a.phone) { me.body.rotation.x = 0.1; me.armR.rotation.x = -2.8; me.armL.rotation.x = 0 } }
-    else if (a.kind === 'search') { me.body.rotation.x = 0.6; me.armL.rotation.x = -1.3 + Math.sin(t * 18) * 0.4; me.armR.rotation.x = -1.3 }
+    const ease = Math.min(1, t / 0.35) // lean in smoothly instead of snapping
+    if (a.kind === 'dig') { me.body.rotation.x = 0.85 * ease; me.armL.rotation.x = (-1.6 + Math.sin(t * 22) * 0.7) * ease; me.armR.rotation.x = (-1.6 - Math.sin(t * 22) * 0.7) * ease; if (a.phone) { me.body.rotation.x = 0.1; me.armR.rotation.x = -2.8; me.armL.rotation.x = 0 } }
+    else if (a.kind === 'search') { me.body.rotation.x = 0.6 * ease; me.armL.rotation.x = (-1.3 + Math.sin(t * 18) * 0.4) * ease; me.armR.rotation.x = -1.3 * ease }
     else { const k = Math.min(1, t / a.dur); me.body.rotation.x = 0.7 * Math.sin(Math.min(1, k * 2) * Math.PI / 2) * (k > 0.6 ? 1 - (k - 0.6) / 0.4 * 0.8 : 1); me.armR.rotation.x = -1.9 * (k < 0.6 ? 1 : 1 - (k - 0.6) / 0.4 * 0.7); me.armL.rotation.x = -0.4 }
   }
 

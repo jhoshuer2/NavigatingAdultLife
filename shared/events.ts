@@ -31,6 +31,7 @@ export const EVENT_PROPS = {
   task_failed: ['task', 'reason'],
   hint_used: ['task'],
   session_resume: ['level', 'task'],
+  level_feedback: ['level', 'rating', 'issue'],
   rush_finished: ['mode', 'distance', 'won'],
   // life
   life_started: ['life_index'],

@@ -35,6 +35,9 @@ export class TaskRunner {
   private pointsThisRun = 0
   /** set after a wrong-try nudge so the phone starts to buzz */
   buzzing = false
+  /** seconds since the player last made progress in this task; after 15 the scene shows a soft guide ring */
+  sinceProgress = 0
+  get guideOn() { return this.sinceProgress > 15 && !this.finished && this.task.kind !== 'reach' }
 
   constructor(public level: LevelDef, progress: ChapterProgress, private h: RunnerHooks, startTask = 0) {
     this.progress = progress
@@ -47,6 +50,7 @@ export class TaskRunner {
   get flagKey() { return `${this.level.id}.item` }
 
   private begin() {
+    this.sinceProgress = 0
     this.wrong = 0; this.found = false; this.collected = []; this.buzzing = false
     if (this.task.kind === 'reach') this.timeLeft = this.level.timeLimit
     this.h.taskStarted(this.idx)
@@ -57,6 +61,7 @@ export class TaskRunner {
   /** the player pressed the action button on a spot or item */
   interact(id: string): void {
     if (this.finished) return
+    this.sinceProgress = 0
     const t = this.task
     if (t.kind === 'find') {
       const s = this.level.spots.find((x) => x.id === id && x.task === this.idx)
@@ -80,7 +85,7 @@ export class TaskRunner {
   /** called every frame with the player position */
   update(dt: number, px: number, _pz: number): void {
     if (this.finished) return
-    this.seconds += dt
+    this.seconds += dt; this.sinceProgress += dt
     if (this.task.kind === 'reach') {
       const before = this.timeLeft
       this.timeLeft = Math.max(0, this.timeLeft - dt)

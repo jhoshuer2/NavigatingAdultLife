@@ -50,6 +50,8 @@ export interface LevelDef {
   spawnAfterFirst: { x: number; z: number }
   spots: Spot[]
   items: Item[]
+  /** where the soft guide ring points, per task index (an area, not the exact object) */
+  guideAreas: { x: number; z: number; r: number }[]
   exitX: number
   timeLimit: number
   next: string | null

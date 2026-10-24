@@ -27,6 +27,7 @@ export default function LevelPlay() {
   const [banner, setBanner] = useState<string | null>(null)
   const [done, setDone] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
+  const [moved, setMoved] = useState(false)
   const [doing, setDoing] = useState<string | null>(null)
   const [near, setNear] = useState<Nearby | null>(null)
   const [paused, setPaused] = useState(false)
@@ -74,7 +75,7 @@ export default function LevelPlay() {
       changed: () => bump(),
       sfx: (n) => audio.sfx(SFX[n] ?? 'click'),
     }, levelStart)
-    runner.current = rn; r.runner = rn; r.onNearby = setNear; r.onAction = (l) => setDoing(l); r.onFx = (n) => audio.sfx(n === 'tap' ? 'tap' : 'prompt')
+    runner.current = rn; r.runner = rn; r.onNearby = setNear; r.onAction = (l) => setDoing(l); r.onFirstMove = () => setMoved(true); r.onFx = (n) => audio.sfx(n === 'tap' ? 'tap' : 'prompt')
     track('level_started', { level: level.id, character: spec.id, resumed: levelStart > 0 })
     if (new URLSearchParams(location.search).get('debug') === '1') (window as unknown as Record<string, unknown>).__level = { runner: rn, scene: r }
     audio.playMusic('play')
@@ -130,7 +131,7 @@ export default function LevelPlay() {
 
   return (
     <div className="screen relative select-none" style={{ background: '#f1d9a8', touchAction: 'none' }}>
-      <div className="absolute inset-0"><canvas ref={canvas} className="w-full h-full block" /></div>
+      <div className="absolute inset-0" onPointerUp={(e) => { if (!paused) scene.current?.moveTo(e.clientX, e.clientY) }}><canvas ref={canvas} className="w-full h-full block" /></div>
 
       <div className="absolute inset-x-0 top-0 flex items-start justify-between gap-2 px-3 pointer-events-none" style={{ paddingTop: 'calc(.6rem + var(--safe-t))' }}>
         <div className="rounded-2xl px-3 py-1.5 pointer-events-auto" style={{ background: `${CREAM}ee`, border: `2px solid ${INK}`, color: INK }}>
@@ -157,7 +158,7 @@ export default function LevelPlay() {
 
       {(() => {
         // one small pill at the top, under the instruction, never over the scene: what is happening now, in priority order
-        const t = doing ?? done ?? toast ?? banner
+        const t = doing ?? done ?? toast ?? banner ?? (!moved ? 'Drag the stick to move. Tap the orange button to act.' : null)
         if (!t) return null
         const tone = done ? FOREST : doing ? INK : banner ? ORANGE : '#fff'
         return <div className="absolute inset-x-0 flex justify-center pointer-events-none" style={{ top: 'calc(7.2rem + var(--safe-t))' }}><div key={t} className="fade-in rounded-full px-4 py-1 text-sm font-extrabold text-center" style={{ background: tone, color: tone === '#fff' ? INK : '#fff', border: `2px solid ${INK}`, opacity: 0.92 }}>{t}</div></div>
@@ -175,12 +176,12 @@ export default function LevelPlay() {
         </div>
       )}
 
-      <div className="absolute inset-x-0 bottom-0 flex items-end justify-between px-5" style={{ paddingBottom: 'calc(1.4rem + var(--safe-b))' }}>
-        <div className="relative w-36 h-36 rounded-full" style={{ background: '#fff6', border: `3px solid ${INK}` }} aria-label="Move stick"
+      <div className="absolute inset-x-0 bottom-0 flex items-end justify-between px-5 pointer-events-none" style={{ paddingBottom: 'calc(1.4rem + var(--safe-b))' }}>
+        <div className="relative w-36 h-36 rounded-full pointer-events-auto" style={{ background: '#fff6', border: `3px solid ${INK}` }} aria-label="Move stick"
           onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); onStick(e) }} onPointerMove={(e) => { if (e.buttons) onStick(e) }} onPointerUp={(e) => onStick(e, true)} onPointerCancel={(e) => onStick(e, true)}>
           <div className="absolute w-14 h-14 rounded-full" style={{ left: `calc(50% - 28px + ${knob.x}px)`, top: `calc(50% - 28px + ${knob.y}px)`, background: INK }} />
         </div>
-        <div className="grid gap-2 justify-items-end">
+        <div className="grid gap-2 justify-items-end pointer-events-auto">
           {task?.kind === 'choose' && !rn?.choice && <V2Btn tone="cream" className="!min-h-12 !text-lg" onClick={() => runner.current?.interact('none')}>Go without</V2Btn>}
           <button disabled={!near || paused} onClick={act} className="rounded-full font-display text-xl px-5 min-h-20 min-w-24 text-center disabled:opacity-40 transition-opacity"
             style={{ background: near ? ORANGE : '#fff8', color: near ? '#fff' : INK, border: `3px solid ${INK}`, boxShadow: `0 5px 0 ${INK}` }}>

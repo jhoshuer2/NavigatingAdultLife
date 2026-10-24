@@ -73,6 +73,15 @@ describe('level 1 task runner', () => {
     r.update(100, 0, 0); expect(r.timeLeft).toBe(0); expect(r.finished).toBe(false)
     r.update(1, 8.5, 0); expect(r.finished).toBe(true); expect(r.stars()).toBe(1)
   })
+  it('shows the guide ring after 15 s without progress, never in the timed task, and resets on progress', () => {
+    const r = new TaskRunner(LEVEL1, emptyProgress(), hooks())
+    r.update(10, -3, 0); expect(r.guideOn).toBe(false)
+    r.update(6, -3, 0); expect(r.guideOn).toBe(true)
+    r.interact('pillow'); expect(r.guideOn).toBe(false)
+    expect(LEVEL1.guideAreas.length).toBe(LEVEL1.tasks.length)
+    r.interact('laundry'); ;['keys', 'wallet', 'bag'].forEach((i) => r.interact(i)); r.interact('snack')
+    r.update(30, 0, 0); expect(r.guideOn).toBe(false)
+  })
   it('resuming at a saved task starts there', () => {
     const r = new TaskRunner(LEVEL1, { ...emptyProgress(), task: 2 }, hooks(), 2)
     expect(r.idx).toBe(2)

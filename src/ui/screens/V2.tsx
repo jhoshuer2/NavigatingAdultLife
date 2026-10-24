@@ -1,4 +1,5 @@
 // Navigating Adult Life 2.0 screens: Home (S1), the level intro with character pick (S4) and the level result (S7).
+import { useState } from 'react'
 import { useGame } from '../../store'
 import { Portrait } from '../Portrait'
 import { Confetti } from '../components'
@@ -141,6 +142,7 @@ export function LevelResult() {
           <Portrait spec={BABA_TUNDE} expression="surprised" size={72} />
           <div className="text-sm font-semibold">Baba Tunde: "Look at the street... something has changed out here."<div className="opacity-80 mt-1">{itemName ? `You took the ${itemName}. It will matter in Level 2.` : 'You travelled light. That will matter in Level 2.'}</div></div>
         </div>
+        <Feedback levelId={r.levelId} />
         <div className="grid gap-2">
           <V2Btn disabled>Level 2 · coming soon</V2Btn>
           <V2Btn tone="cream" onClick={() => { useGame.getState().saveProgress({ ...p, task: 0 }); openLevel(0) }}>Play Level 1 again</V2Btn>
@@ -174,5 +176,30 @@ export function Leaderboard() {
         <p className="text-sm font-semibold opacity-80 text-center">The local board shows the players on this device. Global ranking needs the online service and is not built yet; points on this device will count when it is.</p>
       </div>
     </Shell>
+  )
+}
+
+const ISSUES = [['controls', 'Controls'], ['what', 'What to do'], ['camera', 'Camera'], ['slow', 'Too slow']] as const
+/** One tap rating after the level, plus what confused them. No free text, so nothing personal is ever sent. */
+function Feedback({ levelId }: { levelId: string }) {
+  const [rating, setRating] = useState<string | null>(null)
+  const [sent, setSent] = useState(false)
+  const send = (issue: string) => { track('level_feedback', { level: levelId, rating: rating ?? 'okay', issue }); setSent(true) }
+  if (sent) return <div className="font-bold text-sm">Thank you. That helps us fix it.</div>
+  return (
+    <div className="rounded-2xl p-3" style={{ background: '#fff8', border: `2px solid ${INK}` }}>
+      <div className="font-display text-xl">How was it?</div>
+      {!rating ? (
+        <div className="grid grid-cols-3 gap-2 mt-2">
+          {([['loved', '😍 Loved it'], ['okay', '🙂 Okay'], ['confusing', '😕 Confusing']] as const).map(([k, l]) => (
+            <button key={k} className="rounded-xl py-2 text-sm font-extrabold active:translate-y-0.5" style={{ background: '#fff', border: `2px solid ${INK}` }} onClick={() => { audio.sfx('pop'); setRating(k); if (k === 'loved') { track('level_feedback', { level: levelId, rating: k, issue: 'none' }); setSent(true) } }}>{l}</button>
+          ))}
+        </div>
+      ) : (
+        <div className="mt-2"><div className="text-sm font-bold">What got in the way?</div>
+          <div className="grid grid-cols-2 gap-2 mt-1">{ISSUES.map(([k, l]) => <button key={k} className="rounded-xl py-2 text-sm font-extrabold" style={{ background: '#fff', border: `2px solid ${INK}` }} onClick={() => send(k)}>{l}</button>)}</div>
+          <button className="text-xs font-bold underline mt-2" onClick={() => send('none')}>Nothing, skip</button></div>
+      )}
+    </div>
   )
 }

@@ -82,6 +82,7 @@ export const LEVEL1: LevelDef = {
     { id: 'snack', task: 2, x: 1.4, z: 4.4, label: 'Take the snack', color: '#e07a1f', shape: 'snack' },
     { id: 'powerbank', task: 2, x: 2.1, z: 4.4, label: 'Take the power bank', color: '#1c1b22', shape: 'bank' },
   ],
+  guideAreas: [{ x: -5.2, z: 0.6, r: 3.6 }, { x: 5.2, z: 0, r: 4 }, { x: 1.4, z: 3.8, r: 1.6 }, { x: 8.2, z: 0, r: 1.4 }],
   exitX: 7.7,
   timeLimit: 22,
   next: null,

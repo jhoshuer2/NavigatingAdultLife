@@ -210,3 +210,6 @@ Source of truth: `docs/SPEC-v2-the-unexpected-day.md`; code notes: `docs/V2-TECH
 - **The Rush**: `Dash.tsx` has a `rush` mode (no life, no energy, 2.0 character). Lobby: Play alone, Find a player (honest: "Nobody is online right now", then an explicit "Race Alfred ai (computer)" button), Challenge a friend (disabled, needs backend). Points: 1 for a new personal best over 100 m, 1 for the first win. Local leaderboard shows this device only; Global is marked "soon".
 - **Analytics** (admin schema): first_task_started, first_task_completed, level_started, level_completed, level_abandoned, task_failed, hint_used, session_resume, rush_finished.
 - **Not built (open in spec section 16)**: levels 2 to 9, chapters 2 to 10, global leaderboard, matchmaking/invitations, sign-in, purchases, points policy for competitive play.
+
+### Level 1 polish round (after first live test)
+Popups moved to edge strips (Rush and Level 1); tasks are acted out (walk up, dig, lift, pick up); tap-to-move; a soft yellow guide ring on the area of the next step after 15 s without progress; faint hazard paths in task 4 and a shorter knock-back; first-move hint line; one-tap "How was it?" feedback after Level 1 (`level_feedback` event: rating + issue, no free text). Analytics are on by default with an opt-out in Settings.
