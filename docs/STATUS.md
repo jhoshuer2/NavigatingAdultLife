@@ -213,3 +213,9 @@ Source of truth: `docs/SPEC-v2-the-unexpected-day.md`; code notes: `docs/V2-TECH
 
 ### Level 1 polish round (after first live test)
 Popups moved to edge strips (Rush and Level 1); tasks are acted out (walk up, dig, lift, pick up); tap-to-move; a soft yellow guide ring on the area of the next step after 15 s without progress; faint hazard paths in task 4 and a shorter knock-back; first-move hint line; one-tap "How was it?" feedback after Level 1 (`level_feedback` event: rating + issue, no free text). Analytics are on by default with an opt-out in Settings.
+
+### The Rush upgrade: timer, pickups, flying, rides, Alfred gap
+- **Run time**: every Rush run (solo or vs Alfred) is timed. Chips 1:00, 1:30, 2:00, 3:00, 5:00 in the lobby, the pause menu and the result screen; saved in `chapter.rush.secs`; changing it mid-run applies at once. When time is up the run ends ("TIME UP"), the score is distance and skill based.
+- **HUD**: one slim row at the top (time left with a thin bar, Alfred "N m ahead / behind", scores). Nothing in the lanes; the Alfred name tag over his head is gone; the road-progress bar is hidden in The Rush.
+- **Pickups** (`sim.ts`, same seed = same road for both runners): ⚡ boost (5 s, about 35% faster), 🪽 wings (7 s of flight, a sky stretch of coins with birds, drones and kites follows; a sky hit drops you to the road with a speed loss, no heart), rides 🛹 skateboard / 🚲 bike (every ~620 m) and 🛶 canoe (start of every bridge stretch): 10 s, faster, and the ride absorbs one hit. Alfred picks them up and avoids sky obstacles while flying.
+- Tests: `tests/rush-extras.test.ts`.

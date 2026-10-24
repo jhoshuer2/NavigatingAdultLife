@@ -16,7 +16,7 @@ export interface ChapterProgress {
   /** choices that later levels read, e.g. { 'ch1.l1.item': 'umbrella' } */
   flags: Record<string, string>
   /** The Rush, played alone or against Alfred */
-  rush: { best: number; plays: number; wins: number; points: number }
+  rush: { best: number; plays: number; wins: number; points: number; secs?: number }
 }
 
 export const emptyProgress = (): ChapterProgress => ({

@@ -53,7 +53,8 @@ describe('go-slow dash sim', () => {
   it('the road is the same for everyone with the same seed, whatever they do', () => {
     const a = createDash({ seed: 77, mode: 'foot', hearts: 99, assist: false }), b = createDash({ seed: 77, mode: 'foot', hearts: 99, assist: false })
     for (let i = 0; i < 60 * 20; i++) { if (i % 40 === 3) a.queue.push('left'); stepDash(a, 1 / 60); stepDash(b, 1 / 60) }
-    const sig = (s: DashState) => s.objs.filter((o) => o.type !== 'coin' && o.dist < 900).map((o) => `${o.kind}@${Math.round(o.dist)}:${o.lane}`).join()
+    const upto = Math.min(a.dist, b.dist) + 100 // only compare what both have spawned
+    const sig = (s: DashState) => s.objs.filter((o) => o.type !== 'coin' && o.dist < upto).map((o) => `${o.kind}@${Math.round(o.dist)}:${o.lane}`).join()
     expect(sig(a)).toBe(sig(b))
   })
   it('levels bring new things onto the road and raise the top speed', () => {

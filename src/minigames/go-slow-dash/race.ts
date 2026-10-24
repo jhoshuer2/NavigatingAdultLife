@@ -1,7 +1,7 @@
 // Racing in Go-Slow Dash. Both runners get the same seed, so they meet the same road; the rival is a computer runner ("Alfred ai")
 // that steers by looking at the road ahead, and sometimes misses things. Pure TypeScript, no DOM.
 import { makeRng, type Rng } from '@engine/core/rng'
-import { createDash, stepDash, OBSTACLE_RESPONSE, type DashConfig, type DashObj, type DashState, type ObstacleKind } from './sim'
+import { createDash, stepDash, isSky, OBSTACLE_RESPONSE, type DashConfig, type DashObj, type DashState, type ObstacleKind } from './sim'
 
 export const RACE_SECS = 90
 export const RIVAL_NAME = 'Alfred ai'
@@ -12,7 +12,7 @@ export function createRival(cfg: DashConfig, skill = 0.8): Rival {
   return { st: createDash({ ...cfg, hearts: 3 }), rng: makeRng(cfg.seed ^ 0x7f4a7c15), skill, seen: new Set(), ignore: new Set(), wait: 0, crashedAnnounced: false }
 }
 
-const threatens = (o: DashObj, st: DashState) => o.type === 'obstacle' && !o.taken && !o.passed && !(o.kind === 'bigBus' && st.cfg.mode === 'danfo')
+const threatens = (o: DashObj, st: DashState) => o.type === 'obstacle' && !o.taken && !o.passed && !(o.kind === 'bigBus' && st.cfg.mode === 'danfo') && isSky(o.kind) === (st.powers.wings > 0) // in the sky only the sky things matter, on the ground only the ground ones
 
 /** One decision for the computer runner. Called a few times a second. */
 export function rivalThink(rv: Rival) {
@@ -59,7 +59,12 @@ export function rivalThink(rv: Rival) {
   for (const l of [-1, 0, 1]) {
     if (Math.abs(l - st.lane) > 1 || lanes[l].dodge < look + 10 || (foot && lanes[l].act)) continue
     let n = 0
-    for (const o of st.objs) if (o.type === 'coin' && !o.taken && o.lane === l && o.dist - st.dist > 2 && o.dist - st.dist < 26) n += o.kind === 'gold' ? 3 : 1
+    for (const o of st.objs) {
+      const ahead = o.dist - st.dist
+      if (o.taken || o.lane !== l || ahead < 2 || ahead > 26) continue
+      if (o.type === 'coin' && ((o.y ?? 0.9) > 3) === (st.powers.wings > 0)) n += o.kind === 'gold' ? 3 : 1
+      else if (o.type === 'power' && st.powers.wings <= 0) n += 6 // boosts, wings and rides are worth a detour for the computer runner too
+    }
     if (n > bestN + (l === st.lane ? 0 : 2)) { bestN = n; best = l }
   }
   if (best !== st.lane) st.queue.push(best < st.lane ? 'left' : 'right')

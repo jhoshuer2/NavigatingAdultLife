@@ -3,17 +3,27 @@ import { makeRng, type Rng } from '@engine/core/rng'
 
 export type DashMode = 'foot' | 'danfo'
 export type ObstacleKind = 'pothole' | 'cone' | 'goat' | 'wheelbarrow' | 'signboard' | 'stalledDanfo' | 'okada' | 'barrier'
-  | 'car' | 'train' | 'plane' | 'bigBus' | 'walker' | 'crowd' | 'shack'
+  | 'car' | 'train' | 'plane' | 'bigBus' | 'walker' | 'crowd' | 'shack' | 'bird' | 'drone' | 'kite'
 /** jump over it, slide under it, change lane, or (bigBus) jump on top and ride it */
 export type Response = 'jump' | 'slide' | 'dodge' | 'climb'
 export const OBSTACLE_RESPONSE: Record<ObstacleKind, Response> = {
   pothole: 'jump', cone: 'jump', goat: 'jump', wheelbarrow: 'jump', signboard: 'slide', stalledDanfo: 'dodge', okada: 'dodge', barrier: 'dodge',
-  car: 'dodge', train: 'dodge', plane: 'slide', bigBus: 'climb', walker: 'jump', crowd: 'dodge', shack: 'dodge',
+  car: 'dodge', train: 'dodge', plane: 'slide', bigBus: 'climb', walker: 'jump', crowd: 'dodge', shack: 'dodge', bird: 'dodge', drone: 'dodge', kite: 'dodge',
 }
+/** things in the sky only matter while flying; on the ground they pass far overhead */
+export const SKY_KINDS: ReadonlySet<string> = new Set(['bird', 'drone', 'kite'])
+export const isSky = (kind: string) => SKY_KINDS.has(kind)
 /** objects with a length are anchored at their near edge and run away from the player */
 export const OBSTACLE_LEN: Partial<Record<ObstacleKind, number>> = { car: 4, train: 20, bigBus: 11 }
 export const BUS_ROOF = 1.8
-export type PowerKind = 'magnet' | 'hop' | 'suya'
+export type PowerKind = 'magnet' | 'hop' | 'suya' | 'boost' | 'wings'
+export const POWER_KINDS: PowerKind[] = ['magnet', 'hop', 'suya', 'boost', 'wings']
+/** things to ride: a speed bonus for a while, and one hit is absorbed (the ride breaks instead of costing a heart) */
+export type RideKind = 'skate' | 'bike' | 'canoe'
+export const RIDE_FACTOR: Record<RideKind, number> = { skate: 1.2, bike: 1.35, canoe: 1.28 }
+export const RIDE_SECS = 10, BOOST_SECS = 5, WINGS_SECS = 7
+export const FLY_Y = 4.6
+export const isRide = (k: string): k is RideKind => k === 'skate' || k === 'bike' || k === 'canoe'
 
 export interface DashObj {
   id: number
@@ -39,6 +49,7 @@ export interface Mission extends MissionDef { progress: number; done: boolean }
 
 export type DashEvent =
   | { t: 'coin'; gold: boolean } | { t: 'hit' } | { t: 'jump' } | { t: 'lane' } | { t: 'power'; kind: PowerKind } | { t: 'close' }
+  | { t: 'ride'; kind: RideKind } | { t: 'rideBreak' } | { t: 'fly' } | { t: 'knock' } | { t: 'boost' }
   | { t: 'load'; n: number } | { t: 'drop'; n: number; fare: number } | { t: 'mission'; text: string } | { t: 'over' } | { t: 'segment'; name: string } | { t: 'horn' } | { t: 'level'; n: number; name: string } | { t: 'roof' }
 
 export interface RouteSegment { name: string; length: number; theme: 'market' | 'flyover' | 'brt' | 'estate' | 'bridge' }
@@ -109,6 +120,8 @@ export interface DashState {
   combo: number
   comboT: number
   powers: Record<PowerKind, number>
+  ride: { kind: RideKind; t: number } | null
+  extras: { boost: number; ride: number; wings: number; canoe: number }
   missions: Mission[]
   fastT: number
   sinceHit: number
@@ -142,7 +155,7 @@ export function createDash(cfg: DashConfig): DashState {
   return {
     cfg, rng, evRng: makeRng(cfg.seed ^ 0x5bd1e995), level: 1, tunnelsSpawned: 0, floor: 0, t: 0, dist: 0, speed: cfg.assist ? 11 : 13, maxSpeed: maxSpeedFor(cfg, 1), lane: 0, x: 0, y: 0, vy: 0, slide: 0,
     hearts: cfg.hearts, invuln: 0, objs: [], spawnedTo: 40, nextId: 1, score: 0, coins: 0, closeCalls: 0, aboard: 0, delivered: 0, fares: 0, combo: 1, comboT: 0,
-    powers: { magnet: 0, hop: 0, suya: 0 }, missions: pickMissions(rng, cfg.mode), fastT: 0, sinceHit: 0, loadT: 0, braking: false, over: false,
+    powers: { magnet: 0, hop: 0, suya: 0, boost: 0, wings: 0 }, ride: null, extras: { boost: 0, ride: 0, wings: 0, canoe: 0 }, missions: pickMissions(rng, cfg.mode), fastT: 0, sinceHit: 0, loadT: 0, braking: false, over: false,
     segIndex: 0, queue: [], stopsSpawned: 0,
   }
 }
@@ -261,6 +274,51 @@ export function generateRow(st: DashState): Row {
   return { objs, gap }
 }
 
+/** Stable hash of (seed, index, salt): the extras below depend only on the seed and the position, so both runners in a race meet the same ones. */
+const hash = (seed: number, k: number, salt: number) => { let h = Math.imul(seed ^ Math.imul(k + 1, 0x9e3779b1) ^ salt, 0x85ebca6b); h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35); return (h ^ (h >>> 16)) >>> 0 }
+export const BOOST_FIRST = 220, BOOST_EVERY = 300, RIDE_FIRST = 480, RIDE_EVERY = 620, WINGS_FIRST = 380, WINGS_EVERY = 700
+export const SKY_STEP = 24, SKY_STEPS = 8
+export const boostAt = (seed: number, k: number) => BOOST_FIRST + k * BOOST_EVERY + (hash(seed, k, 1) % 60)
+export const rideAt = (seed: number, k: number) => RIDE_FIRST + k * RIDE_EVERY + (hash(seed, k, 2) % 60)
+export const wingsAt = (seed: number, k: number) => WINGS_FIRST + k * WINGS_EVERY + (hash(seed, k, 3) % 60)
+/** a canoe waits at the start of every bridge stretch */
+export function canoeAt(routeId: string | undefined, k: number): number {
+  const route = ROUTES[routeId ?? 'oshodi'] ?? ROUTES.oshodi
+  const total = route.reduce((a, r) => a + r.length, 0)
+  let acc = 0; for (const r of route) { if (r.theme === 'bridge') break; acc += r.length }
+  return k * total + acc + 24
+}
+
+/** the lane with the fewest obstacles near this spot, starting from a preferred lane */
+function clearLane(st: DashState, at: number, pref: number): number {
+  const busy = (l: number) => st.objs.some((o) => o.type === 'obstacle' && !isSky(o.kind) && (o.lane === l || o.wide) && Math.abs(o.dist - at) < 10 + (o.length ?? 0))
+  for (const l of [pref, ...[-1, 0, 1].filter((x) => x !== pref)]) if (!busy(l)) return l
+  return pref
+}
+
+function placeExtras(st: DashState) {
+  const { seed } = st.cfg
+  const add = (o: Omit<DashObj, 'id'>) => st.objs.push({ ...o, id: st.nextId++ })
+  const ex = st.extras
+  while (boostAt(seed, ex.boost) < st.spawnedTo) { const d = boostAt(seed, ex.boost); add({ type: 'power', kind: 'boost', lane: clearLane(st, d, (hash(seed, ex.boost, 11) % 3) - 1), dist: d }); ex.boost++ }
+  while (rideAt(seed, ex.ride) < st.spawnedTo) { const d = rideAt(seed, ex.ride); add({ type: 'power', kind: ex.ride % 2 ? 'bike' : 'skate', lane: clearLane(st, d, (hash(seed, ex.ride, 12) % 3) - 1), dist: d }); ex.ride++ }
+  while (canoeAt(st.cfg.routeId, ex.canoe) < st.spawnedTo) { const d = canoeAt(st.cfg.routeId, ex.canoe); if (d > 100) add({ type: 'power', kind: 'canoe', lane: clearLane(st, d, 0), dist: d }); ex.canoe++ }
+  while (wingsAt(seed, ex.wings) < st.spawnedTo) {
+    const k = ex.wings, d = wingsAt(seed, k)
+    add({ type: 'power', kind: 'wings', lane: clearLane(st, d, (hash(seed, k, 13) % 3) - 1), dist: d })
+    // the sky stretch after it: coins in the air and birds, drones and kites to dodge, one per row, never closer than a safe gap
+    const kinds: ObstacleKind[] = ['bird', 'drone', 'kite']
+    for (let i = 0; i < SKY_STEPS; i++) {
+      const at = d + 34 + i * SKY_STEP
+      const obLane = (hash(seed, k * 31 + i, 14) % 3) - 1
+      if (i % 2 === 1) add({ type: 'obstacle', kind: kinds[hash(seed, k * 31 + i, 15) % 3], lane: obLane, dist: at })
+      const cl = (obLane + 1 + (hash(seed, k * 31 + i, 16) % 2) + 1) % 3 - 1 // a lane that is not the obstacle's
+      for (let c = 0; c < 3; c++) add({ type: 'coin', kind: c === 2 && i % 4 === 3 ? 'gold' : 'coin', lane: i % 2 === 1 ? cl : obLane, dist: at + c * 3 - 6, y: FLY_Y })
+    }
+    ex.wings++
+  }
+}
+
 function spawn(st: DashState) {
   while (st.spawnedTo < st.dist + 150) {
     // tunnels sit at fixed places along the road
@@ -279,6 +337,7 @@ function spawn(st: DashState) {
     const base = st.spawnedTo
     for (const o of row.objs) st.objs.push({ ...o, id: st.nextId++, dist: base + o.dist })
     st.spawnedTo = base + row.gap
+    placeExtras(st)
   }
 }
 
@@ -295,6 +354,7 @@ export function segmentAt(dist: number, routeId = 'oshodi'): { index: number; se
 }
 
 function hurt(st: DashState, o: DashObj, ev: DashEvent[]) {
+  if (st.ride) { st.ride = null; st.invuln = 1.1; o.passed = true; ev.push({ t: 'rideBreak' }); return } // the ride takes the hit
   st.hearts -= 1; st.invuln = 1.3; st.sinceHit = 0; st.combo = 1
   st.speed = Math.max(8, st.speed * 0.72)
   o.passed = true
@@ -323,26 +383,30 @@ export function stepDash(st: DashState, dt: number): DashEvent[] {
     const a = st.queue.shift()!
     if (a === 'left' && st.lane > -1) { st.lane -= 1; ev.push({ t: 'lane' }) }
     else if (a === 'right' && st.lane < 1) { st.lane += 1; ev.push({ t: 'lane' }) }
-    else if (a === 'jump' && st.y <= st.floor + 0.01 && (foot || st.powers.hop > 0)) { st.vy = JUMP_V * (foot ? 1 : 0.85); st.slide = 0; ev.push({ t: 'jump' }) }
+    else if (a === 'jump' && st.powers.wings <= 0 && st.y <= st.floor + 0.01 && (foot || st.powers.hop > 0)) { st.vy = JUMP_V * (foot ? 1 : 0.85); st.slide = 0; ev.push({ t: 'jump' }) }
     else if (a === 'slide' && foot) { if (st.y > 0.01) st.vy = -JUMP_V; st.slide = 0.7 }
   }
   // speed
-  const target = st.braking && !foot ? 7 : st.maxSpeed
-  const ramp = st.cfg.assist ? 0.1 : 0.17
+  const effMax = st.maxSpeed * (st.powers.boost > 0 ? 1.35 : 1) * (st.ride ? RIDE_FACTOR[st.ride.kind] : 1)
+  const target = st.braking && !foot ? 7 : effMax
+  const ramp = (st.cfg.assist ? 0.1 : 0.17) * (st.powers.boost > 0 ? 3 : st.ride ? 2.5 : 1)
   st.speed += (target - st.speed) * Math.min(1, (st.braking ? 3 : ramp) * dt)
-  if (!st.braking) st.speed = Math.min(st.maxSpeed, st.speed + (st.cfg.assist ? 0.12 : 0.2) * dt * 3)
+  if (!st.braking) st.speed = Math.min(effMax, st.speed + (st.cfg.assist ? 0.12 : 0.2) * dt * 3)
   st.dist += st.speed * dt
   const lv = levelAt(st.dist)
   if (lv > st.level) { st.level = lv; st.maxSpeed = maxSpeedFor(st.cfg, lv); st.score += 100 * lv; ev.push({ t: 'level', n: lv, name: LEVELS[lv - 1].name }) }
   // lateral smoothing (~120 ms)
   st.x += (st.lane - st.x) * Math.min(1, dt * 18)
   // vertical
-  st.floor = floorAt(st)
-  if (st.y > st.floor + 0.001 || st.vy > 0) { st.vy -= GRAVITY * dt; st.y += st.vy * dt; if (st.y <= st.floor && st.vy <= 0) { st.y = st.floor; st.vy = 0 } }
+  const flying = st.powers.wings > 0
+  st.floor = flying ? 0 : floorAt(st)
+  if (flying) { st.vy = 0; st.y += (FLY_Y - st.y) * Math.min(1, dt * 3); st.slide = 0 }
+  else if (st.y > st.floor + 0.001 || st.vy > 0) { st.vy -= GRAVITY * dt; st.y += st.vy * dt; if (st.y <= st.floor && st.vy <= 0) { st.y = st.floor; st.vy = 0 } }
   else if (st.y < st.floor) { st.y = st.floor; st.vy = 0 } // floorAt only reports a roof once the player is high enough to be on it
   st.slide = Math.max(0, st.slide - dt)
   st.invuln = Math.max(0, st.invuln - dt)
-  for (const k of ['magnet', 'hop', 'suya'] as const) st.powers[k] = Math.max(0, st.powers[k] - dt)
+  for (const k of POWER_KINDS) st.powers[k] = Math.max(0, st.powers[k] - dt)
+  if (st.ride) { st.ride.t -= dt; if (st.ride.t <= 0) st.ride = null }
   st.comboT -= dt; if (st.comboT <= 0) st.combo = 1
   st.sinceHit += st.speed * dt
   if (st.speed >= st.maxSpeed * 0.9) st.fastT += dt; else st.fastT = 0
@@ -370,11 +434,30 @@ export function stepDash(st: DashState, dt: number): DashEvent[] {
     } else if (o.type === 'power') {
       if (rel > -1 && rel < 1 && dx < 0.8) {
         o.taken = true
-        st.powers[o.kind as PowerKind] = 6
-        if (o.kind === 'suya') st.invuln = Math.max(st.invuln, 3)
-        ev.push({ t: 'power', kind: o.kind as PowerKind })
+        if (isRide(o.kind)) { st.ride = { kind: o.kind, t: RIDE_SECS }; ev.push({ t: 'ride', kind: o.kind }) }
+        else if (o.kind === 'boost') { st.powers.boost = BOOST_SECS; st.speed = Math.max(st.speed, st.maxSpeed * 1.2); ev.push({ t: 'boost' }) }
+        else if (o.kind === 'wings') { st.powers.wings = WINGS_SECS; st.slide = 0; ev.push({ t: 'fly' }) }
+        else {
+          st.powers[o.kind as PowerKind] = 6
+          if (o.kind === 'suya') st.invuln = Math.max(st.invuln, 3)
+          ev.push({ t: 'power', kind: o.kind as PowerKind })
+        }
       }
     } else if (o.type === 'obstacle') {
+      if (isSky(o.kind) !== flying) {
+        // sky things only count while flying, and the ground only counts while on it
+        if (isSky(o.kind) && rel < -6) o.passed = true
+        else if (!isSky(o.kind) && !o.passed && rel + len < -hitDist) o.passed = true
+        continue
+      }
+      if (isSky(o.kind)) {
+        if (!o.passed && Math.abs(rel) < hitDist + 0.4 && dx < laneDx + 0.3 && st.invuln <= 0) {
+          // knocked out of the sky: the wings stop, you drop to the road and lose some speed (no heart)
+          o.passed = true; st.powers.wings = 0; st.vy = -6; st.invuln = 1.5; st.speed = Math.max(8, st.speed * 0.75); st.combo = 1
+          ev.push({ t: 'knock' })
+        } else if (!o.passed && rel < -hitDist) o.passed = true
+        continue
+      }
       const resp = OBSTACLE_RESPONSE[o.kind as ObstacleKind]
       const behind = len ? rel + len < -hitDist : rel < -hitDist
       const overlap = len ? rel < hitDist && rel + len > -hitDist : Math.abs(rel) < hitDist

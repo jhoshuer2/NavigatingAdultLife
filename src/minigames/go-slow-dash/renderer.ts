@@ -2,7 +2,7 @@
 import * as THREE from 'three'
 import { buildToon, type ToonSpec } from '../../world/toon'
 import type { Appearance, Gender } from '@engine/core/types'
-import { BUS_ROOF, LANE_W, OBSTACLE_RESPONSE, segmentAt, type DashObj, type DashState, type ObstacleKind, type RouteSegment } from './sim'
+import { BUS_ROOF, FLY_Y, LANE_W, OBSTACLE_RESPONSE, isSky, segmentAt, type DashObj, type DashState, type ObstacleKind, type RouteSegment } from './sim'
 import { buildHuman } from '../../world/characters'
 import type { Wear } from '@content/items'
 
@@ -88,6 +88,7 @@ export class DashRenderer {
     // player + shadow
     this.shadow = new THREE.Mesh(new THREE.CircleGeometry(0.9, 14), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 })); this.shadow.rotation.x = -Math.PI / 2; this.shadow.position.y = 0.03; this.root.add(this.shadow)
     this.buildPlayer(opts)
+    this.playerGear = this.makeGear(); for (const m of Object.values(this.playerGear)) this.player.add(m)
     this.root.add(this.player)
     this.resize()
   }
@@ -203,6 +204,25 @@ export class DashRenderer {
         const awn = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.1, 0.7), mat([0xd62828, 0x2b3a8c, 0x1f9d55][Math.floor(Math.random() * 3)])); awn.position.set(0, 1.85, 1.5); g.add(awn)
         const lab = this.label('SHOP', 0.9); lab.position.set(0, 2.8, 1.2); g.add(lab)
         break }
+      case 'bird': { // a dark bird with flapping wings, up where you fly
+        const y = FLY_Y + 1.0
+        const b = new THREE.Mesh(new THREE.SphereGeometry(0.45, 8, 6), mat(0x2a2a35)); b.scale.set(1, 0.8, 1.4); b.position.y = y; g.add(b)
+        const hd = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 6), mat(0x2a2a35)); hd.position.set(0, y + 0.12, 0.65); g.add(hd)
+        const bk = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.3, 5), mat(0xffb020)); bk.rotation.x = Math.PI / 2; bk.position.set(0, y + 0.1, 0.95); g.add(bk)
+        for (const sx of [-1, 1]) { const w = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.06, 0.6), mat(0x3a3a48)); w.position.set(sx * 0.9, y + 0.1, 0); w.name = 'flap'; g.add(w) }
+        break }
+      case 'drone': {
+        const y = FLY_Y + 1.0
+        const b = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.28, 0.8), mat(0x33333f)); b.position.y = y; g.add(b)
+        for (const [x, z] of [[-0.7, -0.7], [0.7, -0.7], [-0.7, 0.7], [0.7, 0.7]]) { const arm = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.06, 0.1), mat(0x55555f)); arm.position.set(x * 0.6, y, z * 0.6); g.add(arm); const r = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.04, 10), mat(0x9fd1ff, { transparent: true, opacity: 0.6 })); r.position.set(x, y + 0.12, z); r.name = 'spin'; g.add(r) }
+        const led = new THREE.Mesh(new THREE.SphereGeometry(0.1, 6, 6), new THREE.MeshBasicMaterial({ color: 0xff3030 })); led.position.set(0, y - 0.18, 0.3); g.add(led)
+        break }
+      case 'kite': {
+        const y = FLY_Y + 1.2
+        const k = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1.4, 0.05), mat(0xe0457b)); k.rotation.z = Math.PI / 4; k.position.y = y; g.add(k)
+        const k2 = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.7, 0.06), mat(0xf5b91c)); k2.rotation.z = Math.PI / 4; k2.position.set(0, y, 0.02); g.add(k2)
+        for (let i = 0; i < 4; i++) { const t = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.12, 0.04), mat(i % 2 ? 0x2b3a8c : 0xffffff)); t.position.set(0.1 * (i % 2 ? 1 : -1), y - 1.0 - i * 0.28, 0); g.add(t) }
+        break }
       case 'barrier': { for (let i = 0; i < 4; i++) { const b = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.4, 0.3), mat(i % 2 ? 0xffffff : 0xd62828)); b.position.set(-0.9 + i * 0.6, 0.9, 0); g.add(b) } for (const x of [-1, 1]) { const p = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.1, 0.12), mat(0x555566)); p.position.set(x, 0.55, 0); g.add(p) } break }
     }
     return g
@@ -267,13 +287,82 @@ export class DashRenderer {
       parts.legL = limb(-0.2, 0.9, 0.9, 0x2a3a44); parts.legR = limb(0.2, 0.9, 0.9, 0x2a3a44); parts.armL = limb(-0.55, 1.75, 0.8, 0xdfe8ec); parts.armR = limb(0.55, 1.75, 0.8, 0xdfe8ec)
     }
     g.traverse((o) => { const m = o as THREE.Mesh; const mt = m.material as THREE.Material | undefined; if (mt && 'opacity' in mt) { mt.transparent = true; (mt as THREE.MeshLambertMaterial).opacity = 0.85 } })
-    const tag = this.label(name, 1.2); tag.position.y = this.mode === 'danfo' ? 4.4 : 3.5; g.add(tag)
+    void name // no floating name over the rival: it only got in the way of the road
+    this.rivalGear = this.makeGear(); for (const m of Object.values(this.rivalGear)) g.add(m)
     g.visible = false
     this.root.add(g); this.rival = { group: g, parts }
   }
 
+  /** a ride (skateboard, bike or canoe) as it looks under a runner's feet; also used, bigger, as the pickup */
+  private rideModel(kind: 'skate' | 'bike' | 'canoe'): THREE.Group {
+    const g = new THREE.Group()
+    const wheel = (x: number, y: number, z: number, r = 0.16) => { const w = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.1, 10), mat(0x1c1b22)); w.rotation.z = Math.PI / 2; w.position.set(x, y, z); g.add(w) }
+    if (kind === 'skate') {
+      const d = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.07, 1.5), mat(0xe07a1f)); d.position.y = 0.22; g.add(d)
+      const st = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.075, 0.25), mat(0xf5b91c)); st.position.set(0, 0.225, 0); g.add(st)
+      for (const x of [-0.2, 0.2]) for (const z of [-0.5, 0.5]) wheel(x, 0.12, z, 0.12)
+    } else if (kind === 'bike') {
+      for (const z of [-0.7, 0.7]) { const t = new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.06, 6, 14), mat(0x1c1b22)); t.rotation.y = Math.PI / 2; t.position.set(0, 0.42, z); g.add(t) }
+      const fr = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 1.5), mat(0x2f5a3a)); fr.position.set(0, 0.62, 0); g.add(fr)
+      const bar = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.07, 0.07), mat(0x555566)); bar.position.set(0, 1.05, -0.62); g.add(bar)
+      const seat = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.07, 0.4), mat(0x1c1b22)); seat.position.set(0, 1.0, 0.45); g.add(seat)
+    } else {
+      const hull = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.38, 3.2), mat(0xc4562a)); hull.position.y = 0.2; g.add(hull)
+      for (const z of [-1, 1]) { const tip = new THREE.Mesh(new THREE.ConeGeometry(0.47, 0.8, 4), mat(0xc4562a)); tip.rotation.x = z > 0 ? -Math.PI / 2 : Math.PI / 2; tip.rotation.z = Math.PI / 4; tip.position.set(0, 0.2, z * 1.95); g.add(tip) }
+      const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.97, 0.06, 3.0), mat(0xf5b91c)); stripe.position.y = 0.36; g.add(stripe)
+      const paddle = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 1.6), mat(0x7a4a2a)); paddle.rotation.y = Math.PI / 2; paddle.position.set(0, 0.7, 0.2); g.add(paddle)
+    }
+    return g
+  }
+
+  private wingsModel(): THREE.Group {
+    const g = new THREE.Group()
+    for (const sx of [-1, 1]) {
+      const w = new THREE.Group(); w.position.set(sx * 0.35, 1.5, 0.3); w.name = sx < 0 ? 'wingL' : 'wingR'
+      for (let i = 0; i < 3; i++) { const f = new THREE.Mesh(new THREE.BoxGeometry(0.9 - i * 0.18, 0.08, 0.34), mat(i % 2 ? 0xffffff : 0xfff3c0)); f.position.set(sx * (0.5 + i * 0.08), -i * 0.14, 0); f.rotation.z = sx * -0.25; w.add(f) }
+      g.add(w)
+    }
+    g.visible = false
+    return g
+  }
+
+  /** the things a runner can carry or ride (shown only while active): three rides and a pair of wings */
+  private makeGear(): { skate: THREE.Group; bike: THREE.Group; canoe: THREE.Group; wings: THREE.Group } {
+    const skate = this.rideModel('skate'), bike = this.rideModel('bike'), canoe = this.rideModel('canoe'), wings = this.wingsModel()
+    for (const m of [skate, bike, canoe]) m.visible = false
+    return { skate, bike, canoe, wings }
+  }
+  private playerGear?: ReturnType<DashRenderer['makeGear']>
+  private rivalGear?: ReturnType<DashRenderer['makeGear']>
+  private applyGear(gear: ReturnType<DashRenderer['makeGear']> | undefined, s: DashState, time: number) {
+    if (!gear) return
+    for (const k of ['skate', 'bike', 'canoe'] as const) gear[k].visible = s.ride?.kind === k
+    const flying = s.powers.wings > 0
+    gear.wings.visible = flying
+    if (flying) { const f = Math.sin(time * 14) * 0.5; const l = gear.wings.getObjectByName('wingL'), r = gear.wings.getObjectByName('wingR'); if (l) l.rotation.z = f; if (r) r.rotation.z = -f }
+  }
+
   private makePower(kind: string): THREE.Group {
     const g = new THREE.Group()
+    if (kind === 'skate' || kind === 'bike' || kind === 'canoe') {
+      const m = this.rideModel(kind); m.scale.setScalar(1.5); m.position.y = 0.9; g.add(m)
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(1.1, 0.06, 6, 18), new THREE.MeshBasicMaterial({ color: 0x7affc8 })); ring.rotation.x = Math.PI / 2; ring.position.y = 0.15; g.add(ring)
+      const label = this.label(kind === 'skate' ? '🛹' : kind === 'bike' ? '🚲' : '🛶', 1.1); label.position.y = 2.7; g.add(label)
+      return g
+    }
+    if (kind === 'wings') {
+      for (const sx of [-1, 1]) { const w = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.12, 0.45), mat(0xffffff, { emissive: new THREE.Color(0x667799) })); w.position.set(sx * 0.6, 1.5, 0); w.rotation.z = sx * -0.35; g.add(w) }
+      const body = new THREE.Mesh(new THREE.OctahedronGeometry(0.35), mat(0xfff3c0, { emissive: new THREE.Color(0x887744) })); body.position.y = 1.5; g.add(body)
+      const label = this.label('🪽', 1.1); label.position.y = 2.6; g.add(label)
+      return g
+    }
+    if (kind === 'boost') {
+      const bolt = new THREE.Mesh(new THREE.OctahedronGeometry(0.55), mat(0x2ee6ff, { emissive: new THREE.Color(0x0a6a80) })); bolt.scale.set(0.8, 1.5, 0.8); bolt.position.y = 1.5; g.add(bolt)
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.9, 0.07, 6, 16), new THREE.MeshBasicMaterial({ color: 0xffe94a })); ring.position.y = 1.5; g.add(ring)
+      const label = this.label('⚡', 1.1); label.position.y = 2.7; g.add(label)
+      this.spinners.push(bolt)
+      return g
+    }
     const col = kind === 'magnet' ? 0xe0324a : kind === 'hop' ? 0x2fd27b : 0xff9a1a
     const orb = new THREE.Mesh(new THREE.OctahedronGeometry(0.6), mat(col, { emissive: new THREE.Color(col).multiplyScalar(0.35) })); orb.position.y = 1.5; g.add(orb)
     const ring = new THREE.Mesh(new THREE.TorusGeometry(0.85, 0.06, 6, 16), new THREE.MeshBasicMaterial({ color: 0xffffff })); ring.position.y = 1.5; g.add(ring)
@@ -357,6 +446,7 @@ export class DashRenderer {
     r.group.visible = rel > -6 && rel < 140
     r.group.position.set(rv.x * LANE_W + (Math.abs(rv.x - st.x) < 0.4 && Math.abs(rel) < 4 ? 0.7 : 0), rv.y, -rel)
     if (rv.over) r.group.rotation.z = Math.min(1.4, r.group.rotation.z + 0.1)
+    this.applyGear(this.rivalGear, rv, time)
     const sw = Math.sin(time * (8 + rv.speed * 0.5)) * 0.9
     if (r.parts.legL) { r.parts.legL.rotation.x = sw; r.parts.legR!.rotation.x = -sw; r.parts.armL!.rotation.x = -sw; r.parts.armR!.rotation.x = sw }
   }
@@ -382,6 +472,7 @@ export class DashRenderer {
       p.body.rotation.z = (st.lane - st.x) * 0.06
       this.busHeads.forEach((h, i) => { h.visible = i < st.aboard })
     }
+    this.applyGear(this.playerGear, st, time)
     this.drawRival(st, rival, time)
     this.player.visible = st.invuln <= 0 || Math.floor(time * 14) % 2 === 0 || st.powers.suya > 0
     this.shadow.position.set(st.x * LANE_W, 0.04, 0); this.shadow.scale.setScalar(this.mode === 'danfo' ? 2 : 1 - Math.min(0.5, st.y * 0.15))
@@ -389,8 +480,8 @@ export class DashRenderer {
     this.shake = Math.max(0, this.shake - dt * 2)
     const sx = (Math.random() - 0.5) * this.shake, sy = (Math.random() - 0.5) * this.shake
     const camBack = this.mode === 'danfo' ? 12.5 : 8.4, camUp = this.mode === 'danfo' ? 6.4 : 4.2
-    this.camera.position.set(st.x * LANE_W * 0.45 + sx, camUp + st.y * 0.3 + sy, camBack)
-    this.camera.lookAt(st.x * LANE_W * 0.25, 1.1, -11)
+    this.camera.position.set(st.x * LANE_W * 0.45 + sx, camUp + st.y * 0.5 + sy, camBack)
+    this.camera.lookAt(st.x * LANE_W * 0.25, 1.1 + st.y * 0.45, -11)
     this.camera.fov = 60 + Math.min(10, (st.speed - 13) * 0.6) + (st.powers.suya > 0 ? 6 : 0); this.camera.updateProjectionMatrix()
     // lane lines & kerbs
     let li = 0
@@ -433,6 +524,7 @@ export class DashRenderer {
       if (o.kind === 'plane') a.group.position.x = 0
       if (o.type === 'stop') a.group.position.x = o.lane * LANE_W
       if (o.type === 'power') a.group.rotation.y = time * 2
+      if (o.type === 'obstacle' && isSky(o.kind)) { a.group.position.y = Math.sin(time * 3 + o.id) * 0.25; a.group.children.forEach((c) => { if (c.name === 'flap') c.rotation.z = Math.sin(time * 12 + o.id) * 0.5 * (c.position.x < 0 ? -1 : 1); else if (c.name === 'spin') c.rotation.y = time * 40 }) }
       if (o.type === 'obstacle' && o.passed && OBSTACLE_RESPONSE[o.kind as ObstacleKind] === 'jump' && o.kind !== 'walker') a.group.position.y = 0
     }
     this.coins.count = ci; this.coins.instanceMatrix.needsUpdate = true; if (this.coins.instanceColor) this.coins.instanceColor.needsUpdate = true

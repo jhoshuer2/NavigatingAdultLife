@@ -17,7 +17,9 @@ import { progressOf, recordRush } from '../../levels/progress'
 import { charSpec } from './V2'
 import { track } from '@platform/analytics'
 
-interface Hud { score: number; coins: number; hearts: number; speed: number; dist: number; seg: string; next: string; toNext: number; segPct: number; missions: { text: string; pct: number; done: boolean }[]; powers: { magnet: number; hop: number; suya: number }; aboard: number; fares: number; combo: number; brake: boolean; level: number; levelPct: number; rival: number | null; rivalOver: boolean; left: number }
+export const RUSH_DURATIONS = [60, 90, 120, 180, 300] as const
+const fmtT = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
+interface Hud { gap: number | null; ride: { kind: string; t: number } | null; score: number; coins: number; hearts: number; speed: number; dist: number; seg: string; next: string; toNext: number; segPct: number; missions: { text: string; pct: number; done: boolean }[]; powers: Record<'magnet' | 'hop' | 'suya' | 'boost' | 'wings', number>; aboard: number; fares: number; combo: number; brake: boolean; level: number; levelPct: number; rival: number | null; rivalOver: boolean; left: number }
 type Phase = 'ready' | 'choose' | 'search' | 'count' | 'run' | 'paused' | 'over'
 
 /** `rush`: The Rush as its own game (no life, no energy, the 2.0 character); without it, the old in-life run. */
@@ -27,6 +29,12 @@ export default function Dash({ rush, again }: { rush?: boolean; again?: () => vo
   const dashMode = rush ? 'foot' : modeState
   const rushSpec = charSpec(progressOf(meta).character)
   const [rushPts, setRushPts] = useState<number | null>(null)
+  // how long a run lasts (The Rush only): the player picks it and can change it any time, in the lobby, in the pause menu and after a run
+  const secs = rush ? progressOf(meta).rush.secs ?? 90 : RACE_SECS
+  const limitRef = useRef(secs)
+  limitRef.current = secs
+  const setSecs = (n: number) => { const st = useGame.getState(); const p = progressOf(st.meta); st.saveProgress({ ...p, rush: { ...p.rush, secs: n } }) }
+  const [timeUp, setTimeUp] = useState(false)
   const host = useRef<HTMLDivElement>(null)
   const city = rush ? 'lagos' : cityOfHome(life?.character.housing.districtId ?? 'surulere')
   const how0 = HOWTO[dashMode === 'foot' ? 'dash' : 'dashDanfo']
@@ -79,14 +87,14 @@ export default function Dash({ rush, again }: { rush?: boolean; again?: () => vo
     const res = resultOf(st)
     if (rv) {
       // you ran out of hearts first: Alfred ai carries on to the end of the race, so you can only win if you are still ahead when his run ends too
-      const carried = !rv.st.over && rv.st.t < RACE_SECS
+      const carried = !rv.st.over && rv.st.t < limitRef.current
       setCarried(carried)
-      if (carried) for (let i = 0; i < RACE_SECS * 60 && !rv.st.over && rv.st.t < RACE_SECS; i++) stepRival(rv, 1 / 60)
+      if (carried) for (let i = 0; i < limitRef.current * 60 && !rv.st.over && rv.st.t < limitRef.current; i++) stepRival(rv, 1 / 60)
       const o = raceOutcome(st, rv.st, timeUp)
       if (o.youWon) res.coins += 10 // winner's bonus
       setRace(o); (res as DashResult & { raceWon?: boolean }).raceWon = o.youWon
     }
-    setResult(res); setPhase('over')
+    setTimeUp(timeUp); setResult(res); setPhase('over')
   }, [])
 
   const handleEvents = useCallback((evs: DashEvent[]) => {
@@ -95,6 +103,11 @@ export default function Dash({ rush, again }: { rush?: boolean; again?: () => vo
         case 'coin': audio.sfx('coin'); break
         case 'hit': audio.sfx('hit'); rendRef.current?.hit(); setFlash(true); setTimeout(() => setFlash(false), 180); break
         case 'jump': audio.sfx('jump'); break
+        case 'boost': audio.sfx('power'); pop('⚡ Speed boost'); break
+        case 'fly': audio.sfx('level'); pop('🪽 Flying!'); break
+        case 'knock': audio.sfx('hit'); rendRef.current?.hit(); pop('Knocked down!'); break
+        case 'ride': audio.sfx('power'); pop(e.kind === 'skate' ? '🛹 Skateboard!' : e.kind === 'bike' ? '🚲 Bike!' : '🛶 Canoe!'); break
+        case 'rideBreak': audio.sfx('hit'); pop('Your ride broke'); break
         case 'power': audio.sfx('power'); pop(e.kind === 'magnet' ? '🧲 Magnet!' : e.kind === 'hop' ? '🦘 Super Hop!' : '🍢 Suya boost!'); break
         case 'close': pop('Close call! +25'); break
         case 'load': audio.sfx('horn'); pop(`🚏 ${e.n} passenger${e.n > 1 ? 's' : ''} on board`); break
@@ -132,8 +145,8 @@ export default function Dash({ rush, again }: { rush?: boolean; again?: () => vo
           const rv = rivalRef.current
           if (rv && !st.over) {
             if (stepRival(rv, 1 / 60)) { audio.sfx('hit'); pop('💥 ' + RIVAL_NAME + ' crashed out!') }
-            if (st.t >= RACE_SECS) { audio.sfx('level'); finishRun(true) }
-          }
+            if (st.t >= limitRef.current) { audio.sfx('level'); finishRun(true) }
+          } else if (rush && !st.over && st.t >= limitRef.current) { audio.sfx('level'); finishRun(true) }
         }
       }
       r.render(st, dt, time, rivalRef.current?.st)
@@ -146,7 +159,7 @@ export default function Dash({ rush, again }: { rush?: boolean; again?: () => vo
         setHud({
           score: st.score, coins: st.coins, hearts: st.hearts, speed: Math.round(st.speed * 3.6), dist: Math.round(st.dist), seg: sg.seg.name, next: route[(sg.index + 1) % route.length].name, toNext: Math.round(sg.toNext), segPct: sg.into / sg.seg.length,
           missions: st.missions.map((m) => ({ text: m.text, pct: Math.min(1, m.progress / m.target), done: m.done })), powers: { ...st.powers }, aboard: st.aboard, fares: st.fares, combo: Math.round(st.combo * 10) / 10, brake: st.braking,
-          level: st.level, levelPct: lvEnd ? (st.dist - lvStart) / (lvEnd - lvStart) : 1, rival: rivalRef.current ? rivalRef.current.st.score : null, rivalOver: !!rivalRef.current?.st.over, left: Math.max(0, RACE_SECS - st.t),
+          level: st.level, levelPct: lvEnd ? (st.dist - lvStart) / (lvEnd - lvStart) : 1, rival: rivalRef.current ? rivalRef.current.st.score : null, rivalOver: !!rivalRef.current?.st.over, left: Math.max(0, limitRef.current - st.t), gap: rivalRef.current ? rivalRef.current.st.dist - st.dist : null, ride: st.ride ? { kind: st.ride.kind, t: st.ride.t } : null,
         })
       }
     }
@@ -262,12 +275,16 @@ export default function Dash({ rush, again }: { rush?: boolean; again?: () => vo
               <div className="text-2xl drop-shadow" aria-label={`${hud.hearts} hearts left`}>{Array.from({ length: Math.max(config.hearts, hud.hearts) }, (_, i) => <span key={i} style={{ opacity: i < hud.hearts ? 1 : 0.25 }}>{dashMode === 'foot' ? '❤️' : '🔧'}</span>)}</div>
               <button className="btn btn-ghost !min-h-10 !px-3 pointer-events-auto" onClick={() => setPhase(phase === 'paused' ? 'run' : 'paused')} aria-label="Pause">⏸</button>
             </div>
-            {hud.rival !== null && (
-              <div className="mt-2 rounded-xl px-3 py-1.5 text-xs font-extrabold" style={{ background: '#0b3a36e6', border: '1px solid #1ec8b4' }}>
-                <div className="flex justify-between items-center"><span>🏃 You <b className="num text-sm">{hud.score.toLocaleString()}</b></span><span className="num text-sm">⏱ {Math.ceil(hud.left)}s</span><span>🤖 {RIVAL_NAME} <b className="num text-sm">{hud.rival.toLocaleString()}</b>{hud.rivalOver ? ' 💥' : ''}</span></div>
+            {(rush || hud.rival !== null) && (
+              // one slim row at the very top: time left with a thin bar, and where Alfred is compared with you. Nothing in the lanes.
+              <div className="mt-1.5 flex items-center gap-2 rounded-full px-2.5 py-0.5 text-[11px] font-extrabold" style={{ background: '#1c1b22a8' }}>
+                <span className="tabular-nums" style={{ color: hud.left < 10 ? '#ff7a7a' : '#fff' }}>⏱ {fmtT(hud.left)}</span>
+                <span className="flex-1 h-[3px] rounded bg-white/25"><i className="block h-full rounded" style={{ width: `${Math.min(100, (1 - hud.left / limitRef.current) * 100)}%`, background: hud.left < 10 ? '#ff7a7a' : '#ffd23f' }} /></span>
+                {hud.gap !== null && <span style={{ color: hud.gap > 0 ? '#ff9a9a' : '#7affc8' }}>{hud.rivalOver ? '🤖 out' : hud.gap > 1 ? `🤖 ${Math.round(hud.gap)} m ahead` : hud.gap < -1 ? `🤖 ${Math.round(-hud.gap)} m behind` : '🤖 beside you'}</span>}
+                {hud.rival !== null && <span className="tabular-nums opacity-90">{hud.score.toLocaleString()}–{hud.rival.toLocaleString()}</span>}
               </div>
             )}
-            {hud.dist > 80 && !banner && !pops.length && (
+            {!rush && hud.dist > 80 && !banner && !pops.length && (
               <div className="mt-1.5 rounded-lg px-2 py-0.5 text-[11px] font-bold opacity-80" style={{ background: '#1c1b22a0' }}>
                 <div className="flex justify-between"><span>📍 {hud.seg}</span><span>Next: {hud.next} · {hud.toNext} m</span></div>
                 <div className="mt-0.5 h-[3px] rounded bg-white/20"><i className="block h-full rounded" style={{ width: `${Math.round(hud.segPct * 100)}%`, background: '#ffd23f' }} /></div>
@@ -277,16 +294,17 @@ export default function Dash({ rush, again }: { rush?: boolean; again?: () => vo
           <div className="absolute left-2 bottom-24 pointer-events-none flex flex-col gap-1">
             <div className="chip" style={{ background: '#1c1b22cc' }}>{hud.speed} km/h · {hud.dist} m</div>
             {dashMode === 'danfo' && <div className="chip" style={{ background: '#1c1b22cc' }}>{city === 'abuja' ? '🚕' : '🚌'} {hud.aboard} on board · fares {naira(hud.fares)}</div>}
-            {(['magnet', 'hop', 'suya'] as const).map((k) => hud.powers[k] > 0 && <div key={k} className="chip pop" style={{ background: '#2fd27bcc', color: '#06241a' }}>{k === 'magnet' ? '🧲' : k === 'hop' ? '🦘' : '🍢'} {hud.powers[k].toFixed(0)}s</div>)}
+            {(['magnet', 'hop', 'suya', 'boost', 'wings'] as const).map((k) => hud.powers[k] > 0 && <div key={k} className="chip" style={{ background: '#2fd27bcc', color: '#06241a' }}>{k === 'magnet' ? '🧲' : k === 'hop' ? '🦘' : k === 'suya' ? '🍢' : k === 'boost' ? '⚡' : '🪽'} {hud.powers[k].toFixed(0)}s</div>)}
+            {hud.ride && <div className="chip" style={{ background: '#7affc8cc', color: '#06241a' }}>{hud.ride.kind === 'skate' ? '🛹' : hud.ride.kind === 'bike' ? '🚲' : '🛶'} {hud.ride.t.toFixed(0)}s</div>}
           </div>
           {ticker && (
-            <div className="absolute right-2 pointer-events-none max-w-[11rem] text-[11px] font-bold rounded-lg px-2 py-1 opacity-90" style={{ top: hud.rival !== null ? '12rem' : '8.6rem', background: ticker.done ? '#1d5a3acc' : '#1c1b22b0' }}>
+            <div className="absolute right-2 pointer-events-none max-w-[11rem] text-[11px] font-bold rounded-lg px-2 py-1 opacity-90" style={{ top: (rush || hud.rival !== null) ? '11rem' : '8.6rem', background: ticker.done ? '#1d5a3acc' : '#1c1b22b0' }}>
               {ticker.done ? '✅ ' : '🎯 '}{ticker.text}<div className="mt-0.5 h-[3px] rounded bg-white/20"><i className="block h-full rounded" style={{ width: `${ticker.pct * 100}%`, background: '#ffd23f' }} /></div>
             </div>
           )}
         </>
       )}
-      <div className="absolute inset-x-0 flex flex-col items-center gap-1 pointer-events-none" style={{ top: hud?.rival != null ? '8.6rem' : '7rem' }}>
+      <div className="absolute inset-x-0 flex flex-col items-center gap-1 pointer-events-none" style={{ top: (rush || hud?.rival != null) ? '8.2rem' : '7rem' }}>
         {banner && phase === 'run' && <div className="rounded-full px-3 py-0.5 text-sm font-display text-danfo fade-in" style={{ background: '#1c1b22b8', border: '1px solid #ffd23f99' }}>LEVEL {banner.n} · {banner.name}</div>}
         {pops.map((p) => <div key={p.id} className="chip !text-sm !px-3 !py-0.5 opacity-80" style={{ background: '#1c1b22b0' }}>{p.text}</div>)}
       </div>
@@ -317,9 +335,10 @@ export default function Dash({ rush, again }: { rush?: boolean; again?: () => vo
           <div className="card p-5 w-full max-w-sm pop" style={{ background: '#1e1a30' }}>
             <h2 className="font-display text-3xl text-danfo text-center">{rush ? 'The Rush' : 'How do you want to run?'}</h2>
             <button className="tile w-full text-left mt-4 !p-3" onClick={startSolo}><div className="font-display text-2xl">🏃 {rush ? 'Play alone' : 'Run alone'}</div><div className="text-xs opacity-80 mt-0.5">{rush ? 'Go as far as you can. Beat your best.' : 'Your normal run. Go as far as you can. This is the run that counts for your trophies.'}</div></button>
-            <button className="tile w-full text-left mt-2 !p-3" style={{ borderColor: '#1ec8b4' }} onClick={startRace}><div className="font-display text-2xl">🏁 {rush ? 'Find a player' : 'Play against someone'}</div><div className="text-xs opacity-80 mt-0.5">{rush ? `Same road, ${RACE_SECS} seconds. If nobody is online you can race Alfred ai, a computer runner.` : `Same road, ${RACE_SECS} seconds. Most points wins a 10 coin bonus.`}</div></button>
+            <button className="tile w-full text-left mt-2 !p-3" style={{ borderColor: '#1ec8b4' }} onClick={startRace}><div className="font-display text-2xl">🏁 {rush ? 'Find a player' : 'Play against someone'}</div><div className="text-xs opacity-80 mt-0.5">{rush ? `Same road, ${fmtT(secs)}. If nobody is online you can race Alfred ai, a computer runner.` : `Same road, ${RACE_SECS} seconds. Most points wins a 10 coin bonus.`}</div></button>
             {rush && <button className="tile w-full text-left mt-2 !p-3 opacity-60" disabled><div className="font-display text-2xl">🤝 Challenge a friend</div><div className="text-xs opacity-80 mt-0.5">Coming soon. It needs the online service.</div></button>}
-            {rush && <p className="text-[11px] opacity-70 mt-3 text-center">Swipe left or right to change lane · up to jump · down to slide</p>}
+            {rush && <DurationPicker secs={secs} onPick={setSecs} />}
+            {rush && <p className="text-[11px] opacity-70 mt-3 text-center">Swipe to change lane · up jumps · down slides. Grab ⚡ boosts, 🪽 wings (dodge the sky!) and 🛹🚲🛶 rides. Alfred grabs them too.</p>}
             <Btn variant="ghost" className="w-full mt-3" onClick={() => rush ? useGame.getState().go('home') : setPhase('ready')}>{rush ? 'Home' : 'Back'}</Btn>
           </div>
         </div>
@@ -341,6 +360,7 @@ export default function Dash({ rush, again }: { rush?: boolean; again?: () => vo
           <div className="card p-5 w-full max-w-sm pop" style={{ background: '#1e1a30' }}>
             <h2 className="font-display text-4xl text-danfo text-center">Paused</h2>
             <div className="mt-2 space-y-1.5 text-sm">{hud?.missions.map((m, i) => <div key={i}><div className="flex justify-between"><span>{m.done ? '✅' : '🎯'} {m.text}</span></div><div className="bar mt-0.5"><i style={{ width: `${m.pct * 100}%`, background: '#2fd27b' }} /></div></div>)}</div>
+            {rush && <div className="mt-3"><DurationPicker secs={secs} onPick={setSecs} /></div>}
             <Btn className="w-full mt-4" onClick={() => setPhase('run')}>Continue</Btn>
             <Btn variant="danger" className="w-full mt-2" onClick={quit}>End run</Btn>
           </div>
@@ -351,7 +371,7 @@ export default function Dash({ rush, again }: { rush?: boolean; again?: () => vo
           <div className="card p-5 w-full max-w-sm text-center pop" style={{ background: '#1e1a30' }}>
             {race
               ? <div className={`font-display text-4xl -rotate-2 ${race.youWon ? 'text-green-400' : race.draw ? 'text-danfo' : 'text-red-400'}`}>{race.youWon ? 'YOU WIN! 🏆' : race.draw ? 'DRAW! 🤝' : `${RIVAL_NAME} wins 🤖`}</div>
-              : <div className="font-display text-5xl text-red-400 -rotate-2">WAHALA!</div>}
+              : <div className={`font-display text-5xl -rotate-2 ${timeUp ? 'text-green-400' : 'text-red-400'}`}>{timeUp ? 'TIME UP!' : 'WAHALA!'}</div>}
             {race && <div className="text-xs font-bold opacity-80 mt-1">{race.timeUp ? 'Time up. ' : carried ? `${RIVAL_NAME} kept running after you crashed. ` : ''}You {race.you.toLocaleString()} · {RIVAL_NAME} {race.rival.toLocaleString()}{race.youWon ? ' · +10 coin bonus' : ''}</div>}
             <div className="font-display text-6xl text-danfo leading-none mt-1">{result.score.toLocaleString()}</div>
             {result.score > (life?.dashBest ?? 0) && !rush && <div className="chip mt-1" style={{ background: '#2fd27b', color: '#06241a' }}>New best!</div>}
@@ -364,6 +384,7 @@ export default function Dash({ rush, again }: { rush?: boolean; again?: () => vo
             {rush
               ? <p className="text-sm font-extrabold mt-2">{rushPts ? `⭐ +${rushPts} point${rushPts > 1 ? 's' : ''}` : `Best: ${Math.round(progressOf(useGame.getState().meta).rush.best)} m`}</p>
               : <p className="text-xs opacity-70 mt-2">Coins and fares become cash when you return to your life.</p>}
+            {rush && <div className="mt-3"><DurationPicker secs={secs} onPick={setSecs} /></div>}
             <Btn variant="green" className="w-full mt-3" onClick={goAgain}>{rush ? 'Go again' : 'GO AGAIN ⚡10'}</Btn>
             <Btn variant="ghost" className="w-full mt-2" onClick={back}>{rush ? 'Home' : 'Back to my life'}</Btn>
           </div>
@@ -375,4 +396,18 @@ export default function Dash({ rush, again }: { rush?: boolean; again?: () => vo
 
 function toMini(r: DashResult & { raceWon?: boolean }) {
   return { raceWon: r.raceWon, coins: r.coins, distance: r.distance, closeCalls: r.closeCalls, passengers: r.passengers, mode: r.mode, score: r.score, fares: r.fares, missionsDone: r.missionsDone }
+}
+
+/** Run length chips (The Rush). Changing it takes effect straight away, also in the middle of a run. */
+function DurationPicker({ secs, onPick }: { secs: number; onPick: (n: number) => void }) {
+  return (
+    <div>
+      <div className="text-[11px] font-extrabold uppercase tracking-wide opacity-70 text-center">Run time</div>
+      <div className="flex gap-1.5 justify-center mt-1">
+        {RUSH_DURATIONS.map((d) => (
+          <button key={d} className="rounded-full px-2.5 py-1 text-xs font-extrabold" style={{ background: d === secs ? '#ffd23f' : '#ffffff22', color: d === secs ? '#3b2300' : '#fff', border: '1px solid #ffffff44' }} onClick={() => { audio.sfx('tap'); onPick(d) }}>{fmtT(d)}</button>
+        ))}
+      </div>
+    </div>
+  )
 }
