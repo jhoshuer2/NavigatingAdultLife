@@ -5,7 +5,7 @@ import type { HumanParts } from './characters'
 
 export type Pose =
   | 'stand' | 'carryTray' | 'carryBox' | 'reachHigh' | 'pickLow' | 'grab' | 'handOver' | 'sit' | 'sitEat' | 'eat' | 'drink' | 'wave' | 'talk' | 'point'
-  | 'shakeHands' | 'knock' | 'write' | 'stamp' | 'chop' | 'stir' | 'pour' | 'sweep' | 'wipe' | 'countMoney' | 'phone' | 'lift' | 'dig' | 'digPhone' | 'search' | 'plank' | 'stretch' | 'cheer' | 'dribble' | 'kneelTie' | 'lean' | 'push' | 'tapeBox' | 'raiseHand' | 'typing' | 'bandage' | 'checkPulse'
+  | 'shakeHands' | 'knock' | 'write' | 'stamp' | 'chop' | 'stir' | 'pour' | 'sweep' | 'wipe' | 'countMoney' | 'phone' | 'lift' | 'dig' | 'digPhone' | 'search' | 'plank' | 'stretch' | 'cheer' | 'dribble' | 'kneelTie' | 'lean' | 'push' | 'tapeBox' | 'raiseHand' | 'typing' | 'bandage' | 'checkPulse' | 'crank' | 'photo'
 
 /** target angles, in radians (and `hy` for how far the hips drop). Missing means 0. Authored so that a negative arm, thigh or elbow x lifts it forward and a
  *  positive knee x tucks the shin back, and a positive body or head x leans forward and down; applyPose flips the signs for the limbs and head, whose axes
@@ -53,6 +53,8 @@ export const POSES: Record<Pose, (t: number) => J> = {
   typing: (t) => ({ aLx: -1.0, aRx: -1.0, eLx: -1.1 + S(t * 14) * 0.1, eRx: -1.1 - S(t * 14) * 0.1, bx: 0.15, nx: 0.45 }),
   bandage: (t) => ({ bx: 0.5, hy: -0.3, lLx: -0.6, lRx: -0.3, kLx: 1.0, kRx: 0.9, aLx: -1.3, aRx: -1.3 + S(t * 7) * 0.35, eLx: -0.8, eRx: -0.8, nx: 0.45 }),
   checkPulse: (t) => ({ aLx: -1.2, eLx: -0.6, aRx: -1.1, eRx: -1.4, bx: 0.15, nx: 0.35 + S(t * 1.5) * 0.03 }),
+  crank: (t) => ({ bx: 0.7, hy: -0.3, aLx: -1.4, aRx: -1.4, eLx: -0.3, eRx: -0.3 + S(t * 5) * 0.5, lLx: -0.5, lRx: -0.3, kLx: 0.9, kRx: 0.8, nx: 0.35 }),
+  photo: (t) => ({ aLx: -1.5, aRx: -1.5, eLx: -1.7, eRx: -1.7, nx: -0.05 + S(t * 1.2) * 0.02, bx: -0.03 }),
   lean: (t) => ({ bz: 0.06, aLx: 0.15, aRx: -0.35, eRx: -1.0, hy: S(t * 1.2) * 0.01, ny: 0.15 }),
   search: (t) => ({ bx: 0.6, aLx: -1.3 + S(t * 18) * 0.4, aRx: -1.3, nx: 0.2 }),
 }

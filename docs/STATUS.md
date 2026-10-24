@@ -351,3 +351,16 @@ Nine levels in `src/levels/chapter8.ts`, each opening with an ambulance ride (wh
 8. The Delivery Ward: sequence, collect, talk, reach
 9. Last Round: talk, serve, hold, goto (badge "Hospital Shift")
 New poses: bandage, checkPulse. Chapters 9 and 10 remain locked placeholders.
+
+## Chapter 9: Road Trip (camper van)
+Nine levels in `src/levels/chapter9.ts`, each opening with a ride in an orange camper van (roof rack with bags). A drive to Calabar with three friends and Uncle Emeka; story, places and dialogue are my own design.
+1. Packing the Van: collect, sequence, talk, choose
+2. Petrol Station: goto, collect (budget), talk, hold
+3. Wrong Turn: find, choose, reach, talk
+4. Roadside Market: collect (budget), serve, choose, goto
+5. Flat Tyre: sequence, hold, find, reach
+6. Border Checkpoint: talk, find, sequence, choose
+7. Mountain Lookout: reach, hold (photo), talk, find
+8. The Campsite: collect, sequence, serve, hold
+9. Arrival in Calabar: talk, hold, choose, goto (badge "Road Trip")
+New poses: crank, photo. Chapter 10 remains a locked placeholder.
