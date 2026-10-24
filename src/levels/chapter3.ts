@@ -1,5 +1,6 @@
 // Chapter 3 "Market Day": the player runs a market stall for a day. Same engine and helpers as chapters 1 and 2.
 import type { Deco } from './schema'
+import { withBus } from './bus'
 import { L, T, R, F, say, D, WOOD, DARK, STREET_BOUNDS, withStreet } from './chapter1b'
 
 const GREEN = '#2f5a3a', ORANGE = '#e07a1f', YELLOW = '#f5b91c', RUST = '#c4562a', BLUE = '#2b6ad0'
@@ -49,7 +50,7 @@ export const LEVEL_C3L1 = L({
 })
 
 // ---------------------------------------------------------------------------------------------------------------- Level 2
-export const LEVEL_C3L2 = L({
+export const LEVEL_C3L2 = withBus(L({
   ch: 'ch3', n: 2, title: 'The Wholesaler', next: 'ch3.l3',
   intro: 'Your shelves are half empty. The wholesaler sells everything, loudly, at prices that move when you stop paying attention.',
   theme: { ground: '#bfae8e', floors: [{ x0: -12.4, x1: 12.4, z0: -5.6, z1: 5.6, color: '#d0c8b4' }], deco: [
@@ -89,10 +90,10 @@ export const LEVEL_C3L2 = L({
   npcs: { folake: { x: 11, z: -4.6, rot: -2.2 }, tunde: { x: -10.8, z: -4.6, rot: 0.6 } }, choiceLabel: 'stock',
   endBeat: { text: 'The crates are back on the table. The tomatoes look at you with a little disappointment. You look back with a lot.', line: 'Your first customers are next.' },
   starRules: ['Finish the level', 'Get back before the timer ends', 'Be on time with two or fewer slips'],
-})
+}), { vehicle: 'train', to: 'the wholesale depot', title: 'Train to the depot', purpose: 'The wholesale depot is out of town: wait at the station, board the train and ride there.', objective: 'Take the train to the depot', success: 'You get off at the depot.', intro: [{ who: 'folake', text: 'The best suppliers are at the wholesale depot, out of town. Take the train and keep hold of the money.', expr: 'calm' }], done: [{ who: 'helper', text: 'The depot train smells of onions and ambition.', expr: 'cheeky' }] })
 
 // ---------------------------------------------------------------------------------------------------------------- Level 3
-export const LEVEL_C3L3 = L({
+export const LEVEL_C3L3 = withBus(L({
   ch: 'ch3', n: 3, title: 'First Customers', next: 'ch3.l4',
   intro: 'The first customers arrive all at once. Everybody wants everything, quickly and cheaper.',
   theme: { ground: '#c9b48a', floors: [{ x0: -12.4, x1: 12.4, z0: -2.4, z1: 5.6, color: '#e6dcc4' }], deco: [...MARKET, awn(0, -4.4, ORANGE, 'YOUR STALL'), { kind: 'sign', x: 10.6, z: 1, label: 'LOST CHANGE', w: 2 }] },
@@ -130,10 +131,10 @@ export const LEVEL_C3L3 = L({
   npcs: { folake: { x: -10.8, z: -4.6, rot: 0.8 }, tunde: { x: 11, z: -4.2, rot: -2.2 } }, choiceLabel: 'discount',
   endBeat: { text: 'By noon you have sold more than your mother did on her first day. She will never admit it.', line: 'A hard haggler is coming.' },
   starRules: ['Finish the level', 'Catch the customer before the timer ends', 'Be on time with two or fewer slips'],
-})
+}), { vehicle: 'train', to: 'the market', title: 'Train to the market', purpose: 'The stall is across town today: wait at the station, board the train and ride to the market.', objective: 'Take the train to the market', success: 'You get off at the market.', intro: [{ who: 'folake', text: 'Second day at the stall. Take the train, say good morning to everyone and smile at customers.', expr: 'happy' }], done: [{ who: 'player', text: 'Fresh day. Fresh tomatoes. Same crowded train.', expr: 'happy' }] })
 
 // ---------------------------------------------------------------------------------------------------------------- Level 4
-export const LEVEL_C3L4 = L({
+export const LEVEL_C3L4 = withBus(L({
   ch: 'ch3', n: 4, title: 'The Haggler', next: 'ch3.l5',
   intro: 'Everyone has a haggler story. Today you get yours: a woman who has never paid the first price in her life.',
   theme: { ground: '#c9b48a', floors: [{ x0: -12.4, x1: 12.4, z0: -2.4, z1: 5.6, color: '#e6dcc4' }], deco: [...MARKET, awn(0, -4.4, ORANGE, 'YOUR STALL')] },
@@ -165,10 +166,10 @@ export const LEVEL_C3L4 = L({
   npcs: { folake: { x: -10.8, z: -4.6, rot: 0.8 }, tunde: { x: 11, z: -4.2, rot: -2.2 } }, choiceLabel: 'settlement',
   endBeat: { text: 'She leaves with tomatoes, a story and a tiny bit of your pride. She will be back tomorrow.', line: 'Count the takings next.' },
   starRules: ['Finish the level', 'Take your time: no timer here', 'Finish with two or fewer slips'],
-})
+}), { vehicle: 'train', to: 'the market', title: 'Train to the market', purpose: 'Market day again: wait at the station, board the train and ride to the market.', objective: 'Take the train to the market', success: 'You get off at the market.', intro: [{ who: 'folake', text: 'A woman is coming to your stall who has never paid the first price in her life. Take the train and take your patience.', expr: 'worried' }], done: [{ who: 'tunde', text: 'Stay calm. Breathe. And do not agree to the first offer.', expr: 'confident' }] })
 
 // ---------------------------------------------------------------------------------------------------------------- Level 5
-export const LEVEL_C3L5 = L({
+export const LEVEL_C3L5 = withBus(L({
   ch: 'ch3', n: 5, title: 'Counting the Takings', next: 'ch3.l6',
   intro: 'The rush slows down. Time to count what you have, and find out whether the day is going as well as it feels.',
   theme: { ground: '#bfae8e', floors: [{ x0: -11, x1: 11, z0: -5, z1: 5, color: '#d8c9a8' }], deco: [
@@ -209,10 +210,10 @@ export const LEVEL_C3L5 = L({
   npcs: { folake: { x: 9.4, z: 3.4, rot: -2.4 }, tunde: { x: -9.6, z: -3.2, rot: 0.6 } }, choiceLabel: 'plan',
   endBeat: { text: 'The money is counted, set aside and mostly safe. A small voice says "business is good", and nobody argues.', line: 'The sky is going dark.' },
   starRules: ['Finish the level', 'Take your time: no timer here', 'Finish with two or fewer wrong notes or picks'],
-})
+}), { vehicle: 'train', to: 'the market', title: 'Train after closing', purpose: 'The takings need counting: wait at the station, board the train and ride back to the market.', objective: 'Take the train to the market', success: 'You get off at the market.', intro: [{ who: 'folake', text: 'You left the money box at the stall. Take the train back and count it before anyone else does.', expr: 'worried' }], done: [{ who: 'player', text: 'Please let the box still be there.', expr: 'worried' }] })
 
 // ---------------------------------------------------------------------------------------------------------------- Level 6
-export const LEVEL_C3L6 = L({
+export const LEVEL_C3L6 = withBus(L({
   ch: 'ch3', n: 6, title: 'Rain!', next: 'ch3.l7',
   intro: 'The sky turns grey in about a minute. Every trader in the market starts running at the same time.',
   theme: { ground: '#a8a08a', floors: [{ x0: -12.4, x1: 12.4, z0: -2.8, z1: 2.8, color: '#bfb8a4' }], deco: [...MARKET, awn(4, -4.4, ORANGE, 'YOUR STALL'), awn(-6.5, -4.4, GREEN), { kind: 'sign', x: 10.8, z: 0, label: 'SHELTER', w: 1.8 }] },
@@ -248,7 +249,7 @@ export const LEVEL_C3L6 = L({
   npcs: { folake: { x: 10.6, z: -4.6, rot: -2.4 }, tunde: { x: -10.8, z: -4.6, rot: 0.7 } }, choiceLabel: 'goods',
   endBeat: { text: 'Under the shelter, everyone is soaked, laughing and slightly in love with the stranger next to them.', line: 'Not everyone is so friendly next.' },
   starRules: ['Finish the level', 'Reach the shelter before the timer ends', 'Be on time with two or fewer slips'],
-})
+}), { vehicle: 'train', to: 'the market', title: 'Train to the market', purpose: 'Dark clouds are gathering: wait at the station, board the train and ride to the market before the rain.', objective: 'Take the train to the market', success: 'You get off at the market.', intro: [{ who: 'folake', text: 'The sky looks angry. Take the train now and cover those goods before it rains!', expr: 'worried' }], done: [{ who: 'tunde', text: 'It will rain the second you arrive. Run.', expr: 'angry' }] })
 
 // ---------------------------------------------------------------------------------------------------------------- Level 7
 export const LEVEL_C3L7 = L({
@@ -290,7 +291,7 @@ export const LEVEL_C3L7 = L({
 })
 
 // ---------------------------------------------------------------------------------------------------------------- Level 8
-export const LEVEL_C3L8 = L({
+export const LEVEL_C3L8 = withBus(L({
   ch: 'ch3', n: 8, title: 'The Inspector', next: 'ch3.l9',
   intro: 'A man in a very clean shirt with a very serious clipboard is walking down the lane. Every stall is suddenly very tidy.',
   theme: { ground: '#c9b48a', floors: [{ x0: -12.4, x1: 12.4, z0: -2.8, z1: 2.8, color: '#e6dcc4' }], deco: [...MARKET, awn(0, -4.4, ORANGE, 'YOUR STALL'), { kind: 'sign', x: 10.8, z: 0, label: 'INSPECTION', w: 2 }] },
@@ -327,10 +328,10 @@ export const LEVEL_C3L8 = L({
   npcs: { folake: { x: -10.8, z: -4.6, rot: 0.8 }, tunde: { x: 10.6, z: -1.4, rot: -1.6 } }, choiceLabel: 'answer',
   endBeat: { text: 'He writes something down, nods, and moves on to the next stall. You do not breathe for a full minute afterwards.', line: 'The day is nearly over.' },
   starRules: ['Finish the level', 'Take your time: no timer here', 'Finish with two or fewer wrong searches or orders'],
-})
+}), { vehicle: 'train', to: 'the market', title: 'Train to the market', purpose: 'Inspection day: wait at the station, board the train and ride to the market.', objective: 'Take the train to the market', success: 'You get off at the market.', intro: [{ who: 'folake', text: 'The inspector is coming today. Tidy, honest and early. Take the train and do not be late!', expr: 'worried' }], done: [{ who: 'helper', text: 'I hear the inspector carries a very small clipboard and a very big opinion.', expr: 'suspicious' }] })
 
 // ---------------------------------------------------------------------------------------------------------------- Level 9
-export const LEVEL_C3L9 = L({
+export const LEVEL_C3L9 = withBus(L({
   ch: 'ch3', n: 9, title: 'Closing Time', next: null, badge: 'Market Day',
   intro: 'The sun goes down, the lanterns come out and every trader gathers to count what the day gave them.',
   theme: { ground: '#c9b48a', floors: [{ x0: -12.4, x1: 12.4, z0: -4.4, z1: 4.4, color: '#e6dcc4' }], deco: [...MARKET, awn(0, -4.8, ORANGE, 'YOUR STALL'), { kind: 'sign', x: 10.8, z: 0.4, label: 'SHUTTER', w: 1.8 }, { kind: 'rug', x: -4, z: 1.6, w: 5, d: 3, color: '#2f5a3a' }] },
@@ -364,4 +365,4 @@ export const LEVEL_C3L9 = L({
   npcs: { folake: { x: 8.4, z: 3.4, rot: -2.4 }, tunde: { x: 9.6, z: -3.4, rot: -2 } }, choiceLabel: 'share',
   endBeat: { text: 'The shutter comes down. The lanterns flicker. Mama Folake says nothing, which from her is a standing ovation.', line: 'Chapter 3 is done. A new chapter is open.' },
   starRules: ['Finish the level', 'Take your time: no timer here', 'Finish with two or fewer wrong notes'],
-})
+}), { vehicle: 'train', to: 'the market', title: 'Train to the market', purpose: 'The last trading day: wait at the station, board the train and ride to the market.', objective: 'Take the train to the market', success: 'You get off at the market.', intro: [{ who: 'folake', text: 'Last day of the season. Take the train, my child. We count the money together tonight.', expr: 'happy' }], done: [{ who: 'tunde', text: 'Whatever you earned, you earned it standing up.', expr: 'proud' }] })

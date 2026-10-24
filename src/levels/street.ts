@@ -8,4 +8,9 @@ export const STREET: { floor: Rect & { color: string }; deco: Deco[] } = {
     { kind: 'tree', x: -24, z: -4.6 }, { kind: 'tree', x: -18, z: -4.8 }, { kind: 'lamp', x: -20, z: 2.2 }, { kind: 'lamp', x: -26, z: 2.2 }],
 }
 export const STREET_BOUNDS = R(-34, 12.4, -6, 6)
-export const withStreet = (t: Theme): Theme => ({ ...t, floors: [...t.floors, STREET.floor], deco: [...t.deco, ...STREET.deco] })
+/** the same stretch as a train station: a platform, rails instead of a road, a station sign */
+export const STATION: typeof STREET = {
+  floor: { ...STREET.floor, color: '#cfc8b8' },
+  deco: STREET.deco.map((d) => d.kind === 'road' ? { ...d, kind: 'rail' as const, d: 2.6 } : d.kind === 'sign' ? { ...d, label: 'STATION', w: 1.8 } : d),
+}
+export const withStreet = (t: Theme, vehicle: 'bus' | 'train' = 'bus'): Theme => { const s = vehicle === 'train' ? STATION : STREET; return { ...t, floors: [...t.floors, s.floor], deco: [...t.deco, ...s.deco] } }

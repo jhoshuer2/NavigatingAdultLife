@@ -274,3 +274,8 @@ Feedback: levels felt like walk, tap, repeat. Two new acted-out task kinds (engi
 - `src/levels/bus.ts` `withBus(level, opts)` puts a ride task in front of a level (new task `<level>.t0`, street west of the scene, every task-indexed field shifted by one). Applied to ch2 L2 to L9, each with its own destination (training pitch, stadium, club, sports ground, ground, rival's ground, stadium, club office) and Folake/Tunde lines.
 - Bot tests and the real-button headless run (all eight levels: board, ride, arrive, next task) pass. Existing tests that start Chapter 2 runners at fixed task indices were moved by one.
 - Caveat: Trial Day is one day in the story, so the rides are framed as trips between sessions and venues. Players mid-level resume one step earlier.
+
+## Chapter 3: train rides
+- `Ride.vehicle: 'train'` draws a three-carriage train, rails instead of a road and a STATION sign (`STATION` in `street.ts`, deco kind `rail`). `withBus(level, { vehicle: 'train', ... })` adds it.
+- Added to ch3 L2, L3, L4, L5, L6, L8, L9 (L1 and L7 already start on a bus). Each has its own Folake/Tunde lines. Played in headless Chrome: board, ride, arrive, next task.
+- Players mid-level resume one step earlier in these levels.

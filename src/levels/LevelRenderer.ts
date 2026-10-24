@@ -225,10 +225,17 @@ export class LevelRenderer {
   }
 
   private buildBus() {
+    const train = Object.values(this.level.rides ?? {})[0]?.vehicle === 'train'
     const g = new THREE.Group(), add = (w: number, h: number, d: number, c: string, x: number, y: number, z: number) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), lam(c)); m.position.set(x, y, z); g.add(m) }
-    add(4.6, 1.5, 1.8, '#f5b91c', 0, 1.15, 0); add(4.62, 0.25, 1.82, '#1c1b22', 0, 0.7, 0); add(4.4, 0.55, 1.84, '#9ecbe6', 0, 1.55, 0); add(0.12, 0.55, 1.5, '#9ecbe6', 2.3, 1.5, 0)
-    for (const x of [-1.5, 1.5]) for (const z of [-0.9, 0.9]) { const w = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.36, 0.2, 10), lam('#1c1b22')); w.rotation.x = Math.PI / 2; w.position.set(x, 0.36, z); g.add(w) }
-    const l = this.label('BUS', 1.4); l.position.set(0, 2.5, 0); g.add(l)
+    if (train) { // three carriages behind the engine, which is at the origin
+      for (const [i, c] of ['#2f5a3a', '#e07a1f', '#e07a1f'].entries()) { const x = -i * 5; add(4.8, 1.7, 1.9, c, x, 1.25, 0); add(4.82, 0.2, 1.92, '#1c1b22', x, 0.55, 0); add(4.4, 0.55, 1.94, '#9ecbe6', x, 1.65, 0); add(4.9, 0.12, 2.0, '#fbf8f0', x, 2.15, 0); for (const wx of [-1.6, 1.6]) for (const wz of [-0.8, 0.8]) { const w = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.12, 10), lam('#1c1b22')); w.rotation.x = Math.PI / 2; w.position.set(x + wx, 0.3, wz); g.add(w) } }
+      add(0.2, 0.5, 1.5, '#fbf8f0', 2.4, 1.2, 0)
+      const l = this.label('TRAIN', 1.5); l.position.set(0, 2.9, 0); g.add(l)
+    } else {
+      add(4.6, 1.5, 1.8, '#f5b91c', 0, 1.15, 0); add(4.62, 0.25, 1.82, '#1c1b22', 0, 0.7, 0); add(4.4, 0.55, 1.84, '#9ecbe6', 0, 1.55, 0); add(0.12, 0.55, 1.5, '#9ecbe6', 2.3, 1.5, 0)
+      for (const x of [-1.5, 1.5]) for (const z of [-0.9, 0.9]) { const w = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.36, 0.2, 10), lam('#1c1b22')); w.rotation.x = Math.PI / 2; w.position.set(x, 0.36, z); g.add(w) }
+      const l = this.label('BUS', 1.4); l.position.set(0, 2.5, 0); g.add(l)
+    }
     g.visible = false; this.scene.add(g); this.bus = g
   }
 
@@ -272,6 +279,7 @@ export class LevelRenderer {
         case 'road': { this.box(w, 0.04, dd, col === '#a87a50' ? '#3d3d46' : col, d.x, 0.0, d.z); for (let x = d.x - w / 2 + 1; x < d.x + w / 2 - 1; x += 3) this.box(1.4, 0.02, 0.14, '#f4f1e6', x, 0.04, d.z); break }
         case 'rug': this.box(w, 0.03, dd, col, d.x, 0.02, d.z); break
         case 'crate': this.box(w, h, dd, col, d.x, h / 2, d.z); break
+        case 'rail': { this.box(w, 0.06, dd, '#6f6a60', d.x, 0.0, d.z); for (const dz of [-0.55, 0.55]) this.box(w, 0.1, 0.1, '#b9bdc2', d.x, 0.1, d.z + dz); for (let x = d.x - w / 2 + 0.5; x < d.x + w / 2; x += 1.1) this.box(0.28, 0.06, dd, '#5b4636', x, 0.04, d.z); break }
         case 'chair': { this.box(0.7, 0.1, 0.7, col, d.x, 0.5, d.z); this.box(0.7, 0.8, 0.1, col, d.x, 0.95, d.z - 0.3); for (const sx of [-1, 1]) for (const sz of [-1, 1]) this.box(0.08, 0.5, 0.08, '#44444e', d.x + sx * 0.3, 0.25, d.z + sz * 0.3); break }
       }
     }
@@ -528,7 +536,7 @@ export class LevelRenderer {
           else if (st === 1 && run.carry) consider({ id: `g:${g.id}`, x: at.x, z: at.z, label: run.carry === g.dish ? `Serve ${g.name}` : `Give to ${g.name}` } as unknown as Spot, 'spot') }
         if (!run.carry) for (const it of L.items) if (it.task === idx) { const g = run.serve?.guests.find((x) => x.dish === it.id); if (g && run.guests[g.id] === 1) consider(it, 'item') }
       }
-      if (run.task.kind === 'ride' && this.busPhase === 'waiting') { const r = L.rides?.[idx]; if (r && Math.hypot(this.px - r.stop.x, this.pz - r.stop.z) < 3.4) best = { kind: 'spot', id: 'bus', label: `Board the bus to ${r.to}` } }
+      if (run.task.kind === 'ride' && this.busPhase === 'waiting') { const r = L.rides?.[idx]; if (r && Math.hypot(this.px - r.stop.x, this.pz - r.stop.z) < 3.4) best = { kind: 'spot', id: 'bus', label: `Board the ${r.vehicle === 'train' ? 'train' : 'bus'} to ${r.to}` } }
       if (run.task.kind === 'kick' && L.kick && !this.kickAnim && Math.hypot(L.kick.x - this.px, L.kick.z - this.pz) < 1.3) best = { kind: 'spot', id: 'kick', label: L.kick.pass ? 'Pass!' : 'Kick!' }
     }
     if (this.act) best = null
