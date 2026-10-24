@@ -14,7 +14,7 @@ const placeholder = (n: number, title: string, blurb: string): ChapterDef => ({ 
 export const CHAPTERS: ChapterDef[] = [
   { id: CHAPTER1.id, number: 1, title: CHAPTER1.title, blurb: CHAPTER1.blurb, levels: ['ch1.l1', 'ch1.l2', 'ch1.l3', 'ch1.l4', 'ch1.l5', 'ch1.l6', 'ch1.l7', 'ch1.l8', 'ch1.l9'], totalLevels: CHAPTER1.totalLevels, built: true },
   { id: 'ch2', number: 2, title: 'Trial Day', blurb: 'An open football trial, a loud coach and a number on your back.', levels: [LEVEL_C2L1.id, LEVEL_C2L2.id, LEVEL_C2L3.id, 'ch2.l4', 'ch2.l5', 'ch2.l6', 'ch2.l7', 'ch2.l8', 'ch2.l9'], totalLevels: 9, built: true },
-  placeholder(3, 'Market Day', 'Buy, sell, bargain and keep your cool.'),
+  { id: 'ch3', number: 3, title: 'Market Day', blurb: 'Buy, sell, bargain and keep your cool.', levels: Array.from({ length: 9 }, (_, i) => `ch3.l${i + 1}`), totalLevels: 9, built: true },
   placeholder(4, 'Kitchen Rush', 'Orders pile up and the pot will not wait.'),
   placeholder(5, 'Beach Weekend', 'Sun, sand and a plan that keeps changing.'),
   placeholder(6, 'Move-Out Day', 'Boxes, keys and one stubborn sofa.'),
