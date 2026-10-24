@@ -146,17 +146,17 @@ describe('chapter 2 level 2 (Skills Stations)', () => {
   })
   it('plays through: circle, three penalties (misses widen the green zone), a drill choice that changes the run', async () => {
     const { LEVEL_C2L2: L } = await import('../src/levels/chapter2')
-    const r = new TaskRunner(L, emptyProgress(), hooks())
-    r.update(0.1, L.gotoAreas![0]!.x, L.gotoAreas![0]!.z); expect(r.task.kind).toBe('kick')
+    const r = new TaskRunner(L, emptyProgress(), hooks(), 1) // task 0 is the bus ride
+    r.update(0.1, L.gotoAreas![1]!.x, L.gotoAreas![1]!.z); expect(r.task.kind).toBe('kick')
     const band0 = r.kickBand; r.kickResult(false); r.kickResult(false); expect(r.kickBand).toBeGreaterThan(band0); expect(r.mistakes).toBe(2)
-    r.kickResult(true); r.kickResult(true); expect(r.idx).toBe(1); r.kickResult(true); expect(r.idx).toBe(2); r.kickResult(true) // ignored: now on the choice
+    r.kickResult(true); r.kickResult(true); expect(r.idx).toBe(2); r.kickResult(true); expect(r.idx).toBe(3); r.kickResult(true) // ignored: now on the choice
     r.interact('sprint')
     expect(r.task.kind).toBe('reach'); expect(r.timeLimit).toBe(14); expect(r.hazards.length).toBe(2); expect(r.timeLeft).toBe(14)
     r.update(1, 0, 0); expect(r.finished).toBe(true); expect(r.progress.points).toBe(4); expect(r.progress.flags['ch2.l2.item']).toBe('sprint')
   })
   it('the safe drill gives more time and more dummies, and the base hazard set is the largest', async () => {
     const { LEVEL_C2L2: L } = await import('../src/levels/chapter2')
-    const r = new TaskRunner(L, emptyProgress(), hooks(), 2)
+    const r = new TaskRunner(L, emptyProgress(), hooks(), 3)
     r.interact('passing'); expect(r.timeLimit).toBe(24); expect(r.hazards.length).toBe(3)
     for (const v of Object.values(L.variants!)) expect(v.hazards.length).toBeLessThanOrEqual(L.hazards.length)
   })
@@ -168,7 +168,7 @@ describe('chapter 2 level 2 (Skills Stations)', () => {
 })
 
 describe('chapter 2 level 3 (The Trial Match)', () => {
-  const start = async (boots?: string, at = 0) => {
+  const start = async (boots?: string, at = 1) => {
     const { LEVEL_C2L3: L } = await import('../src/levels/chapter2')
     const p = emptyProgress(); if (boots) p.flags['ch2.l1.item'] = boots
     return { L, r: new TaskRunner(L, p, hooks(), at) }
@@ -182,9 +182,9 @@ describe('chapter 2 level 3 (The Trial Match)', () => {
     expect(st.r.goalArea).toEqual({ x: 9.6, z: 0, r: 1.6 }) // the run to the goal ring is the same for everybody
   })
   it('the pass task has no keeper in its data, widens on misses, and the coach reacts to the decision', async () => {
-    const { L, r } = await start('winger', 1)
+    const { L, r } = await start('winger', 2)
     expect(L.kick?.pass).toBe(true); const b0 = r.kickBand; r.kickResult(false); expect(r.kickBand).toBeGreaterThan(b0)
     r.kickResult(true); r.kickResult(true); r.update(1, 9.6, 0); expect(r.task.kind).toBe('choose'); r.interact('hold'); expect(r.task.kind).toBe('goto')
-    expect(L.tasks[4].introByChoice!.hold[0].text).toMatch(/held the ball/)
+    expect(L.tasks[5].introByChoice!.hold[0].text).toMatch(/held the ball/)
   })
 })

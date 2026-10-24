@@ -269,3 +269,8 @@ Feedback: levels felt like walk, tap, repeat. Two new acted-out task kinds (engi
 - New first task `ch2.l1.t0` ("Take the bus to the trial"): bus stop at x = -30, dropped at the pitch gate (-13.8, 0.8), then the registration walk, kit, boots and sprint as before (old task ids kept, so saved points stay valid; indices shifted by one).
 - Pitch levels can now have a street: `LevelRenderer.buildPitchStreet` builds it west of the fence when `rides` is set. Street data moved to `src/levels/street.ts` (still re-exported from `chapter1b.ts`).
 - Other Chapter 2 levels have no bus ride.
+
+## Chapter 2: bus ride in every level
+- `src/levels/bus.ts` `withBus(level, opts)` puts a ride task in front of a level (new task `<level>.t0`, street west of the scene, every task-indexed field shifted by one). Applied to ch2 L2 to L9, each with its own destination (training pitch, stadium, club, sports ground, ground, rival's ground, stadium, club office) and Folake/Tunde lines.
+- Bot tests and the real-button headless run (all eight levels: board, ride, arrive, next task) pass. Existing tests that start Chapter 2 runners at fixed task indices were moved by one.
+- Caveat: Trial Day is one day in the story, so the rides are framed as trips between sessions and venues. Players mid-level resume one step earlier.

@@ -1,6 +1,7 @@
 // Chapter 2, "Trial Day": the player is a young footballer at an open trial. Only Level 1 exists so far (same rule as chapter 1: one level first, test it).
 import type { LevelDef, TaskDef, Rect, Furn, Hazard, Line } from './schema'
 import { STREET_BOUNDS } from './street'
+import { withBus } from './bus'
 const say = (who: Line['who'], text: string, expr?: Line['expr']): Line => ({ who, text, expr })
 
 const R = (x0: number, x1: number, z0: number, z1: number): Rect => ({ x0, x1, z0, z1 })
@@ -145,7 +146,7 @@ const tasks2: TaskDef[] = [
 const D = (x: number, z0: number, z1: number, speed: number, phase: number, color: string): Hazard => ({ x, z0, z1, speed, phase, name: 'dummy', color })
 const RING = (x: number, z: number, r = 1.6) => ({ x, z, r })
 
-export const LEVEL_C2L2: LevelDef = {
+export const LEVEL_C2L2: LevelDef = withBus({
   id: 'ch2.l2', sceneKind: 'pitch', kit: true, chapter: 'ch2', title: 'Skills Stations', subtitle: 'Level 2',
   intro: 'A loud whistle, three stations to survive, and a coach who somehow only watches you.',
   tasks: tasks2,
@@ -175,7 +176,7 @@ export const LEVEL_C2L2: LevelDef = {
   timeLimit: 20,
   next: 'ch2.l3',
   starRules: ['Finish the level', 'Get back to the circle before the timer ends', 'Do it on time with 2 mistakes or fewer'],
-}
+}, { to: 'the training pitch', title: 'Afternoon session', purpose: 'The afternoon session is on the training pitch across town: wait at the stop, board the bus and ride there.', objective: 'Take the bus to the training pitch', success: 'You get off at the training pitch.', intro: [{ who: 'folake', text: 'The skills session is on the other pitch this afternoon. The bus stop is up the road, my champion!', expr: 'happy' }], done: [{ who: 'tunde', text: 'You are early. I do not trust early. Warm up.', expr: 'suspicious' }] })
 
 // ---------------------------------------------------------------------------------------------------------------- Level 3
 const FURNITURE3: Furn[] = [
@@ -244,7 +245,7 @@ const tasks3: TaskDef[] = [
   },
 ]
 
-export const LEVEL_C2L3: LevelDef = {
+export const LEVEL_C2L3: LevelDef = withBus({
   id: 'ch2.l3', sceneKind: 'pitch', kit: true, chapter: 'ch2', title: 'The Trial Match', subtitle: 'Level 3',
   intro: 'Whistle. Bibs. A real match, and your boots from this morning have an opinion about where you play.',
   tasks: tasks3,
@@ -276,4 +277,4 @@ export const LEVEL_C2L3: LevelDef = {
   timeLimit: 18,
   next: 'ch2.l4',
   starRules: ['Finish the level', 'Get through the defenders before the timer ends', 'Do it on time with 2 mistakes or fewer'],
-}
+}, { to: 'the stadium', title: 'Bus to the stadium', purpose: 'The trial match is at the stadium across town: wait at the stop, board the bus and ride there.', objective: 'Take the bus to the stadium', success: 'You get off at the stadium.', intro: [{ who: 'folake', text: 'The trial match is at the stadium. Take the bus, eat something and do not be shy.', expr: 'calm' }], done: [{ who: 'helper', text: 'Real stadium. Real grass. Real nerves.', expr: 'worried' }] })
