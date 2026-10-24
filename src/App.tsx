@@ -10,6 +10,7 @@ import { lazy, Suspense } from 'react'
 const LevelPlay = lazy(() => import('./ui/screens/LevelPlay'))
 const Dash = lazy(() => import('./ui/screens/Dash'))
 const CharacterSheet = lazy(() => import('./dev/CharacterSheet'))
+const PoseSheet = lazy(() => import('./dev/PoseSheet'))
 import { audio } from '@platform/audio'
 import { setAnalyticsContext, startAnalytics } from '@platform/analytics'
 
@@ -24,6 +25,7 @@ function SoundPill({ enabled }: { enabled: boolean }) {
 }
 
 export default function App() {
+  if (typeof location !== 'undefined' && location.search.includes('poses=1')) return <Suspense fallback={null}><PoseSheet /></Suspense>
   if (typeof location !== 'undefined' && location.search.includes('sheet=1')) return <Suspense fallback={null}><CharacterSheet /></Suspense>
   const { screen, toasts, init, tick, meta, openSheet, levelNonce } = useGame()
   const last = useRef(Date.now())

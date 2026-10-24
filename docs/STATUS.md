@@ -287,3 +287,9 @@ Feedback: levels felt like walk, tap, repeat. Two new acted-out task kinds (engi
 Feedback: each chapter should introduce its own means of transport, not repeat one. Now: Chapter 1 bus, Chapter 2 train, Chapter 3 helicopter, Chapter 4 ferry (replaces the earlier bus/train in those chapters).
 - `Ride.vehicle`: `'bus' | 'train' | 'helicopter' | 'ferry'`. `street.ts` has a setting per vehicle (`SETS`: road, rails, helipad, water and dock) and `VEHICLE_INFO` (names, sign, hint). The renderer draws each vehicle; the helicopter descends to land and climbs while flying with a spinning rotor, the ferry bobs on the water.
 - Texts were reworded per chapter (stop, station, helipad, dock). Played in headless Chrome: ch2 L1/L8 (train), ch3 L1/L4/L7 (helicopter), ch4 L1/L4/L8 (ferry).
+
+## Gestures (real hands, knees and back)
+- `buildToon` arms and legs are now two pieces (elbows, knees) with hand anchors and a head pivot. New `src/world/poses.ts`: 30 poses (carry tray/box, reach high, pick from the floor, lift, grab, hand over, sit, eat, drink, wave, talk, point, shake hands, knock, write, stamp, chop, stir, pour, sweep, wipe, count money, phone, dig, search). `applyPose(parts, pose, t, k, upper)` blends from standing; `Item.act` overrides the pose, otherwise `poseForItem(shape, height)` picks one.
+- In levels: picking up uses the pose of the item (low items bend, shelf items reach, paper is written on); carried things sit in the hands (tray or box pose, legs keep walking); guests sit and eat with the sit poses and wave while waiting; the speaker of the current line gestures (`talk`); Folake and Tunde use the same poses.
+- Axis note: because the toon body is turned round, limb x angles are flipped inside `applyPose`; the pose table is written in "negative = forward" terms.
+- Proof page: `?poses=1` renders every pose side-on. `tests/poses.test.ts` covers it.

@@ -4,7 +4,9 @@ import type { Appearance } from '@engine/core/types'
 import { SKIN_TONES } from '../ui/Avatar'
 import type { Wear } from '@content/items'
 
-export interface HumanParts { group: THREE.Group; body: THREE.Group; legL: THREE.Object3D; legR: THREE.Object3D; armL: THREE.Object3D; armR: THREE.Object3D }
+export interface HumanParts { group: THREE.Group; body: THREE.Group; legL: THREE.Object3D; legR: THREE.Object3D; armL: THREE.Object3D; armR: THREE.Object3D
+  /** only on the sheet-style toon: bendable forearms and shins, hand anchors for held things, and the head */
+  elbowL?: THREE.Object3D; elbowR?: THREE.Object3D; kneeL?: THREE.Object3D; kneeR?: THREE.Object3D; handL?: THREE.Object3D; handR?: THREE.Object3D; head?: THREE.Object3D }
 
 const lam = (c: number | THREE.Color | string) => new THREE.MeshLambertMaterial({ color: c as THREE.ColorRepresentation })
 
@@ -127,10 +129,13 @@ export function buildHuman(opts: { look: Appearance; age: number; gender?: 'male
 }
 
 export function animateHuman(p: HumanParts, t: number, moving: boolean, speed = 1) {
-  if (!moving) { p.legL.rotation.x = p.legR.rotation.x = p.armL.rotation.x = p.armR.rotation.x = 0; p.body.position.y = 0; return }
+  const bend = !!p.elbowL
+  if (bend) { p.head?.rotation.set(0, 0, 0); p.armL.rotation.z = p.armR.rotation.z = 0; p.body.rotation.z = 0 }
+  if (!moving) { p.legL.rotation.x = p.legR.rotation.x = p.armL.rotation.x = p.armR.rotation.x = 0; p.body.position.y = 0; if (bend) { p.elbowL!.rotation.x = p.elbowR!.rotation.x = p.kneeL!.rotation.x = p.kneeR!.rotation.x = 0 } return }
   const sw = Math.sin(t * 9 * speed) * 0.8
   p.legL.rotation.x = sw; p.legR.rotation.x = -sw; p.armL.rotation.x = -sw * 0.8; p.armR.rotation.x = sw * 0.8
   p.body.position.y = Math.abs(Math.sin(t * 9 * speed)) * 0.07
+  if (bend) { p.elbowL!.rotation.x = 0.25 + Math.max(0, -sw) * 0.5; p.elbowR!.rotation.x = 0.25 + Math.max(0, sw) * 0.5; p.kneeL!.rotation.x = -Math.max(0, -sw) * 0.9; p.kneeR!.rotation.x = -Math.max(0, sw) * 0.9 }
 }
 
 /** Exercise moves for gym-goers and early-morning joggers. Sets limb angles for the current time; call resetPose to stand them back up. */
@@ -147,6 +152,7 @@ export function exercisePose(p: HumanParts, move: Move, t: number) {
 }
 export function resetPose(p: HumanParts) {
   p.body.rotation.x = 0; p.body.position.y = 0
+  for (const o of [p.elbowL, p.elbowR, p.kneeL, p.kneeR, p.head]) o?.rotation.set(0, 0, 0)
   p.legL.rotation.set(0, 0, 0); p.legR.rotation.set(0, 0, 0); p.armL.rotation.set(0, 0, 0); p.armR.rotation.set(0, 0, 0)
 }
 

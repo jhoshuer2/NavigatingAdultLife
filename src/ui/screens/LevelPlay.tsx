@@ -47,8 +47,8 @@ export default function LevelPlay() {
   const playQueue = useCallback(() => {
     if (speaking.current) return
     const next = queue.current.shift()
-    if (!next) { setLine(null); return }
-    speaking.current = true; setLine(next); scene.current?.setExpression(next.who, next.expr ?? 'neutral')
+    if (!next) { setLine(null); scene.current?.setSpeaker(null); return }
+    speaking.current = true; setLine(next); scene.current?.setExpression(next.who, next.expr ?? 'neutral'); scene.current?.setSpeaker(next.who)
     later(() => { speaking.current = false; playQueue() }, 2600)
   }, [])
 

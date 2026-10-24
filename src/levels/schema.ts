@@ -37,7 +37,7 @@ export interface TaskDef {
 }
 
 export interface Spot { id: string; task: number; x: number; z: number; label: string; wrong?: Line; right?: boolean; icon?: string }
-export interface Item { id: string; price?: number; y?: number; task: number; x: number; z: number; label: string; color: string; shape: 'box' | 'bag' | 'phone' | 'keys' | 'wallet' | 'umbrella' | 'snack' | 'bank' | 'boots' | 'shinpad' | 'bib' | 'bottle' | 'ladder' | 'cones' | 'plate' | 'cup' | 'folder' | 'paper' | 'stamp' | 'crate' | 'produce' | 'sign' | 'blanket' | 'cake' }
+export interface Item { /** the body pose for picking this up (default: from its shape and height) */ act?: import('../world/poses').Pose; id: string; price?: number; y?: number; task: number; x: number; z: number; label: string; color: string; shape: 'box' | 'bag' | 'phone' | 'keys' | 'wallet' | 'umbrella' | 'snack' | 'bank' | 'boots' | 'shinpad' | 'bib' | 'bottle' | 'ladder' | 'cones' | 'plate' | 'cup' | 'folder' | 'paper' | 'stamp' | 'crate' | 'produce' | 'sign' | 'blanket' | 'cake' }
 export interface Rect { x0: number; x1: number; z0: number; z1: number }
 export interface Furn { name: string; rect: Rect; h: number; color: string }
 

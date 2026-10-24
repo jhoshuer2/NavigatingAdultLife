@@ -3,6 +3,7 @@
 import * as THREE from 'three'
 import { buildToon, type Expression, type ToonParts, type ToonSpec } from '../world/toon'
 import { animateHuman } from '../world/characters'
+import { applyPose, carryPoseFor, poseForItem, type Pose } from '../world/poses'
 import { MAMA_FOLAKE, BABA_TUNDE, neighbour } from '../world/castData'
 import { moveWithCollision } from '../world/nav'
 import { SETS } from './street'
@@ -14,8 +15,9 @@ export const REACH = 2.3
 
 /** an action being played: the player walks up, then bends, digs or reaches, then the rule fires */
 type ActKind = 'dig' | 'search' | 'take'
-interface Act { kind: ActKind; x: number; z: number; id: string; label: string; t: number; dur: number; walk: number; done: () => void; beat: number; phone?: boolean }
-const ACT_DUR: Record<ActKind, number> = { dig: 2.4, search: 1.3, take: 1.0 }
+interface Act { pose?: Pose; kind: ActKind; x: number; z: number; id: string; label: string; t: number; dur: number; walk: number; done: () => void; beat: number; phone?: boolean }
+const ACT_DUR: Record<ActKind, number> = { dig: 2.4, search: 1.3, take: 1.3 }
+const POSE_DUR: Partial<Record<Pose, number>> = { write: 1.8, stamp: 1.5, pickLow: 1.5, lift: 1.6, handOver: 1.2, shakeHands: 1.5, point: 1.1, wave: 1.2 }
 export const actLabel = (kind: ActKind, id: string) => kind === 'dig' ? 'Digging through the laundry…' : kind === 'search' ? (id === 'pillow' ? 'Lifting the pillow…' : id === 'drawer' ? 'Opening the drawer…' : 'Checking…') : 'Picking it up…'
 
 export interface Nearby { kind: 'spot' | 'item'; id: string; label: string }
@@ -68,12 +70,14 @@ export class LevelRenderer {
   private lastNear = ''
   /** serve task: the guests (drawn as characters that walk, sit and eat), their order labels and plates */
   private guestObjs = new Map<string, { parts: ToonParts; label: THREE.Sprite; plate: THREE.Object3D; g: ServeGuest; task: number; from?: number }>()
-  private carryMesh?: { id: string; o: THREE.Object3D }
+  private carryMesh?: { id: string; o: THREE.Object3D; shape: string }
   /** ride task: the bus and where it is in its journey */
   private bus?: THREE.Group
   private busX = 0
   private busPhase: 'away' | 'arriving' | 'waiting' | 'riding' | 'dropped' = 'away'
   private busT = 0
+  /** who is speaking now: they gesture while their line is on screen */
+  private speaker: Speaker | null = null
   private vehicleKind: 'bus' | 'train' | 'helicopter' | 'ferry' = 'bus'
 
   constructor(private canvas: HTMLCanvasElement, private level: LevelDef, spec: ToonSpec, startTask = 0) {
@@ -352,6 +356,7 @@ export class LevelRenderer {
     this.target = { x: Math.max(this.level.bounds.x0, Math.min(this.level.bounds.x1, o.x + d.x * k)), z: Math.max(this.level.bounds.z0, Math.min(this.level.bounds.z1, o.z + d.z * k)) }
   }
 
+  setSpeaker(who: Speaker | null) { this.speaker = who }
   setExpression(who: Speaker, e: Expression) { if (who === 'neighbour' || who === 'helper') return; (who === 'folake' ? this.folake : who === 'tunde' ? this.tunde : this.me).setExpression(e) }
   hazardPos(i: number, t = this.t) { return { x: this.level.hazards[i].x, z: hazardZ(this.level.hazards[i], t) } }
 
@@ -387,12 +392,13 @@ export class LevelRenderer {
     const dr = ((this.facing - this.me.group.rotation.y + Math.PI * 3) % (Math.PI * 2)) - Math.PI
     this.me.group.rotation.y += dr * Math.min(1, dt * 14)
     this.me.group.position.set(this.px, 0, this.pz)
-    if (stumbling) { this.me.body.rotation.x = -1.2 * Math.min(1, (1.1 - this.stumbleT) * 8) * (this.stumbleT > 0.35 ? 1 : this.stumbleT / 0.35); this.me.body.position.y = 0; this.me.armL.rotation.x = this.me.armR.rotation.x = -2.4 }
-    else { this.me.body.rotation.x = 0; animateHuman(this.me, this.t, moving || actState === 'walking', 1.15); if (this.act && actState === 'acting') this.actPose(this.act) }
+    if (stumbling) { this.me.body.rotation.x = -1.2 * Math.min(1, (1.1 - this.stumbleT) * 8) * (this.stumbleT > 0.35 ? 1 : this.stumbleT / 0.35); this.me.body.position.y = 0; this.me.armL.rotation.x = this.me.armR.rotation.x = 2.4 }
+    else { this.me.body.rotation.x = 0; animateHuman(this.me, this.t, moving || actState === 'walking', 1.15); if (this.act && actState === 'acting') this.actPose(this.act); else if (this.speaker === 'player' && !moving && !this.act) applyPose(this.me, 'talk', this.t, 1, true) }
     for (let i = this.fx.length - 1; i >= 0; i--) { const f = this.fx[i]; f.life -= dt; f.v.y -= 9 * dt; f.m.position.addScaledVector(f.v, dt); f.m.rotation.x += dt * 6; if (f.life <= 0 || f.m.position.y < 0.05) { this.scene.remove(f.m); this.fx.splice(i, 1) } }
     // the others breathe, Folake waves her arms when she is cross
     this.folake.group.position.y = Math.sin(this.t * 2) * 0.02
-    this.tunde.armR.rotation.x = Math.sin(this.t * 3) * 0.12
+    applyPose(this.folake, this.speaker === 'folake' ? 'talk' : 'stand', this.t, 1)
+    applyPose(this.tunde, this.speaker === 'tunde' ? 'talk' : 'stand', this.t + 1, 1)
 
     if (run) {
       run.update(dt, this.px, this.pz)
@@ -436,6 +442,7 @@ export class LevelRenderer {
       this.reportNearby(run)
     }
     this.stepGuests(dt)
+    this.stepCarry()
     this.stepBus(dt)
     // camera behind and above, a little ahead of where the player is heading
     const tx = this.px, tz = this.pz
@@ -478,7 +485,9 @@ export class LevelRenderer {
     const src = gp ?? (n.kind === 'spot' ? this.level.spots.find((x) => x.id === n.id) : this.level.items.find((x) => x.id === n.id))
     if (!src) { done(); return }
     const kind: ActKind = n.kind === 'item' || go ? 'take' : n.id === 'laundry' ? 'dig' : 'search'
-    this.act = { kind, x: src.x, z: src.z, id: n.id, label: go ? (n.label.startsWith('Seat') ? 'Showing them to a seat…' : n.label.startsWith('Greet') ? 'Greeting…' : 'Serving the plate…') : actLabel(kind, n.id), t: 0, dur: ACT_DUR[kind], walk: 0, done, beat: 0 }
+    const item = n.kind === 'item' ? this.level.items.find((x) => x.id === n.id) : undefined
+    const pose: Pose | undefined = go ? (n.label.startsWith('Seat') ? 'point' : n.label.startsWith('Greet') ? 'shakeHands' : 'handOver') : item ? (item.act ?? poseForItem(item.shape, this.itemY(item))) : undefined
+    this.act = { pose, kind, x: src.x, z: src.z, id: n.id, label: go ? (n.label.startsWith('Seat') ? 'Showing them to a seat…' : n.label.startsWith('Greet') ? 'Greeting…' : 'Serving the plate…') : actLabel(kind, n.id), t: 0, dur: (pose && POSE_DUR[pose]) || ACT_DUR[kind], walk: 0, done, beat: 0 }
     this.onAction?.(this.act.label, this.act.dur)
   }
 
@@ -532,9 +541,9 @@ export class LevelRenderer {
   private actPose(a: Act) {
     const me = this.me, t = a.t
     const ease = Math.min(1, t / 0.35) // lean in smoothly instead of snapping
-    if (a.kind === 'dig') { me.body.rotation.x = 0.85 * ease; me.armL.rotation.x = (-1.6 + Math.sin(t * 22) * 0.7) * ease; me.armR.rotation.x = (-1.6 - Math.sin(t * 22) * 0.7) * ease; if (a.phone) { me.body.rotation.x = 0.1; me.armR.rotation.x = -2.8; me.armL.rotation.x = 0 } }
-    else if (a.kind === 'search') { me.body.rotation.x = 0.6 * ease; me.armL.rotation.x = (-1.3 + Math.sin(t * 18) * 0.4) * ease; me.armR.rotation.x = -1.3 * ease }
-    else { const k = Math.min(1, t / a.dur); me.body.rotation.x = 0.7 * Math.sin(Math.min(1, k * 2) * Math.PI / 2) * (k > 0.6 ? 1 - (k - 0.6) / 0.4 * 0.8 : 1); me.armR.rotation.x = -1.9 * (k < 0.6 ? 1 : 1 - (k - 0.6) / 0.4 * 0.7); me.armL.rotation.x = -0.4 }
+    if (a.kind === 'dig') applyPose(me, a.phone ? 'digPhone' : 'dig', t, ease)
+    else if (a.kind === 'search') applyPose(me, 'search', t, ease)
+    else if (a.pose) { const k = Math.min(1, t / 0.28) * (t > a.dur - 0.22 ? Math.max(0, (a.dur - t) / 0.22) : 1); applyPose(me, a.pose, t, k) }
   }
 
   private reportNearby(run: TaskRunner) {
@@ -561,7 +570,7 @@ export class LevelRenderer {
 
   /** guests walk to their chair, sit, eat, and keep their seat afterwards; the order label hovers until they are served */
   private stepGuests(dt: number) {
-    const run = this.runner; if (!run || this.guestObjs.size === 0) return
+    const run = this.runner; if (!run) return
     for (const o of this.guestObjs.values()) {
       const { g, parts } = o
       const active = run.idx === o.task, after = run.idx > o.task || (run.finished && run.idx === o.task)
@@ -571,20 +580,28 @@ export class LevelRenderer {
       const to = st >= 1 ? g.seat : g, p = parts.group.position
       const dx = to.x - p.x, dz = to.z - p.z, d = Math.hypot(dx, dz)
       const walking = d > 0.08
-      if (walking) { const sp = Math.min(d, 3.2 * dt); p.x += (dx / d) * sp; p.z += (dz / d) * sp; parts.group.rotation.y = Math.atan2(dx, dz); animateHuman(parts, this.t + g.x, true, 0.9) }
-      else if (st >= 1) { // seated, facing the table
-        parts.group.rotation.y = Math.atan2(g.table.x - p.x, g.table.z - p.z); parts.legL.rotation.x = parts.legR.rotation.x = -1.4; parts.body.position.y = -0.42
-        const eating = st === 2; parts.armR.rotation.x = eating ? -1.2 + Math.sin(this.t * 7) * 0.5 : 0; parts.armL.rotation.x = eating ? -0.6 : 0
-        if (st === 3) parts.body.position.y = -0.42 + Math.abs(Math.sin(this.t * 3 + g.z)) * 0.03
-      } else { animateHuman(parts, this.t, false); parts.armR.rotation.x = Math.sin(this.t * 4 + g.z) * 0.9 - 1.6 } // waiting: waves at you
+      if (walking) { const sp = Math.min(d, 3.2 * dt); p.x += (dx / d) * sp; p.z += (dz / d) * sp; parts.group.rotation.y = Math.atan2(dx, dz); parts.body.rotation.x = 0; animateHuman(parts, this.t + g.x, true, 0.9) }
+      else if (st >= 1) { // seated, facing the table; eating when the plate is down
+        parts.group.rotation.y = Math.atan2(g.table.x - p.x, g.table.z - p.z)
+        applyPose(parts, st === 2 ? 'sitEat' : 'sit', this.t + g.x, 1)
+      } else { animateHuman(parts, this.t, false); applyPose(parts, 'wave', this.t + g.z, 1, true) } // waiting: waves at you
       o.label.visible = st === 1 || st === 0; o.label.position.set(p.x, 2.7, p.z)
       o.plate.visible = st === 2
     }
-    // what you are carrying rides in front of you
+  }
+
+  /** what you are carrying rides in your hands: both hands for a tray or a box, one hand while you hand it over */
+  private stepCarry() {
+    const run = this.runner; if (!run) return
     const c = run.carry
     if (this.carryMesh && this.carryMesh.id !== c) { this.scene.remove(this.carryMesh.o); this.carryMesh = undefined }
-    if (c && !this.carryMesh) { const it = this.level.items.find((x) => x.id === c); if (it) { const o = this.itemMesh(it); this.scene.add(o); this.carryMesh = { id: c, o } } }
-    if (this.carryMesh) { const o = this.carryMesh.o; o.visible = true; o.scale.setScalar(1); o.rotation.set(0, 0, 0); o.position.set(this.px + Math.sin(this.facing) * 0.55, 1.15, this.pz + Math.cos(this.facing) * 0.55); if (!this.act) this.me.armR.rotation.x = this.me.armL.rotation.x = -1.3 }
+    if (c && !this.carryMesh) { const it = this.level.items.find((x) => x.id === c); if (it) { const o = this.itemMesh(it); this.scene.add(o); this.carryMesh = { id: c, o, shape: it.shape } } }
+    const cm = this.carryMesh; if (!cm) return
+    const o = cm.o; o.visible = true; o.scale.setScalar(1); o.rotation.set(0, this.facing, 0)
+    if (!this.act) applyPose(this.me, carryPoseFor(cm.shape), this.t, 1, true)
+    const hl = this.me.handL, hr = this.me.handR
+    if (hl && hr) { const a = new THREE.Vector3(), b = new THREE.Vector3(); hl.getWorldPosition(a); hr.getWorldPosition(b); if (this.act) a.copy(b); o.position.set((a.x + b.x) / 2, (a.y + b.y) / 2 + 0.12, (a.z + b.z) / 2) }
+    else o.position.set(this.px + Math.sin(this.facing) * 0.55, 1.15, this.pz + Math.cos(this.facing) * 0.55)
   }
 
   /** the bus pulls up when you get near the stop, waits, carries you across town and drives off */

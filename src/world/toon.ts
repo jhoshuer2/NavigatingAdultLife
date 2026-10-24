@@ -185,35 +185,52 @@ export function buildToon(spec: ToonSpec): ToonParts {
   const sleeveMat = spec.top === 'hoodie' || spec.top === 'tunic' ? topMat : spec.top === 'overshirt' ? topMat : spec.top === 'apron' ? innerMat : topMat
   const armLen = kid ? 0.78 : 0.9
   const armX = bw / 2 + 0.13
+  const eh = armLen * 0.5 // the elbow: the arm is two pieces so it can bend
   const limb = (x: number, y: number, w: number, h: number, sleeveFrac: number, skinMat: THREE.Material, sMat: THREE.Material) => {
     const p = new THREE.Group(); p.position.set(x, y, 0)
-    box(p, w, h * sleeveFrac, w, sMat, 0, -h * sleeveFrac / 2, 0)
-    box(p, w * 0.82, h * (1 - sleeveFrac), w * 0.82, skinMat, 0, -h * sleeveFrac - h * (1 - sleeveFrac) / 2, 0)
-    ball(p, w * 0.5, skinMat, 0, -h - 0.02, 0, 6)
-    body.add(p); return p
+    const lo = new THREE.Group(); lo.position.y = -eh; p.add(lo)
+    const piece = (y0: number, y1: number, pw: number, mat: THREE.Material) => { // y0 above y1, both measured down from the shoulder
+      if (y1 <= eh) box(p, pw, y1 - y0, pw, mat, 0, -(y0 + y1) / 2, 0)
+      else if (y0 >= eh) box(lo, pw, y1 - y0, pw, mat, 0, -(y0 + y1) / 2 + eh, 0)
+      else { box(p, pw, eh - y0, pw, mat, 0, -(y0 + eh) / 2, 0); box(lo, pw, y1 - eh, pw, mat, 0, -(eh + y1) / 2 + eh, 0) }
+    }
+    const sh = h * sleeveFrac
+    piece(0, sh, w, sMat); piece(sh, h, w * 0.82, skinMat)
+    ball(lo, w * 0.5, skinMat, 0, -h + eh - 0.02, 0, 6)
+    const hand = new THREE.Object3D(); hand.position.set(0, -h + eh - 0.02, 0); lo.add(hand)
+    body.add(p); return { p, lo, hand }
   }
   const longSleeve = spec.top === 'hoodie' || spec.top === 'tunic'
-  const armL = limb(-armX, hipY + bh - 0.1, 0.28, armLen, longSleeve ? 0.95 : 0.42, skin, sleeveMat), armR = limb(armX, hipY + bh - 0.1, 0.28, armLen, longSleeve ? 0.95 : 0.42, skin, sleeveMat)
+  const aL = limb(-armX, hipY + bh - 0.1, 0.28, armLen, longSleeve ? 0.95 : 0.42, skin, sleeveMat), aR = limb(armX, hipY + bh - 0.1, 0.28, armLen, longSleeve ? 0.95 : 0.42, skin, sleeveMat)
+  const armL = aL.p, armR = aR.p
 
-  // legs, bottoms and shoes
+  // legs, bottoms and shoes (two pieces each, so knees bend)
   const botMat = lam(spec.bottomColor)
   const lw = spec.bottom === 'cargo' || spec.bottom === 'jeans' ? 0.42 : 0.34
+  const kh = legH * 0.5
   const legGroup = (x: number) => {
     const p = new THREE.Group(); p.position.set(x, hipY, 0)
+    const lo = new THREE.Group(); lo.position.y = -kh; p.add(lo)
+    const piece = (y0: number, y1: number, pw: number, pd: number, mat: THREE.Material | string) => {
+      if (y1 <= kh) box(p, pw, y1 - y0, pd, mat, 0, -(y0 + y1) / 2, 0)
+      else if (y0 >= kh) box(lo, pw, y1 - y0, pd, mat, 0, -(y0 + y1) / 2 + kh, 0)
+      else { box(p, pw, kh - y0, pd, mat, 0, -(y0 + kh) / 2, 0); box(lo, pw, y1 - kh, pd, mat, 0, -(kh + y1) / 2 + kh, 0) }
+    }
     const short = spec.bottom === 'shorts'
     const wrap = spec.bottom === 'wrap'
     const upper = short ? legH * 0.5 : legH * 0.86
     if (!wrap) {
-      box(p, lw, upper, lw + 0.04, botMat, 0, -upper / 2, 0)
-      if (short) box(p, lw * 0.76, legH * 0.4, lw * 0.76, skin, 0, -upper - legH * 0.2, 0)
-      if (spec.bottom === 'cargo') { box(p, lw + 0.06, 0.06, lw + 0.1, botMat, 0, -legH * 0.82, 0); box(p, 0.05, 0.3, 0.28, new THREE.Color(spec.bottomColor).multiplyScalar(0.85).getStyle(), x < 0 ? -lw / 2 - 0.03 : lw / 2 + 0.03, -0.38, 0) }
-    } else { box(p, 0.26, legH * 0.9, 0.26, skin, 0, -legH * 0.45, 0) }
+      piece(0, upper, lw, lw + 0.04, botMat)
+      if (short) piece(upper, upper + legH * 0.4, lw * 0.76, lw * 0.76, skin)
+      if (spec.bottom === 'cargo') { box(lo, lw + 0.06, 0.06, lw + 0.1, botMat, 0, -legH * 0.82 + kh, 0); box(p, 0.05, 0.3, 0.28, new THREE.Color(spec.bottomColor).multiplyScalar(0.85).getStyle(), x < 0 ? -lw / 2 - 0.03 : lw / 2 + 0.03, -0.38, 0) }
+    } else piece(0, legH * 0.9, 0.26, 0.26, skin)
     const sh = spec.shoes === 'sandal' ? lam('#1c1b22') : lam('#f2ead8')
-    const sole = box(p, lw + 0.08, 0.14, 0.62, sh, 0, -legH - 0.02, -0.1)
-    if (spec.shoes === 'sneaker') { box(p, lw + 0.1, 0.08, 0.5, '#1c1b22', 0, -legH + 0.05, -0.14); box(p, 0.04, 0.14, 0.34, '#1c1b22', x < 0 ? -(lw + 0.08) / 2 : (lw + 0.08) / 2, -legH, -0.1) } else sole.scale.set(1, 0.6, 1)
-    body.add(p); return p
+    const sole = box(lo, lw + 0.08, 0.14, 0.62, sh, 0, -legH - 0.02 + kh, -0.1)
+    if (spec.shoes === 'sneaker') { box(lo, lw + 0.1, 0.08, 0.5, '#1c1b22', 0, -legH + 0.05 + kh, -0.14); box(lo, 0.04, 0.14, 0.34, '#1c1b22', x < 0 ? -(lw + 0.08) / 2 : (lw + 0.08) / 2, -legH + kh, -0.1) } else sole.scale.set(1, 0.6, 1)
+    body.add(p); return { p, lo }
   }
-  const legL = legGroup(-0.24), legR = legGroup(0.24)
+  const gL = legGroup(-0.24), gR = legGroup(0.24)
+  const legL = gL.p, legR = gR.p
   if (spec.bottom === 'wrap') { // wax-print wrapper skirt
     const sk = add(body, new THREE.CylinderGeometry(bw * 0.58, bw * 0.95, legH * 1.05, 14), printMat(spec.printA ?? '#e07a1f', spec.printB ?? '#f5b91c'), 0, hipY - legH * 0.5 + 0.08, 0)
     sk.scale.set(1, 1, 0.82)
@@ -226,7 +243,7 @@ export function buildToon(spec: ToonSpec): ToonParts {
   if (acc.includes('tote')) { box(body, 0.46, 0.5, 0.2, '#e07a1f', bw / 2 + 0.28, hipY - 0.2, -0.1); box(body, 0.4, 0.05, 0.05, '#1f4a2e', bw / 2 + 0.28, hipY + 0.14, -0.1) }
   if (acc.includes('bag')) { box(body, 0.5, 0.42, 0.26, '#1c1b22', -bw / 2 - 0.3, hipY - 0.1, -0.1); box(body, 0.36, 0.06, 0.06, '#f5b91c', -bw / 2 - 0.3, hipY + 0.14, -0.1) }
   if (acc.includes('towel')) { box(body, 0.34, 0.12, 0.7, '#f4efe4', -bw / 2 - 0.02, hipY + bh + 0.06, -0.02); box(body, 0.35, 0.03, 0.7, '#2f8a5a', -bw / 2 - 0.02, hipY + bh + 0.13, -0.02); box(body, 0.2, 0.62, 0.12, '#f4efe4', -bw / 2 + 0.04, hipY + bh - 0.28, -0.32); box(body, 0.2, 0.05, 0.13, '#2f8a5a', -bw / 2 + 0.04, hipY + bh - 0.38, -0.32) }
-  if (acc.includes('watch')) { const w = box(armL, 0.3, 0.12, 0.3, '#2a2a30', 0, -armLen + 0.12, 0); w.scale.set(1, 1, 1); box(armL, 0.1, 0.08, 0.08, '#cfcfcf', 0, -armLen + 0.12, -0.17) }
+  if (acc.includes('watch')) { const w = box(aL.lo, 0.3, 0.12, 0.3, '#2a2a30', 0, -armLen + 0.12 + eh, 0); w.scale.set(1, 1, 1); box(aL.lo, 0.1, 0.08, 0.08, '#cfcfcf', 0, -armLen + 0.12 + eh, -0.17) }
   if (acc.includes('glasses')) { for (const s of [-1, 1]) { const r = add(face, new THREE.TorusGeometry(0.17, 0.025, 6, 14), basic('#14110e'), s * 0.23, 0.06, -0.06); r.scale.set(1, 1.1, 1) } box(face, 0.1, 0.03, 0.03, '#14110e', 0, 0.08, -0.06) }
   if (acc.includes('cap')) { const cp = add(head, new THREE.SphereGeometry(hr * 1.06, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.5), lam('#1c1b22'), 0, 0.06, 0.02); cp.scale.set(1.05, 1.02, 1); box(head, 0.7, 0.07, 0.4, '#1c1b22', 0, 0.12, -hr * 0.9); box(head, 0.2, 0.12, 0.04, '#f5b91c', 0, 0.3, -hr * 0.98) }
   if (acc.includes('headphones')) { const band = add(head, new THREE.TorusGeometry(hr * 1.02, 0.05, 6, 16, Math.PI), lam('#1c1b22'), 0, 0, 0); band.rotation.z = 0; for (const s of [-1, 1]) box(head, 0.16, 0.34, 0.3, '#1c1b22', s * (hr + 0.1), -0.04, 0) }
@@ -236,7 +253,7 @@ export function buildToon(spec: ToonSpec): ToonParts {
   group.add(body)
   group.scale.setScalar((spec.size ?? 1) * (kid ? 0.78 : 0.86))
 
-  const parts = { group, body, legL, legR, armL, armR, expression: 'neutral' as Expression, setExpression: (_e: Expression) => {} } as ToonParts
+  const parts = { group, body, legL, legR, armL, armR, elbowL: aL.lo, elbowR: aR.lo, handL: aL.hand, handR: aR.hand, kneeL: gL.lo, kneeR: gR.lo, head, expression: 'neutral' as Expression, setExpression: (_e: Expression) => {} } as ToonParts
   parts.setExpression = (e: Expression) => {
     const f = FACE[e]
     parts.expression = e
