@@ -13,6 +13,7 @@ export const SETS: Record<Vehicle, StreetSet> = {
   bus: base({ kind: 'road', x: -23.2, z: 4.4, w: 22.4, d: 2.6 }, 'BUS STOP'),
   train: base({ kind: 'rail', x: -23.2, z: 4.4, w: 22.4, d: 2.6 }, 'STATION', [], '#cfc8b8'),
   helicopter: base({ kind: 'road', x: -23.2, z: 4.4, w: 22.4, d: 2.6, color: '#8c8a84' }, 'HELIPAD', [{ kind: 'pad', x: -28.6, z: 4.4, w: 4 }], '#cfcac0'),
+  keke: base({ kind: 'road', x: -23.2, z: 4.4, w: 22.4, d: 2.6 }, 'KEKE STAND', [], '#e0d2a8'),
   ferry: base({ kind: 'water', x: -23.2, z: 4.9, w: 22.4, d: 3.6 }, 'FERRY DOCK', [{ kind: 'rug', x: -28.6, z: 3.4, w: 4.6, d: 1.2, color: '#a87a50' }], '#d6c9a8'),
 }
 export const STREET = SETS.bus
@@ -23,5 +24,6 @@ export const VEHICLE_INFO: Record<Vehicle, { noun: string; sign: string; hint: s
   bus: { noun: 'bus', sign: 'BUS STOP', hint: 'Walk to the BUS STOP sign, wait for the yellow bus and tap Board the bus.' },
   train: { noun: 'train', sign: 'STATION', hint: 'Walk to the STATION sign, wait for the train and tap Board the train.' },
   helicopter: { noun: 'helicopter', sign: 'HELIPAD', hint: 'Walk to the HELIPAD sign, wait for the helicopter to land and tap Board the helicopter.' },
+  keke: { noun: 'keke', sign: 'KEKE STAND', hint: 'Walk to the KEKE STAND sign, wait for the yellow keke and tap Board the keke.' },
   ferry: { noun: 'ferry', sign: 'FERRY DOCK', hint: 'Walk to the FERRY DOCK sign, wait for the ferry and tap Board the ferry.' },
 }

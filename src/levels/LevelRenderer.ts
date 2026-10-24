@@ -81,7 +81,7 @@ export class LevelRenderer {
   private peopleObjs = new Map<string, { parts: ToonParts; label: THREE.Sprite; p: TalkPerson; task: number }>()
   /** who is speaking now: they gesture while their line is on screen */
   private speaker: Speaker | null = null
-  private vehicleKind: 'bus' | 'train' | 'helicopter' | 'ferry' = 'bus'
+  private vehicleKind: 'bus' | 'train' | 'helicopter' | 'ferry' | 'keke' = 'bus'
 
   constructor(private canvas: HTMLCanvasElement, private level: LevelDef, spec: ToonSpec, startTask = 0) {
     this.r = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false })
@@ -255,6 +255,10 @@ export class LevelRenderer {
       const rotor = new THREE.Group(); rotor.position.set(0, 2.65, 0); rotor.name = 'rotor'; const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.3, 6), lam('#1c1b22')); mast.position.y = -0.1; rotor.add(mast); for (const a of [0, Math.PI / 2]) { const bl = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.05, 0.18), lam('#2b2b33')); bl.rotation.y = a; rotor.add(bl) } g.add(rotor)
       for (const z of [-0.7, 0.7]) { add(3.0, 0.08, 0.1, '#1c1b22', 0, 0.35, z); add(0.08, 0.7, 0.08, '#1c1b22', -0.8, 0.7, z); add(0.08, 0.7, 0.08, '#1c1b22', 0.8, 0.7, z) }
       const l = this.label('HELI', 1.4); l.position.set(0, 3.4, 0); g.add(l)
+    } else if (kind === 'keke') { // a little three-wheeler: yellow body, black canopy, one wheel in front
+      add(2.4, 0.9, 1.5, '#f5b91c', 0, 0.85, 0); add(1.2, 0.7, 1.4, '#f5b91c', 1.3, 0.75, 0); add(2.2, 0.12, 1.7, '#1c1b22', -0.1, 1.9, 0); add(0.12, 0.9, 0.1, '#1c1b22', -1.1, 1.45, 0.7); add(0.12, 0.9, 0.1, '#1c1b22', -1.1, 1.45, -0.7); add(0.12, 0.9, 0.1, '#1c1b22', 0.9, 1.45, 0.7); add(0.12, 0.9, 0.1, '#1c1b22', 0.9, 1.45, -0.7); add(0.9, 0.4, 1.2, '#9ecbe6', 1.5, 1.2, 0)
+      for (const [wx, wz] of [[-0.8, -0.8], [-0.8, 0.8], [1.7, 0]]) { const w = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.34, 0.2, 10), lam('#1c1b22')); w.rotation.x = Math.PI / 2; w.position.set(wx, 0.34, wz); g.add(w) }
+      const l = this.label('KEKE', 1.4); l.position.set(0, 2.6, 0); g.add(l)
     } else if (kind === 'ferry') {
       add(6.4, 0.9, 2.3, '#fbf8f0', 0, 0.55, 0); add(6.42, 0.3, 2.32, '#2b6ad0', 0, 0.2, 0); add(3.2, 1.0, 1.8, '#fbf8f0', -0.4, 1.5, 0); add(3.0, 0.4, 1.84, '#9ecbe6', -0.4, 1.6, 0); add(0.5, 0.9, 0.5, '#e07a1f', -1.4, 2.4, 0); add(0.52, 0.2, 0.52, '#1c1b22', -1.4, 2.9, 0)
       const l = this.label('FERRY', 1.5); l.position.set(0, 3.5, 0); g.add(l)

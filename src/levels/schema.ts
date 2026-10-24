@@ -48,7 +48,7 @@ export interface ServeGuest { id: string; name: string; order: string; dish: str
 /** a bus ride: walk to `stop`, wait for the bus on the road at `busZ`, board, and be dropped in the task's goto area */
 /** a person to talk to in a talk task: they say `lines` when you walk up; each round then offers choices and they answer the one you pick */
 export interface TalkPerson { id: string; name: string; x: number; z: number; /** hide until this task index (default: this task) */ from?: number; lines: Line[]; rounds?: { options: { id: string; label: string; reply: Line }[] }[] }
-export type Vehicle = 'bus' | 'train' | 'helicopter' | 'ferry'
+export type Vehicle = 'bus' | 'train' | 'helicopter' | 'ferry' | 'keke'
 export interface Ride { /** default bus */ vehicle?: Vehicle; stop: { x: number; z: number }; busZ: number; from: string; to: string }
 export interface Theme { ground: string; ground2?: string; floors: (Rect & { color: string })[]; deco: Deco[]; fence?: boolean }
 export interface LevelDef {
