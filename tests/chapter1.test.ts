@@ -26,6 +26,7 @@ function solve(L: LevelDef): TaskRunner {
     else if (t.kind === 'choose') r.interact(items[0].id)
     else if (t.kind === 'sequence') for (const id of L.sequences![idx]) r.interact(id)
     else if (t.kind === 'serve') { for (const g of L.serves![idx].guests) { r.interact(`g:${g.id}`); r.interact(g.dish); r.interact(`g:${g.id}`) } r.update(L.serves![idx].eatSecs ?? 3, 0, 0) }
+    else if (t.kind === 'talk') { for (const p of L.talks![idx]) { r.interact(`t:${p.id}`); for (let i = 0; i < (p.rounds?.length ?? 0); i++) r.interact(`c:${r.convoOptions![0].id}`) } }
     else if (t.kind === 'hold') { const h = L.holds![idx]; r.update(h.secs + 1, h.x, h.z) }
     else if (t.kind === 'kick') for (let i = 0; i < L.kick!.goals; i++) r.kickResult(true)
   }
@@ -77,11 +78,11 @@ describe('chapter 1 and 2: every level', () => {
     })
   }
   it('budget task is solvable and over-spending is refused', () => {
-    const L = LEVELS['ch1.l3']; const r = new TaskRunner(L, emptyProgress(), hooks(), 1)
-    r.interact('rice'); r.interact('fish'); expect(r.collected).toEqual(['rice']) // 800 + 600 is too much
-    r.interact('onions'); r.interact('pepper'); expect(r.collected).toEqual(['rice', 'onions']); expect(r.budgetLeft).toBe(0)
-    r.interact('reset'); expect(r.collected).toEqual([]); expect(r.budgetLeft).toBe(1000) // never stuck: put everything back
-    for (const id of ['tomatoes', 'onions', 'pepper']) r.interact(id)
+    const L = LEVELS['ch1.l5']; const r = new TaskRunner(L, emptyProgress(), hooks(), 1)
+    r.interact('goat'); r.interact('rice_imp'); r.interact('chicken'); expect(r.collected).toEqual(['goat', 'rice_imp']) // 2200 + 1800 + 1500 is too much
+    expect(r.budgetLeft).toBe(200)
+    r.interact('reset'); expect(r.collected).toEqual([]); expect(r.budgetLeft).toBe(4200) // never stuck: put everything back
+    for (const id of ['tomato', 'rice', 'chicken', 'oil']) r.interact(id)
     expect(r.idx).toBe(2)
   })
   it('sequence task: a wrong order sends you back, the right order finishes', () => {
@@ -92,16 +93,16 @@ describe('chapter 1 and 2: every level', () => {
     expect(r.idx).toBe(2)
   })
   it('serve task: seat, fetch the right dish, deliver, they eat; a wrong plate is sent back', () => {
-    const L = LEVELS['ch1.l5']; const r = new TaskRunner(L, emptyProgress(), hooks(), 2)
+    const L = LEVELS['ch1.l6']; const r = new TaskRunner(L, emptyProgress(), hooks(), 2)
     expect(r.task.kind).toBe('serve')
-    r.interact('jollof'); expect(r.carry).toBeNull() // nobody is seated yet: there is nobody to take it to
-    r.interact('g:sade'); expect(r.guests.sade).toBe(1)
-    r.interact('jollof'); expect(r.carry).toBe('jollof')
-    r.interact('g:sade'); expect(r.guests.sade).toBe(2); expect(r.carry).toBeNull()
-    r.interact('g:mamaput'); r.interact('g:chidi'); r.interact('drink'); r.interact('g:chidi') // the wrong plate
-    expect(r.guests.chidi).toBe(1); expect(r.mistakes).toBe(1); expect(r.carry).toBeNull()
-    r.update(3.1, 0, 0); expect(r.guests.sade).toBe(3); expect(r.fed).toBe(1)
-    r.interact('chicken'); r.interact('g:chidi'); r.interact('drink'); r.interact('g:mamaput')
+    r.interact('plateChidi'); expect(r.carry).toBeNull() // nobody is seated yet: there is nobody to take it to
+    r.interact('g:chidi'); expect(r.guests.chidi).toBe(1)
+    r.interact('plateChidi'); expect(r.carry).toBe('plateChidi')
+    r.interact('g:chidi'); expect(r.guests.chidi).toBe(2); expect(r.carry).toBeNull()
+    r.interact('g:femi'); r.interact('g:tobi'); r.interact('g:femi'); r.interact('plateTobi'); r.interact('g:femi') // the wrong plate
+    expect(r.guests.femi).toBe(1); expect(r.mistakes).toBe(1); expect(r.carry).toBeNull()
+    r.update(3.1, 0, 0); expect(r.guests.chidi).toBe(3); expect(r.fed).toBe(1)
+    r.interact('plateFemi'); r.interact('g:femi'); r.interact('plateTobi'); r.interact('g:tobi')
     r.update(3.1, 0, 0); expect(r.idx).toBe(3)
   })
   it('ride task: finishes when you arrive at the destination (the bus drops you there)', () => {
@@ -110,15 +111,26 @@ describe('chapter 1 and 2: every level', () => {
     const a = r.goalArea!; r.update(0.1, a.x, a.z); expect(r.idx).toBe(1)
   })
   it('hold task counts seconds in the ring and loses them outside', () => {
-    const L = LEVELS['ch1.l5']; const r = new TaskRunner(L, emptyProgress(), hooks(), 1)
-    r.update(3, -3.2, 0); expect(r.holdT).toBeCloseTo(3); r.update(1, 0, 0); expect(r.holdT).toBeCloseTo(1); r.update(6, -3.2, 0); expect(r.idx).toBe(2)
+    const L = LEVELS['ch1.l3']; const r = new TaskRunner(L, emptyProgress(), hooks(), 3)
+    r.update(3, 16, 0.4); expect(r.holdT).toBeCloseTo(3); r.update(1, 0, 0); expect(r.holdT).toBeCloseTo(1); r.update(6, 16, 0.4); expect(r.finished).toBe(true)
   })
-  it('the choice before it changes the timed task, the goal of a walk-to task and the lines of the next task', () => {
-    const L6 = LEVELS['ch1.l6']; const r6 = new TaskRunner(L6, emptyProgress(), hooks()); r6.interact('green')
-    for (const id of ['print', 'sign', 'stamp']) r6.interact(id)
-    expect(r6.timeLimit).toBe(15)
-    const L4 = LEVELS['ch1.l4']; const r4 = new TaskRunner(L4, emptyProgress(), hooks(), 1); r4.interact('ladder')
-    expect(r4.goalArea).toEqual({ x: 8.6, z: 3.0, r: 1.5 })
+  it('talk task: walk up, answer, any order, done when everyone has been spoken to; one conversation at a time', () => {
+    const L = LEVELS['ch1.l4']; const lines: string[] = []; const r = new TaskRunner(L, emptyProgress(), { ...hooks(), say: (l: { text: string }) => { lines.push(l.text) } } as never)
+    expect(r.task.kind).toBe('talk'); r.interact('t:tobi'); expect(r.spoken).toBe(1); expect(lines.length).toBeGreaterThan(0)
+    r.interact('t:chidi'); expect(r.convoOptions!.length).toBe(2); r.interact('t:femi'); expect(r.spoken).toBe(1) // busy in a conversation
+    r.interact('c:help'); expect(r.convo).toBeNull(); expect(r.spoken).toBe(2)
+    r.interact('t:chidi'); expect(r.spoken).toBe(2) // already done
+    r.interact('t:femi'); expect(r.idx).toBe(1)
+  })
+  it('the interview asks three questions one after the other', () => {
+    const L = LEVELS['ch1.l8']; const r = new TaskRunner(L, emptyProgress(), hooks(), 2)
+    r.interact('t:adeyemi'); for (const id of ['story', 'honest']) { expect(r.convo).toBeTruthy(); r.interact(`c:${id}`) }
+    expect(r.convoOptions!.map((o) => o.id)).toEqual(['grow', 'need', 'city']); r.interact('c:city'); expect(r.idx).toBe(3)
+  })
+  it('every Chapter 1 level mixes tasks differently: no two levels share the same ordered list of task kinds', () => {
+    const lists = Array.from({ length: 9 }, (_, i) => LEVELS[`ch1.l${i + 1}`].tasks.map((t) => t.kind).join('>'))
+    expect(new Set(lists).size).toBe(9)
+    for (let i = 2; i <= 9; i++) { const b = LEVELS[`ch1.l${i}`].bounds; expect(b.x1 - b.x0, `ch1.l${i} is a bigger space`).toBeGreaterThanOrEqual(28) }
   })
   it('chapter 1 finished opens chapter 2', async () => {
     const { chapterState, finishLevel } = await import('../src/levels/progress')

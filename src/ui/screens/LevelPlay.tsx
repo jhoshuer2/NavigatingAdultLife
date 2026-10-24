@@ -141,7 +141,7 @@ export default function LevelPlay() {
   const speakerSpec = (w: Line['who']) => (w === 'folake' ? MAMA_FOLAKE : w === 'tunde' ? BABA_TUNDE : w === 'neighbour' ? NEIGHBOUR : w === 'helper' ? HELPER : spec)
   const speakerName = (w: Line['who']) => (w === 'folake' ? 'Mama Folake' : w === 'tunde' ? 'Baba Tunde' : w === 'neighbour' ? 'The Neighbour' : w === 'helper' ? 'The Helper' : spec.name)
   const collectInfo = !rn || !task ? '' : task.kind === 'collect' ? (rn.budgetLeft !== null ? ` (${rn.collected.length}/${level.budgets?.[rn.idx]?.need} · ₦${rn.budgetLeft} left)` : ` (${rn.collected.length}/${level.items.filter((i) => i.task === rn.idx).length})`)
-    : task.kind === 'kick' ? ` (${rn.goals}/${level.kick?.goals ?? 3})` : task.kind === 'hold' ? ` (${Math.floor(rn.holdT)}/${rn.holdNeed} s)` : task.kind === 'sequence' ? ` (${rn.seqPos}/${level.sequences?.[rn.idx]?.length ?? 0})` : task.kind === 'serve' ? ` (${rn.fed}/${rn.serve?.guests.length ?? 0} fed)` : ''
+    : task.kind === 'kick' ? ` (${rn.goals}/${level.kick?.goals ?? 3})` : task.kind === 'hold' ? ` (${Math.floor(rn.holdT)}/${rn.holdNeed} s)` : task.kind === 'sequence' ? ` (${rn.seqPos}/${level.sequences?.[rn.idx]?.length ?? 0})` : task.kind === 'serve' ? ` (${rn.fed}/${rn.serve?.guests.length ?? 0} fed)` : task.kind === 'talk' ? ` (${rn.spoken}/${rn.people.length})` : ''
   const onStick = (e: React.PointerEvent<HTMLDivElement>, end = false) => {
     const el = e.currentTarget.getBoundingClientRect()
     if (end) { stick.current = { x: 0, z: 0 }; setKnob({ x: 0, y: 0 }); sync(); return }
@@ -192,12 +192,17 @@ export default function LevelPlay() {
           {line && (
             <div className="mx-auto max-w-sm flex items-center gap-2 rounded-2xl p-1.5 pr-3 text-sm" style={{ background: '#ffffffe6', border: `3px solid ${INK}`, color: INK, boxShadow: `0 4px 0 ${INK}` }}>
               <Portrait spec={speakerSpec(line.who)} expression={line.expr ?? 'neutral'} size={44} />
-              <div><div className="text-xs font-extrabold uppercase tracking-wide" style={{ color: ORANGE }}>{speakerName(line.who)}</div><div className="font-bold leading-tight">{line.text}</div></div>
+              <div><div className="text-xs font-extrabold uppercase tracking-wide" style={{ color: ORANGE }}>{line.name ?? speakerName(line.who)}</div><div className="font-bold leading-tight">{line.text}</div></div>
             </div>
           )}
         </div>
       )}
 
+      {rn?.convoOptions && !paused && (
+        <div className="absolute inset-x-0 px-4 grid gap-2 justify-items-center" style={{ bottom: 'calc(15.4rem + var(--safe-b))' }}>
+          {rn.convoOptions.map((o) => <V2Btn key={o.id} tone="cream" className="!min-h-12 !text-base w-full max-w-sm" onClick={() => runner.current?.interact(`c:${o.id}`)}>{o.label}</V2Btn>)}
+        </div>
+      )}
       {kickReady && rn && (
         <div className="absolute inset-x-0 flex justify-center pointer-events-none" style={{ bottom: 'calc(14.2rem + var(--safe-b))' }}>
           <div className="relative h-7 rounded-full overflow-hidden" style={{ width: 260, background: CREAM, border: `3px solid ${INK}` }} aria-label="Kick timing">

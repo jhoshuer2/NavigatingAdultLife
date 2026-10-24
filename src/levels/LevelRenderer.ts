@@ -7,7 +7,7 @@ import { applyPose, carryPoseFor, poseForItem, type Pose } from '../world/poses'
 import { MAMA_FOLAKE, BABA_TUNDE, neighbour } from '../world/castData'
 import { moveWithCollision } from '../world/nav'
 import { SETS } from './street'
-import type { Deco, LevelDef, Item, Spot, Hazard, Speaker, ServeGuest } from './schema'
+import type { TalkPerson, Deco, LevelDef, Item, Spot, Hazard, Speaker, ServeGuest } from './schema'
 import type { TaskRunner } from './TaskRunner'
 
 const lam = (c: string | number) => new THREE.MeshLambertMaterial({ color: c })
@@ -17,6 +17,7 @@ export const REACH = 2.3
 type ActKind = 'dig' | 'search' | 'take'
 interface Act { pose?: Pose; kind: ActKind; x: number; z: number; id: string; label: string; t: number; dur: number; walk: number; done: () => void; beat: number; phone?: boolean }
 const ACT_DUR: Record<ActKind, number> = { dig: 2.4, search: 1.3, take: 1.3 }
+const POSE_LABEL: Partial<Record<Pose, string>> = { lift: 'Lifting…', write: 'Writing…', chop: 'Chopping…', stir: 'Stirring…', pour: 'Seasoning…', countMoney: 'Counting the money…', pickLow: 'Bending down…', reachHigh: 'Reaching up…', stamp: 'Stamping…', grab: 'Taking it…', carryBox: 'Picking it up…' }
 const POSE_DUR: Partial<Record<Pose, number>> = { write: 1.8, stamp: 1.5, pickLow: 1.5, lift: 1.6, handOver: 1.2, shakeHands: 1.5, point: 1.1, wave: 1.2 }
 export const actLabel = (kind: ActKind, id: string) => kind === 'dig' ? 'Digging through the laundry…' : kind === 'search' ? (id === 'pillow' ? 'Lifting the pillow…' : id === 'drawer' ? 'Opening the drawer…' : 'Checking…') : 'Picking it up…'
 
@@ -76,6 +77,8 @@ export class LevelRenderer {
   private busX = 0
   private busPhase: 'away' | 'arriving' | 'waiting' | 'riding' | 'dropped' = 'away'
   private busT = 0
+  /** talk task: the people to speak to */
+  private peopleObjs = new Map<string, { parts: ToonParts; label: THREE.Sprite; p: TalkPerson; task: number }>()
   /** who is speaking now: they gesture while their line is on screen */
   private speaker: Speaker | null = null
   private vehicleKind: 'bus' | 'train' | 'helicopter' | 'ferry' = 'bus'
@@ -123,6 +126,12 @@ export class LevelRenderer {
       const plate = new THREE.Group(); const pl = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.04, 14), lam('#fbf8f0')); const fd = new THREE.Mesh(new THREE.SphereGeometry(0.2, 10, 6), lam(L.items.find((x) => x.id === g.dish)?.color ?? '#c4562a')); fd.position.y = 0.1; plate.add(pl, fd)
       plate.position.set(g.table.x, 0.86, g.table.z); plate.visible = false; this.scene.add(plate)
       this.guestObjs.set(g.id, { parts, label, plate, g, task: Number(ti), from: sv.from })
+    }
+    for (const [ti, list] of Object.entries(L.talks ?? {})) for (const p of list) {
+      const i = this.peopleObjs.size, parts = buildToon({ ...neighbour(i + 14), accessories: [] as never[] })
+      parts.group.position.set(p.x, 0, p.z); parts.group.visible = false; this.scene.add(parts.group)
+      const label = this.label(p.name, 1.9); label.position.set(p.x, 2.7, p.z); label.visible = false; this.scene.add(label)
+      this.peopleObjs.set(p.id, { parts, label, p, task: Number(ti) })
     }
     if (L.rides) this.buildBus()
     // spots keep an invisible anchor so the scene can wobble them when the player gets close
@@ -259,7 +268,7 @@ export class LevelRenderer {
   private label(text: string, w = 2.2): THREE.Sprite {
     const c = document.createElement('canvas'); c.width = 256; c.height = 96
     const g = c.getContext('2d')!; g.fillStyle = '#1c1b22'; g.fillRect(4, 8, 248, 80); g.fillStyle = '#f5b91c'; g.fillRect(10, 14, 236, 68); g.fillStyle = '#1c1b22'
-    g.font = '800 34px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text.toUpperCase().slice(0, 14), 128, 50)
+    g.font = `800 ${text.length > 16 ? 22 : text.length > 11 ? 28 : 34}px system-ui, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text.toUpperCase().slice(0, 22), 128, 50)
     const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthWrite: false })); sp.scale.set(w, w * 0.375, 1); return sp
   }
@@ -393,7 +402,7 @@ export class LevelRenderer {
     this.me.group.rotation.y += dr * Math.min(1, dt * 14)
     this.me.group.position.set(this.px, 0, this.pz)
     if (stumbling) { this.me.body.rotation.x = -1.2 * Math.min(1, (1.1 - this.stumbleT) * 8) * (this.stumbleT > 0.35 ? 1 : this.stumbleT / 0.35); this.me.body.position.y = 0; this.me.armL.rotation.x = this.me.armR.rotation.x = 2.4 }
-    else { this.me.body.rotation.x = 0; animateHuman(this.me, this.t, moving || actState === 'walking', 1.15); if (this.act && actState === 'acting') this.actPose(this.act); else if (this.speaker === 'player' && !moving && !this.act) applyPose(this.me, 'talk', this.t, 1, true) }
+    else { this.me.body.rotation.x = 0; animateHuman(this.me, this.t, moving || actState === 'walking', 1.15); if (this.act && actState === 'acting') this.actPose(this.act); else if (!moving && !this.act) { const hp = this.runner?.task.kind === 'hold' ? L.holds?.[this.runner.idx] : undefined; if (hp?.pose && Math.hypot(this.px - hp.x, this.pz - hp.z) < hp.r) applyPose(this.me, hp.pose, this.t, 1); else if (this.speaker === 'player') applyPose(this.me, 'talk', this.t, 1, true) } }
     for (let i = this.fx.length - 1; i >= 0; i--) { const f = this.fx[i]; f.life -= dt; f.v.y -= 9 * dt; f.m.position.addScaledVector(f.v, dt); f.m.rotation.x += dt * 6; if (f.life <= 0 || f.m.position.y < 0.05) { this.scene.remove(f.m); this.fx.splice(i, 1) } }
     // the others breathe, Folake waves her arms when she is cross
     this.folake.group.position.y = Math.sin(this.t * 2) * 0.02
@@ -442,6 +451,7 @@ export class LevelRenderer {
       this.reportNearby(run)
     }
     this.stepGuests(dt)
+    this.stepPeople()
     this.stepCarry()
     this.stepBus(dt)
     // camera behind and above, a little ahead of where the player is heading
@@ -480,14 +490,14 @@ export class LevelRenderer {
   /** Play the action for what the player is next to; `done` runs when the animation ends (that is when the task rule is applied). */
   perform(n: Nearby, done: () => void): void {
     if (this.act) return
-    const go = n.id.startsWith('g:') ? this.guestObjs.get(n.id.slice(2)) : undefined
+    const go = n.id.startsWith('g:') ? this.guestObjs.get(n.id.slice(2)) : n.id.startsWith('t:') ? this.peopleObjs.get(n.id.slice(2)) : undefined
     const gp = go ? { x: go.parts.group.position.x, z: go.parts.group.position.z } : null
     const src = gp ?? (n.kind === 'spot' ? this.level.spots.find((x) => x.id === n.id) : this.level.items.find((x) => x.id === n.id))
     if (!src) { done(); return }
     const kind: ActKind = n.kind === 'item' || go ? 'take' : n.id === 'laundry' ? 'dig' : 'search'
     const item = n.kind === 'item' ? this.level.items.find((x) => x.id === n.id) : undefined
-    const pose: Pose | undefined = go ? (n.label.startsWith('Seat') ? 'point' : n.label.startsWith('Greet') ? 'shakeHands' : 'handOver') : item ? (item.act ?? poseForItem(item.shape, this.itemY(item))) : undefined
-    this.act = { pose, kind, x: src.x, z: src.z, id: n.id, label: go ? (n.label.startsWith('Seat') ? 'Showing them to a seat…' : n.label.startsWith('Greet') ? 'Greeting…' : 'Serving the plate…') : actLabel(kind, n.id), t: 0, dur: (pose && POSE_DUR[pose]) || ACT_DUR[kind], walk: 0, done, beat: 0 }
+    const pose: Pose | undefined = go ? (n.label.startsWith('Talk') ? 'wave' : n.label.startsWith('Seat') ? 'point' : n.label.startsWith('Greet') ? 'shakeHands' : 'handOver') : item ? (item.act ?? poseForItem(item.shape, this.itemY(item))) : undefined
+    this.act = { pose, kind, x: src.x, z: src.z, id: n.id, label: !go && pose && POSE_LABEL[pose] ? POSE_LABEL[pose]! : go ? (n.label.startsWith('Talk') ? 'Saying hello…' : n.label.startsWith('Seat') ? 'Showing them to a seat…' : n.label.startsWith('Greet') ? 'Greeting…' : 'Serving the plate…') : actLabel(kind, n.id), t: 0, dur: (pose && POSE_DUR[pose]) || (pose === 'chop' || pose === 'stir' || pose === 'pour' || pose === 'countMoney' ? 1.6 : ACT_DUR[kind]), walk: 0, done, beat: 0 }
     this.onAction?.(this.act.label, this.act.dur)
   }
 
@@ -560,6 +570,7 @@ export class LevelRenderer {
           else if (st === 1 && run.carry) consider({ id: `g:${g.id}`, x: at.x, z: at.z, label: run.carry === g.dish ? `Serve ${g.name}` : `Give to ${g.name}` } as unknown as Spot, 'spot') }
         if (!run.carry) for (const it of L.items) if (it.task === idx) { const g = run.serve?.guests.find((x) => x.dish === it.id); if (g && run.guests[g.id] === 1) consider(it, 'item') }
       }
+      if (run.task.kind === 'talk' && !run.convo) for (const q of run.people) if (!run.talked[q.id]) consider({ id: `t:${q.id}`, x: q.x, z: q.z, label: `Talk to ${q.name}` } as unknown as Spot, 'spot')
       if (run.task.kind === 'ride' && this.busPhase === 'waiting') { const r = L.rides?.[idx]; if (r && Math.hypot(this.px - r.stop.x, this.pz - r.stop.z) < 3.4) best = { kind: 'spot', id: 'bus', label: `Board the ${r.vehicle ?? 'bus'} to ${r.to}` } }
       if (run.task.kind === 'kick' && L.kick && !this.kickAnim && Math.hypot(L.kick.x - this.px, L.kick.z - this.pz) < 1.3) best = { kind: 'spot', id: 'kick', label: L.kick.pass ? 'Pass!' : 'Kick!' }
     }
@@ -587,6 +598,22 @@ export class LevelRenderer {
       } else { animateHuman(parts, this.t, false); applyPose(parts, 'wave', this.t + g.z, 1, true) } // waiting: waves at you
       o.label.visible = st === 1 || st === 0; o.label.position.set(p.x, 2.7, p.z)
       o.plate.visible = st === 2
+    }
+  }
+
+  /** the people of a talk task stand where they are, turn to face you when you are near, and gesture while they talk to you */
+  private stepPeople() {
+    const run = this.runner; if (!run || this.peopleObjs.size === 0) return
+    for (const o of this.peopleObjs.values()) {
+      const { parts, p } = o, here = run.idx === o.task || (o.p.from !== undefined && run.idx >= o.p.from && run.idx <= o.task) || run.idx > o.task
+      parts.group.visible = here
+      if (!here) { o.label.visible = false; continue }
+      const done = run.idx > o.task || (run.idx === o.task && run.talked[p.id])
+      const near = Math.hypot(this.px - p.x, this.pz - p.z) < 6
+      if (near || run.convo?.id === p.id) { const want = Math.atan2(this.px - p.x, this.pz - p.z), d = ((want - parts.group.rotation.y + Math.PI * 3) % (Math.PI * 2)) - Math.PI; parts.group.rotation.y += d * 0.12 }
+      animateHuman(parts, this.t, false)
+      applyPose(parts, run.convo?.id === p.id || (this.speaker && near && !done && run.idx === o.task && Math.hypot(this.px - p.x, this.pz - p.z) < 3.5) ? 'talk' : done ? 'stand' : 'wave', this.t + p.x, 1, true)
+      o.label.visible = !done; o.label.position.set(p.x, 2.7, p.z)
     }
   }
 

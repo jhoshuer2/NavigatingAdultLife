@@ -2,10 +2,10 @@
 // failure and recovery rules written down.
 import type { Expression } from '../world/toon'
 
-export type TaskKind = 'find' | 'collect' | 'choose' | 'reach' | 'goto' | 'kick' | 'hold' | 'sequence' | 'serve' | 'ride'
+export type TaskKind = 'find' | 'collect' | 'choose' | 'reach' | 'goto' | 'kick' | 'hold' | 'sequence' | 'serve' | 'ride' | 'talk'
 export type Speaker = 'folake' | 'tunde' | 'player' | 'neighbour' | 'helper'
 
-export interface Line { who: Speaker; text: string; expr?: Expression }
+export interface Line { who: Speaker; text: string; expr?: Expression; /** shown instead of the generic speaker name */ name?: string }
 
 export interface TaskDef {
   id: string
@@ -46,6 +46,8 @@ export interface Deco { kind: 'awning' | 'tree' | 'lamp' | 'sign' | 'stall' | 'w
 /** a guest in a serve task: waits at (x, z), is seated at `seat`, eats from a plate on `table`, and wants the dish whose item id is `dish` */
 export interface ServeGuest { id: string; name: string; order: string; dish: string; x: number; z: number; seat: { x: number; z: number }; table: { x: number; z: number } }
 /** a bus ride: walk to `stop`, wait for the bus on the road at `busZ`, board, and be dropped in the task's goto area */
+/** a person to talk to in a talk task: they say `lines` when you walk up; each round then offers choices and they answer the one you pick */
+export interface TalkPerson { id: string; name: string; x: number; z: number; /** hide until this task index (default: this task) */ from?: number; lines: Line[]; rounds?: { options: { id: string; label: string; reply: Line }[] }[] }
 export type Vehicle = 'bus' | 'train' | 'helicopter' | 'ferry'
 export interface Ride { /** default bus */ vehicle?: Vehicle; stop: { x: number; z: number }; busZ: number; from: string; to: string }
 export interface Theme { ground: string; ground2?: string; floors: (Rect & { color: string })[]; deco: Deco[]; fence?: boolean }
@@ -61,10 +63,12 @@ export interface LevelDef {
   sequences?: Record<number, string[]>
   /** serve tasks: seat each guest, bring them the dish they ordered, let them eat. `eatSecs` is how long a meal takes */
   serves?: Record<number, { eatSecs?: number; /** 'greet' for a market stall: customers step up to the counter instead of sitting down */ verb?: 'seat' | 'greet'; /** guests are already standing about from this task index on (before it they are not there) */ from?: number; guests: ServeGuest[] }>
+  /** talk tasks: the people to speak to (any order)  */
+  talks?: Record<number, TalkPerson[]>
   /** ride tasks: the bus journey (the destination is the task's goto area) */
   rides?: Record<number, Ride>
   /** hold tasks: stand in the area for this long */
-  holds?: Record<number, { x: number; z: number; r: number; secs: number }>
+  holds?: Record<number, { x: number; z: number; r: number; secs: number; /** what you do while you wait, for example sit */ pose?: import('../world/poses').Pose }>
   /** a badge awarded on the result screen (optional) */
   badge?: string
   /** result-screen closing beats by stars (1, 2, 3), when the ending depends on how it went */

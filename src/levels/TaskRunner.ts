@@ -66,6 +66,12 @@ export class TaskRunner {
     const sg = sv.guests.find((g) => this.guests[g.id] === 1); const it = sg && this.level.items.find((i) => i.id === sg.dish)
     return it ? { x: it.x, z: it.z } : null
   }
+  /** talk task: people spoken to, and the conversation in progress (the choices on offer) */
+  talked: Record<string, boolean> = {}
+  convo: { id: string; round: number } | null = null
+  get people() { return this.level.talks?.[this.idx] ?? [] }
+  get spoken() { return this.people.filter((p) => this.talked[p.id]).length }
+  get convoOptions() { const c = this.convo; if (!c) return null; return this.people.find((p) => p.id === c.id)?.rounds?.[c.round]?.options ?? null }
   get budgetLeft() { const b = this.level.budgets?.[this.idx]; return b ? b.budget - this.spent : null }
   get holdNeed() { return this.level.holds?.[this.idx]?.secs ?? 0 }
   get hazards() { return this.variant?.hazards ?? this.level.hazards }
@@ -84,7 +90,7 @@ export class TaskRunner {
   private begin() {
     this.sinceProgress = 0
     this.wrong = 0; this.found = false; this.collected = []; this.buzzing = false; this.choice = null; this.goals = 0; this.misses = 0; this.spent = 0; this.holdT = 0; this.seqPos = 0
-    this.guests = {}; this.eatT = {}; this.carry = null
+    this.guests = {}; this.eatT = {}; this.carry = null; this.talked = {}; this.convo = null
     for (const g of this.serve?.guests ?? []) this.guests[g.id] = 0
     if (this.task.kind === 'reach') this.timeLeft = this.timeLimit
     this.h.taskStarted(this.idx)
@@ -121,6 +127,8 @@ export class TaskRunner {
       } else { this.mistakes++; this.seqPos = 0; this.collected = []; this.h.sfx?.('nope'); this.h.toast('Wrong order! Start again'); this.h.changed() }
     } else if (t.kind === 'serve') {
       this.serveInteract(id)
+    } else if (t.kind === 'talk') {
+      this.talkInteract(id)
     } else if (t.kind === 'choose') {
       const it = id === 'none' ? null : this.level.items.find((x) => x.id === id && x.task === this.idx)
       if (id !== 'none' && !it) return
@@ -128,6 +136,27 @@ export class TaskRunner {
       this.progress = setFlag(this.progress, this.flagKey, this.choice ?? 'none')
       this.h.sfx?.('pick'); this.complete()
     }
+  }
+
+  private talkInteract(id: string): void {
+    if (id.startsWith('c:')) { // a choice in the conversation
+      const c = this.convo, p = c && this.people.find((x) => x.id === c.id), o = p?.rounds?.[c!.round]?.options.find((x) => x.id === id.slice(2))
+      if (!c || !p || !o) return
+      this.h.sfx?.('pick'); this.h.say(o.reply); this.picked = o.id
+      c.round++
+      if (c.round >= (p.rounds?.length ?? 0)) this.finishTalk(p.id)
+      this.h.changed(); return
+    }
+    if (!id.startsWith('t:') || this.convo) return
+    const p = this.people.find((x) => x.id === id.slice(2)); if (!p || this.talked[p.id]) return
+    for (const l of p.lines) this.h.say(l)
+    this.h.sfx?.('pick')
+    if (p.rounds?.length) this.convo = { id: p.id, round: 0 }; else this.finishTalk(p.id)
+    this.h.changed()
+  }
+  private finishTalk(pid: string): void {
+    this.talked[pid] = true; this.convo = null; this.sinceProgress = 0
+    if (this.spoken >= this.people.length) this.complete()
   }
 
   private serveInteract(id: string): void {
