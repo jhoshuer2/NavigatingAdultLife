@@ -1,4 +1,5 @@
 import type { GameState } from '@engine/core/types'
+import type { ChapterProgress } from '../levels/progress'
 
 export interface Settings { sound: boolean; music: boolean; volume: number; reducedMotion: boolean; bigText: boolean; assist: boolean; lite: boolean; lang?: 'en' | 'pcm' | 'both'; guide?: boolean; voice?: boolean }
 export interface LifeSummary { name: string; age: number; ending: string; legacy: number; netWorth: number; at: number; dream: string; dreamDone: boolean }
@@ -21,6 +22,8 @@ export interface MetaProfile {
   consentAnalytics: boolean
   /** True once the player has seen the first-run privacy screen (either answer). */
   consentAsked: boolean
+  /** Navigating Adult Life 2.0: chapter and Rush progress (see src/levels/progress.ts) */
+  chapter?: ChapterProgress
 }
 
 export const WELCOME_SEC = 120 * 60

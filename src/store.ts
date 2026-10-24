@@ -3,6 +3,8 @@ import type { GameState, NewLifeConfig, Lifestyle, QuizQuestion } from '@engine/
 import { createNewLife, doActivity, setClock, setFlag, payCash, submitQuizAnswer, finishActions, chooseOption, continueAfterEvent, advanceYear, setLifestyle, applyDashResult, relocate, finishDreamLife, type ActivityArgs, type MiniGameResult } from '@engine/api'
 import { ACHIEVEMENT_BY_ID } from '@content/achievements'
 import { defaultMeta, mergeEnding, UNLOCKABLES, type MetaProfile, type Settings } from '@platform/meta'
+import { progressOf, withProgress, type ChapterProgress, type CharacterId } from './levels/progress'
+import type { LevelResult } from './levels/TaskRunner'
 import { loadLife, loadMeta, saveLife, saveMeta, importSave, exportSave } from '@platform/storage'
 import { addPaid, consume, refreshTokens, remainingSec } from '@platform/tokens'
 import { audio } from '@platform/audio'
@@ -11,7 +13,7 @@ import { HOWTO } from '@content/taskGuide'
 import { track, setLifeId, restoreLifeId, newLifeId, setAnalyticsConsent, setAnalyticsContext } from '@platform/analytics'
 import { ACTIVITY_HOURS } from './world/time'
 
-export type Screen = 'title' | 'create' | 'play' | 'ending' | 'achievements' | 'unlocks' | 'settings' | 'dash' | 'history'
+export type Screen = 'home' | 'levelIntro' | 'levelPlay' | 'levelResult' | 'rushLobby' | 'rushPlay' | 'leaderboard' | 'title' | 'create' | 'play' | 'ending' | 'achievements' | 'unlocks' | 'settings' | 'dash' | 'history'
 export type Sheet = null | 'shop' | 'jobs' | 'quests' | 'profile' | 'pick-social' | 'pick-family' | 'lifestyle' | 'paywall' | 'place' | 'npc' | 'places' | 'dreamDone' | 'bus'
 
 import type { PlaceId } from './world/layout'
@@ -21,6 +23,13 @@ interface Toast { id: number; text: string; kind: 'ach' | 'info' }
 
 interface Store {
   screen: Screen
+  lastLevel: LevelResult | null
+  levelStart: number
+  levelNonce: number
+  saveProgress: (p: ChapterProgress) => void
+  chooseCharacter: (c: CharacterId) => void
+  openLevel: (startTask: number) => void
+  showLevelResult: (r: LevelResult) => void
   life: GameState | null
   meta: MetaProfile
   sheet: Sheet
@@ -140,7 +149,7 @@ export const useGame = create<Store>((set, get) => {
   }
   const setMeta = (meta: MetaProfile) => { saveMeta(meta); set({ meta }); audio.configure(meta.settings); configureVoice({ on: meta.settings.sound && meta.settings.voice !== false, volume: meta.settings.volume }) }
   return {
-    screen: 'title', life: null, meta: defaultMeta(), sheet: null, toasts: [], quizFeedback: null, dashMode: 'foot', lastDash: null, endingRecorded: false, placeId: null, npcId: null, walkReq: null, hour: 8, day: 0, enterReq: null, taskActive: false, deliveredNow: null, talkReq: null, penaltyReq: null, marketReq: null, startChoresReq: null, startShopReq: null, jogReq: null, tripReq: null, rideReq: null, birthday: null, matchReq: null,
+    screen: 'home', lastLevel: null, levelStart: 0, levelNonce: 0, life: null, meta: defaultMeta(), sheet: null, toasts: [], quizFeedback: null, dashMode: 'foot', lastDash: null, endingRecorded: false, placeId: null, npcId: null, walkReq: null, hour: 8, day: 0, enterReq: null, taskActive: false, deliveredNow: null, talkReq: null, penaltyReq: null, marketReq: null, startChoresReq: null, startShopReq: null, jogReq: null, tripReq: null, rideReq: null, birthday: null, matchReq: null,
     startMatch: () => set((st) => ({ matchReq: { n: (st.matchReq?.n ?? 0) + 1 }, sheet: null })),
     startRide: (dest, fare) => { const st = get(); let life = st.life; if (!life) return; if (fare) life = payCash(life, fare, 'Bus fare'); commit(life); set((s) => ({ rideReq: { dest, n: (s.rideReq?.n ?? 0) + 1 }, sheet: null })) },
     startTrip: () => set((st) => ({ tripReq: { n: (st.tripReq?.n ?? 0) + 1 }, sheet: null })),
@@ -179,9 +188,14 @@ export const useGame = create<Store>((set, get) => {
     openPlace: (id) => set({ placeId: id, sheet: 'place' }),
     openNpc: (id) => set({ npcId: id, sheet: 'npc' }),
     goToPlace: (id) => set((st) => ({ walkReq: { place: id, n: (st.walkReq?.n ?? 0) + 1 }, sheet: null })),
+    saveProgress: (p) => setMeta(withProgress(get().meta, p)),
+    chooseCharacter: (c) => setMeta(withProgress(get().meta, { ...progressOf(get().meta), character: c })),
+    openLevel: (startTask) => { set((st) => ({ levelNonce: st.levelNonce + 1 })); set({ levelStart: startTask, screen: 'levelPlay', sheet: null }); setAnalyticsContext({ screen: 'levelPlay' }) },
+    showLevelResult: (r) => { set({ lastLevel: r, screen: 'levelResult' }); setAnalyticsContext({ screen: 'levelResult' }) },
     go: (screen) => {
+      if (screen === 'title') screen = 'home'
       set({ screen, sheet: null }); setAnalyticsContext({ screen })
-      if (screen === 'title') track('title_viewed'); else if (screen === 'create') track('create_started')
+      if (screen === 'home') track('title_viewed'); else if (screen === 'create') track('create_started')
     },
     openSheet: (sheet) => { set({ sheet }); if (sheet === 'paywall') track('paywall_seen'); else if (sheet === 'shop') track('shop_viewed') },
     toast: (text, kind = 'info') => {

@@ -1,17 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
 import { useGame } from './store'
 import { Toasts } from './ui/components'
-import { Title } from './ui/screens/Title'
+import { Home, LevelIntro, LevelResult } from './ui/screens/V2'
 import { Create } from './ui/screens/Create'
 import { Play } from './ui/screens/Play'
 import { Ending } from './ui/screens/Ending'
 import { Achievements, History, Settings, Unlocks } from './ui/screens/Misc'
 import { lazy, Suspense } from 'react'
+const LevelPlay = lazy(() => import('./ui/screens/LevelPlay'))
 const Dash = lazy(() => import('./ui/screens/Dash'))
 const CharacterSheet = lazy(() => import('./dev/CharacterSheet'))
 import { audio } from '@platform/audio'
-import { analyticsAvailable, setAnalyticsContext, startAnalytics } from '@platform/analytics'
-import { ConsentScreen } from './ui/screens/Consent'
+import { setAnalyticsContext, startAnalytics } from '@platform/analytics'
 
 /** Shown whenever sound is switched on but the browser is still blocking it, so silence is never a mystery. One tap turns it on. */
 function SoundPill({ enabled }: { enabled: boolean }) {
@@ -25,7 +25,7 @@ function SoundPill({ enabled }: { enabled: boolean }) {
 
 export default function App() {
   if (typeof location !== 'undefined' && location.search.includes('sheet=1')) return <Suspense fallback={null}><CharacterSheet /></Suspense>
-  const { screen, toasts, init, tick, meta, openSheet } = useGame()
+  const { screen, toasts, init, tick, meta, openSheet, levelNonce } = useGame()
   const last = useRef(Date.now())
   useEffect(() => { init(); startAnalytics() }, [init])
   useEffect(() => { document.documentElement.classList.toggle('reduce-motion', meta.settings.reducedMotion) }, [meta.settings.reducedMotion])
@@ -43,16 +43,17 @@ export default function App() {
     }, 1000)
     return () => { clearInterval(iv); for (const ev of ['pointerdown', 'keydown', 'touchstart']) window.removeEventListener(ev, touch) }
   }, [tick])
-  useEffect(() => { if (screen === 'play' || screen === 'dash') return; if (screen === 'title' || screen === 'create') audio.playMusic('menu') }, [screen])
+  useEffect(() => { if (screen === 'play' || screen === 'dash') return; if (screen === 'home' || screen === 'create') audio.playMusic('menu') }, [screen])
   useEffect(() => { void openSheet }, [openSheet])
 
-  const consentOpen = analyticsAvailable() && !meta.consentAsked && screen === 'title'
-  return (
+    return (
     <div className="shell">
       <Toasts items={toasts} />
       <SoundPill enabled={meta.settings.sound} />
-      {consentOpen && <ConsentScreen />}
-      {screen === 'title' && <Title hold={consentOpen} />}
+      {screen === 'home' && <Home />}
+      {screen === 'levelIntro' && <LevelIntro />}
+      {screen === 'levelPlay' && <Suspense fallback={<div className="p-8 text-center font-display text-3xl">Loading…</div>}><LevelPlay key={levelNonce} /></Suspense>}
+      {screen === 'levelResult' && <LevelResult />}
       {screen === 'create' && <Create />}
       {screen === 'play' && <Play />}
       {screen === 'ending' && <Ending />}

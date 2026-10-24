@@ -22,6 +22,16 @@ export const EVENT_PROPS = {
   tutorial_step: ['step'],
   tutorial_skipped: ['step'],
   tutorial_completed: [],
+  // chapters (2.0)
+  first_task_started: ['task', 'ms_since_open'],
+  first_task_completed: ['task', 'duration_s'],
+  level_started: ['level', 'character', 'resumed'],
+  level_completed: ['level', 'stars', 'duration_s', 'mistakes', 'hints'],
+  level_abandoned: ['level', 'task', 'duration_s'],
+  task_failed: ['task', 'reason'],
+  hint_used: ['task'],
+  session_resume: ['level', 'task'],
+  rush_finished: ['mode', 'distance', 'won'],
   // life
   life_started: ['life_index'],
   year_ended: ['age', 'life_index'],
