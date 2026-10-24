@@ -154,3 +154,29 @@ export function LevelResult() {
     </Shell>
   )
 }
+
+export function Leaderboard() {
+  const { meta, go } = useGame()
+  const p = progressOf(meta)
+  const spec = charSpec(p.character)
+  const stars = Object.values(p.stars).reduce((a, b) => a + b, 0)
+  return (
+    <Shell>
+      <header className="px-4 pt-4" style={{ paddingTop: 'calc(1rem + var(--safe-t))' }}><button className="font-extrabold underline" onClick={() => go('home')}>← Home</button></header>
+      <div className="flex-1 overflow-y-auto px-5 pb-6 pt-3 max-w-xl w-full mx-auto grid content-start gap-4">
+        <h1 className="font-display text-5xl text-center">Leaderboard</h1>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="rounded-2xl py-2 text-center font-display text-xl" style={{ background: YELLOW, border: `3px solid ${INK}` }}>Local</div>
+          <div className="rounded-2xl py-2 text-center font-display text-xl opacity-50" style={{ background: '#fff8', border: `3px solid ${INK}` }}>Global · soon</div>
+        </div>
+        <div className="flex items-center gap-3 rounded-2xl p-3" style={{ background: '#fff', border: `3px solid ${INK}` }}>
+          <span className="font-display text-3xl w-8 text-center">1</span>
+          <Portrait spec={spec} expression="proud" size={64} />
+          <div className="flex-1"><div className="font-display text-2xl leading-none">{spec.name} (you)</div><div className="text-sm font-bold opacity-70">{stars} stars · Rush best {p.rush.best} m</div></div>
+          <div className="text-right"><div className="font-display text-3xl leading-none">{p.points}</div><div className="text-xs font-bold">points</div></div>
+        </div>
+        <p className="text-sm font-semibold opacity-80 text-center">The local board shows the players on this device. Global ranking needs the online service and is not built yet; points on this device will count when it is.</p>
+      </div>
+    </Shell>
+  )
+}

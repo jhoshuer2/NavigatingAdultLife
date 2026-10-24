@@ -200,3 +200,13 @@ After the year summary, "Next year" now shows a birthday screen (`BirthdayModal`
 
 ## Race fix: running out of hearts first
 If you crash out while Alfred ai is still running, his run now continues to the end of the 90-second race (instantly, behind the result screen) and the scores are compared at the end, so you can only win if you are still ahead when his run is over. The result says "Alfred ai kept running after you crashed."
+
+## 2.0 first playable (Level 1 + The Rush)
+Source of truth: `docs/SPEC-v2-the-unexpected-day.md`; code notes: `docs/V2-TECH-NOTES.md`.
+- **Shell**: the app now opens on `Home` (Chapters card, The Rush card, Leaderboard, Profile, Settings). The old open-world life is still in the code but unreachable from Home (`go('title')` maps to Home).
+- **Characters**: `src/world/toon.ts` (3D, sheet style, 15 expressions), `castData.ts` (Baba Tunde, Zuri, Navi, Mama Folake, neighbours), `src/ui/Portrait.tsx` (SVG headshots). Preview: `/?sheet=1`.
+- **Level 1 "The Morning Disaster"**: `src/levels/` (`schema.ts` task template, `chapter1.ts` data, `TaskRunner.ts` pure rules, `LevelRenderer.ts` scene, `progress.ts` save rules) and `src/ui/screens/{V2,LevelPlay}.tsx`. Four tasks: find the phone, pack the essentials, choose what to take (stored as flag `ch1.l1.item`), leave on time (sliding clutter costs 3 s, never a restart). Stars: finish, on time, on time with 2 mistakes or fewer. 1 point per task the first time only; coins 10 per extra star.
+- **Progress** is saved at every task in `MetaProfile.chapter` (resume at the exact task). Debug hook: `?debug=1` exposes `window.__level`.
+- **The Rush**: `Dash.tsx` has a `rush` mode (no life, no energy, 2.0 character). Lobby: Play alone, Find a player (honest: "Nobody is online right now", then an explicit "Race Alfred ai (computer)" button), Challenge a friend (disabled, needs backend). Points: 1 for a new personal best over 100 m, 1 for the first win. Local leaderboard shows this device only; Global is marked "soon".
+- **Analytics** (admin schema): first_task_started, first_task_completed, level_started, level_completed, level_abandoned, task_failed, hint_used, session_resume, rush_finished.
+- **Not built (open in spec section 16)**: levels 2 to 9, chapters 2 to 10, global leaderboard, matchmaking/invitations, sign-in, purchases, points policy for competitive play.

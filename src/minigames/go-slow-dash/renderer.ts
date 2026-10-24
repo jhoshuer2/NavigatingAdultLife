@@ -1,5 +1,6 @@
 // Three.js renderer for Go-Slow Dash. All geometry is procedural low-poly (no external assets).
 import * as THREE from 'three'
+import { buildToon, type ToonSpec } from '../../world/toon'
 import type { Appearance, Gender } from '@engine/core/types'
 import { BUS_ROOF, LANE_W, OBSTACLE_RESPONSE, segmentAt, type DashObj, type DashState, type ObstacleKind, type RouteSegment } from './sim'
 import { buildHuman } from '../../world/characters'
@@ -48,7 +49,7 @@ export class DashRenderer {
 
   private city: 'lagos' | 'abuja' = 'lagos'
 
-  constructor(private container: HTMLElement, opts: { mode: 'foot' | 'danfo'; look: Appearance; gender: Gender; age: number; wear?: Wear[]; city?: 'lagos' | 'abuja' }) {
+  constructor(private container: HTMLElement, opts: { mode: 'foot' | 'danfo'; look: Appearance; gender: Gender; age: number; wear?: Wear[]; city?: 'lagos' | 'abuja'; toon?: ToonSpec }) {
     this.city = opts.city ?? 'lagos'
     this.mode = opts.mode
     const dpr = window.devicePixelRatio || 1
@@ -100,8 +101,14 @@ export class DashRenderer {
   }
 
   // ---------- characters ----------
-  private buildPlayer(o: { mode: 'foot' | 'danfo'; look: Appearance; gender: Gender; age: number; wear?: Wear[] }) {
+  private buildPlayer(o: { mode: 'foot' | 'danfo'; look: Appearance; gender: Gender; age: number; wear?: Wear[]; toon?: ToonSpec }) {
     if (o.mode === 'danfo') return this.buildBus(this.player, true)
+    if (o.toon) {
+      const t = buildToon(o.toon); t.group.rotation.y = Math.PI // face away from the camera, running toward -z
+      const w = new THREE.Group(); w.add(t.group); w.scale.setScalar(1.25)
+      this.playerParts.legL = t.legL; this.playerParts.legR = t.legR; this.playerParts.armL = t.armL; this.playerParts.armR = t.armR
+      this.playerParts.body = w; this.player.add(w); return
+    }
     const parts = buildHuman({ look: o.look, age: o.age, gender: o.gender, wear: o.wear, uniform: o.age < 18, scale: 1.1 })
     parts.body.rotation.y = Math.PI // face away from camera (running toward -z)
     this.playerParts.legL = parts.legL; this.playerParts.legR = parts.legR; this.playerParts.armL = parts.armL; this.playerParts.armR = parts.armR

@@ -13,14 +13,22 @@ import { findRunner } from '@platform/match'
 import { DashRenderer } from '../../minigames/go-slow-dash/renderer'
 import { audio } from '@platform/audio'
 import { traitSum } from '@engine/core/helpers'
+import { progressOf, recordRush } from '../../levels/progress'
+import { charSpec } from './V2'
+import { track } from '@platform/analytics'
 
 interface Hud { score: number; coins: number; hearts: number; speed: number; dist: number; seg: string; next: string; toNext: number; segPct: number; missions: { text: string; pct: number; done: boolean }[]; powers: { magnet: number; hop: number; suya: number }; aboard: number; fares: number; combo: number; brake: boolean; level: number; levelPct: number; rival: number | null; rivalOver: boolean; left: number }
 type Phase = 'ready' | 'choose' | 'search' | 'count' | 'run' | 'paused' | 'over'
 
-export default function Dash() {
-  const { life, dashMode, meta, finishDash } = useGame()
+/** `rush`: The Rush as its own game (no life, no energy, the 2.0 character); without it, the old in-life run. */
+export default function Dash({ rush, again }: { rush?: boolean; again?: () => void } = {}) {
+  const { life: lifeState, dashMode: modeState, meta, finishDash } = useGame()
+  const life = rush ? null : lifeState
+  const dashMode = rush ? 'foot' : modeState
+  const rushSpec = charSpec(progressOf(meta).character)
+  const [rushPts, setRushPts] = useState<number | null>(null)
   const host = useRef<HTMLDivElement>(null)
-  const city = cityOfHome(life?.character.housing.districtId ?? 'surulere')
+  const city = rush ? 'lagos' : cityOfHome(life?.character.housing.districtId ?? 'surulere')
   const how0 = HOWTO[dashMode === 'foot' ? 'dash' : 'dashDanfo']
   const lz = (x: { en: string; pcm: string }) => ({ en: localise(city, x.en), pcm: localise(city, x.pcm) })
   const how = city === 'lagos' ? how0 : { ...how0, title: lz(how0.title), steps: how0.steps.map((x) => ({ ...x, say: lz(x.say) })), goal: lz(how0.goal) }
@@ -29,8 +37,8 @@ export default function Dash() {
   const dashLine = [plain(meta.settings.lang, how.title), ...how.steps.map((x) => plain(meta.settings.lang, x.say)), plain(meta.settings.lang, how.goal)].join('. ')
   const simRef = useRef<DashState | null>(null)
   const rendRef = useRef<DashRenderer | null>(null)
-  const phaseRef = useRef<Phase>('ready')
-  const [phase, setPhaseState] = useState<Phase>('ready')
+  const phaseRef = useRef<Phase>(rush ? 'choose' : 'ready')
+  const [phase, setPhaseState] = useState<Phase>(rush ? 'choose' : 'ready')
   useEffect(() => { if (phase === 'ready' && meta.settings.guide !== false && meta.settings.sound && meta.settings.voice !== false) void speakLine({ id: howVoice, lang: vlang(meta.settings.lang), text: dashLine, key: 'howto:dash', gapMs: 20000 }) }, [phase]) // eslint-disable-line react-hooks/exhaustive-deps
   const [hud, setHud] = useState<Hud | null>(null)
   const [pops, setPops] = useState<{ id: number; text: string }[]>([])
@@ -40,6 +48,7 @@ export default function Dash() {
   const [race, setRace] = useState<RaceOutcome | null>(null)
   const [carried, setCarried] = useState(false)
   const [searchMsg, setSearchMsg] = useState('')
+  const [offer, setOffer] = useState(false)
   const [count, setCount] = useState<string | null>(null)
   const [banner, setBanner] = useState<{ n: number; name: string; tip: string } | null>(null)
   const timers = useRef<number[]>([])
@@ -50,8 +59,7 @@ export default function Dash() {
   const setPhase = (p: Phase) => { phaseRef.current = p; setPhaseState(p) }
 
   const config = useMemo(() => {
-    const c = life!.character
-    const hearts = 3 + (traitSum(c, 'dashHearts') > 0 ? 1 : 0)
+    const hearts = rush ? 3 : 3 + (traitSum(life!.character, 'dashHearts') > 0 ? 1 : 0)
     return { seed: (Math.random() * 2 ** 31) >>> 0, mode: dashMode, hearts, assist: meta.settings.assist, routeId: city === 'abuja' ? 'abuja' : 'oshodi' }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -101,12 +109,11 @@ export default function Dash() {
   // mount renderer + loop
   useEffect(() => {
     const el = host.current
-    if (!el || !life) return
-    const c = life.character
+    if (!el || (!life && !rush)) return
     const st = createDash(config)
     simRef.current = st
     let r: DashRenderer
-    try { r = new DashRenderer(el, { mode: dashMode, look: c.appearance, gender: c.gender, age: c.age, wear: wearOf(c.items), city }) } catch { setWebglFail(true); return }
+    try { r = new DashRenderer(el, rush ? { mode: 'foot', toon: rushSpec, look: undefined as never, gender: 'male', age: 22, city } : { mode: dashMode, look: life!.character.appearance, gender: life!.character.gender, age: life!.character.age, wear: wearOf(life!.character.items), city }) } catch { setWebglFail(true); return }
     rendRef.current = r
     if (location.search.includes('debug=1')) (window as unknown as { __dash: unknown }).__dash = { st, rival: () => rivalRef.current, phase: () => phaseRef.current }
     audio.playMusic('dash')
@@ -145,7 +152,7 @@ export default function Dash() {
     const onVis = () => { if (document.visibilityState === 'hidden' && phaseRef.current === 'run') setPhase('paused') }
     document.addEventListener('visibilitychange', onVis)
     return () => { cancelAnimationFrame(raf); ro.disconnect(); document.removeEventListener('visibilitychange', onVis); r.dispose(); rendRef.current = null; audio.playMusic('play') }
-  }, [life, config, dashMode, handleEvents, finishRun, pop])
+  }, [life, rush, config, dashMode, handleEvents, finishRun, pop])
 
   // controls
   const act = useCallback((a: 'left' | 'right' | 'jump' | 'slide') => { const st = simRef.current; if (st && phaseRef.current === 'run') st.queue.push(a) }, [])
@@ -185,16 +192,33 @@ export default function Dash() {
     const m = findRunner(); searchRef.current = m
     void m.promise.then((opp) => {
       if (phaseRef.current !== 'search') return
+      if (!opp && rush) { setOffer(true); setSearchMsg('Nobody is online right now.'); return } // no pretending: Alfred ai is only ever offered as Alfred ai
+      proceed(opp)
+    })
+  }
+  const raceAlfred = () => { setOffer(false); proceed(null) }
+  const proceed = (opp: { name: string } | null) => {
+    {
       rivalRef.current = createRival(config); rendRef.current?.setRival(opp?.name ?? RIVAL_NAME)
       setSearchMsg(opp ? `${opp.name} is in!` : `Nobody is around right now. You are racing ${RIVAL_NAME} 🤖`)
       const seq: [string, number][] = [['3', 1600], ['2', 2400], ['1', 3200], ['GO!', 4000]]
       setPhase('count')
       for (const [t, ms] of seq) timers.current.push(window.setTimeout(() => { if (phaseRef.current !== 'count') return; setCount(t); audio.sfx(t === 'GO!' ? 'level' : 'click'); if (t === 'GO!') { setPhase('run'); window.setTimeout(() => setCount(null), 700) } }, ms))
-    })
+    }
   }
-  const cancelSearch = () => { searchRef.current?.cancel(); timers.current.forEach(clearTimeout); timers.current = []; rivalRef.current = null; setCount(null); setPhase('choose') }
-  const goAgain = () => { if (!result) return; finishDash(toMini(result)); useGame.getState().startDash() }
-  const back = () => { if (result) finishDash(toMini(result)) }
+  const cancelSearch = () => { setOffer(false); searchRef.current?.cancel(); timers.current.forEach(clearTimeout); timers.current = []; rivalRef.current = null; setCount(null); setPhase('choose') }
+  const goAgain = () => { if (rush) { again?.(); return } if (!result) return; finishDash(toMini(result)); useGame.getState().startDash() }
+  const back = () => { if (rush) { useGame.getState().go('home'); return } if (result) finishDash(toMini(result)) }
+  // The Rush: record the run once when it ends (1 point for a new personal best over 100 m, 1 for the first win)
+  const recorded = useRef(false)
+  useEffect(() => {
+    if (!rush || phase !== 'over' || !result || recorded.current) return
+    recorded.current = true
+    const st = useGame.getState(), cur = progressOf(st.meta)
+    const rec = recordRush(cur, { distance: result.distance, won: race?.youWon })
+    st.saveProgress(rec.progress); setRushPts(rec.points)
+    track('rush_finished', { mode: race ? 'race' : 'solo', distance: Math.round(result.distance), won: !!race?.youWon })
+  }, [rush, phase, result, race])
   const quit = () => { if (simRef.current) finishRun(false) }
   const route = ROUTES[config.routeId]
   void route
@@ -202,8 +226,8 @@ export default function Dash() {
   if (webglFail) return (
     <div className="p-6 text-center">
       <h1 className="font-display text-4xl text-danfo">Go-Slow Dash</h1>
-      <p className="my-3 opacity-80">Your device could not start the 3D game. Your Energy is safe: tap below to return to your life.</p>
-      <Btn onClick={() => finishDash({ coins: 0, distance: 0, closeCalls: 0, passengers: 0, mode: dashMode, score: 0 })}>Back to life</Btn>
+      <p className="my-3 opacity-80">Your device could not start the 3D game. {rush ? 'Nothing is lost: go back home.' : 'Your Energy is safe: tap below to return to your life.'}</p>
+      <Btn onClick={() => rush ? useGame.getState().go('home') : finishDash({ coins: 0, distance: 0, closeCalls: 0, passengers: 0, mode: dashMode, score: 0 })}>{rush ? 'Home' : 'Back to life'}</Btn>
     </div>
   )
 
@@ -279,10 +303,12 @@ export default function Dash() {
       {phase === 'choose' && (
         <div className="absolute inset-0 grid place-items-center p-5" style={{ background: '#000a' }}>
           <div className="card p-5 w-full max-w-sm pop" style={{ background: '#1e1a30' }}>
-            <h2 className="font-display text-3xl text-danfo text-center">How do you want to run?</h2>
-            <button className="tile w-full text-left mt-4 !p-3" onClick={startSolo}><div className="font-display text-2xl">🏃 Run alone</div><div className="text-xs opacity-80 mt-0.5">Your normal run. Go as far as you can. This is the run that counts for your trophies.</div></button>
-            <button className="tile w-full text-left mt-2 !p-3" style={{ borderColor: '#1ec8b4' }} onClick={startRace}><div className="font-display text-2xl">🏁 Play against someone</div><div className="text-xs opacity-80 mt-0.5">Same road, {RACE_SECS} seconds. Most points wins a 10 coin bonus.</div></button>
-            <Btn variant="ghost" className="w-full mt-3" onClick={() => setPhase('ready')}>Back</Btn>
+            <h2 className="font-display text-3xl text-danfo text-center">{rush ? 'The Rush' : 'How do you want to run?'}</h2>
+            <button className="tile w-full text-left mt-4 !p-3" onClick={startSolo}><div className="font-display text-2xl">🏃 {rush ? 'Play alone' : 'Run alone'}</div><div className="text-xs opacity-80 mt-0.5">{rush ? 'Go as far as you can. Beat your best.' : 'Your normal run. Go as far as you can. This is the run that counts for your trophies.'}</div></button>
+            <button className="tile w-full text-left mt-2 !p-3" style={{ borderColor: '#1ec8b4' }} onClick={startRace}><div className="font-display text-2xl">🏁 {rush ? 'Find a player' : 'Play against someone'}</div><div className="text-xs opacity-80 mt-0.5">{rush ? `Same road, ${RACE_SECS} seconds. If nobody is online you can race Alfred ai, a computer runner.` : `Same road, ${RACE_SECS} seconds. Most points wins a 10 coin bonus.`}</div></button>
+            {rush && <button className="tile w-full text-left mt-2 !p-3 opacity-60" disabled><div className="font-display text-2xl">🤝 Challenge a friend</div><div className="text-xs opacity-80 mt-0.5">Coming soon. It needs the online service.</div></button>}
+            {rush && <p className="text-[11px] opacity-70 mt-3 text-center">Swipe left or right to change lane · up to jump · down to slide</p>}
+            <Btn variant="ghost" className="w-full mt-3" onClick={() => rush ? useGame.getState().go('home') : setPhase('ready')}>{rush ? 'Home' : 'Back'}</Btn>
           </div>
         </div>
       )}
@@ -292,6 +318,7 @@ export default function Dash() {
             <div className="card p-5 w-full max-w-sm text-center pop pointer-events-auto" style={{ background: '#1e1a30' }}>
               <div className={`text-5xl inline-block ${rivalRef.current ? '' : 'animate-spin'}`}>{rivalRef.current ? '🤖' : '🔎'}</div>
               <h2 className="font-display text-2xl mt-2">{searchMsg}</h2>
+              {offer && <Btn variant="green" className="w-full mt-3" onClick={raceAlfred}>Race Alfred ai (computer)</Btn>}
               {phase === 'search' && !rivalRef.current && <Btn variant="ghost" className="w-full mt-3" onClick={cancelSearch}>Cancel</Btn>}
             </div>
           )}
@@ -315,16 +342,18 @@ export default function Dash() {
               : <div className="font-display text-5xl text-red-400 -rotate-2">WAHALA!</div>}
             {race && <div className="text-xs font-bold opacity-80 mt-1">{race.timeUp ? 'Time up. ' : carried ? `${RIVAL_NAME} kept running after you crashed. ` : ''}You {race.you.toLocaleString()} · {RIVAL_NAME} {race.rival.toLocaleString()}{race.youWon ? ' · +10 coin bonus' : ''}</div>}
             <div className="font-display text-6xl text-danfo leading-none mt-1">{result.score.toLocaleString()}</div>
-            {result.score > (life?.dashBest ?? 0) && <div className="chip mt-1" style={{ background: '#2fd27b', color: '#06241a' }}>New best!</div>}
+            {result.score > (life?.dashBest ?? 0) && !rush && <div className="chip mt-1" style={{ background: '#2fd27b', color: '#06241a' }}>New best!</div>}
             <div className="grid grid-cols-2 gap-2 mt-3 text-sm">
               <div className="card p-2">🪙 Coins <b className="block text-lg">{result.coins}</b></div>
               <div className="card p-2">🛣 Distance <b className="block text-lg">{(result.distance / 1000).toFixed(2)} km</b></div>
               <div className="card p-2">{dashMode === 'danfo' ? `${city === 'abuja' ? '🚕' : '🚌'} Passengers` : '😮 Close calls'} <b className="block text-lg">{dashMode === 'danfo' ? result.passengers : result.closeCalls}</b></div>
               <div className="card p-2">🎯 Missions <b className="block text-lg">{result.missionsDone}/3</b></div>
             </div>
-            <p className="text-xs opacity-70 mt-2">Coins and fares become cash when you return to your life.</p>
-            <Btn variant="green" className="w-full mt-3" onClick={goAgain}>GO AGAIN ⚡10</Btn>
-            <Btn variant="ghost" className="w-full mt-2" onClick={back}>Back to my life</Btn>
+            {rush
+              ? <p className="text-sm font-extrabold mt-2">{rushPts ? `⭐ +${rushPts} point${rushPts > 1 ? 's' : ''}` : `Best: ${Math.round(progressOf(useGame.getState().meta).rush.best)} m`}</p>
+              : <p className="text-xs opacity-70 mt-2">Coins and fares become cash when you return to your life.</p>}
+            <Btn variant="green" className="w-full mt-3" onClick={goAgain}>{rush ? 'Go again' : 'GO AGAIN ⚡10'}</Btn>
+            <Btn variant="ghost" className="w-full mt-2" onClick={back}>{rush ? 'Home' : 'Back to my life'}</Btn>
           </div>
         </div>
       )}

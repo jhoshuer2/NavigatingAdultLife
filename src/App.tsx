@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useGame } from './store'
 import { Toasts } from './ui/components'
-import { Home, LevelIntro, LevelResult } from './ui/screens/V2'
+import { Home, LevelIntro, LevelResult, Leaderboard } from './ui/screens/V2'
 import { Create } from './ui/screens/Create'
 import { Play } from './ui/screens/Play'
 import { Ending } from './ui/screens/Ending'
@@ -27,6 +27,7 @@ export default function App() {
   if (typeof location !== 'undefined' && location.search.includes('sheet=1')) return <Suspense fallback={null}><CharacterSheet /></Suspense>
   const { screen, toasts, init, tick, meta, openSheet, levelNonce } = useGame()
   const last = useRef(Date.now())
+  const [rushKey, setRushKey] = useState(0)
   useEffect(() => { init(); startAnalytics() }, [init])
   useEffect(() => { document.documentElement.classList.toggle('reduce-motion', meta.settings.reducedMotion) }, [meta.settings.reducedMotion])
 
@@ -54,6 +55,8 @@ export default function App() {
       {screen === 'levelIntro' && <LevelIntro />}
       {screen === 'levelPlay' && <Suspense fallback={<div className="p-8 text-center font-display text-3xl">Loading…</div>}><LevelPlay key={levelNonce} /></Suspense>}
       {screen === 'levelResult' && <LevelResult />}
+      {screen === 'leaderboard' && <Leaderboard />}
+      {(screen === 'rushLobby' || screen === 'rushPlay') && <Suspense fallback={<div className="p-8 text-center font-display text-3xl">Loading the road…</div>}><Dash key={rushKey} rush again={() => setRushKey((k) => k + 1)} /></Suspense>}
       {screen === 'create' && <Create />}
       {screen === 'play' && <Play />}
       {screen === 'ending' && <Ending />}
