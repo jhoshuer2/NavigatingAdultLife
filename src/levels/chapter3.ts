@@ -1,6 +1,6 @@
 // Chapter 3 "Market Day": the player runs a market stall for a day. Same engine and helpers as chapters 1 and 2.
 import type { Deco } from './schema'
-import { L, T, R, F, say, D, WOOD, DARK } from './chapter1b'
+import { L, T, R, F, say, D, WOOD, DARK, STREET_BOUNDS, withStreet } from './chapter1b'
 
 const GREEN = '#2f5a3a', ORANGE = '#e07a1f', YELLOW = '#f5b91c', RUST = '#c4562a', BLUE = '#2b6ad0'
 const RING = (x: number, z: number, r = 1.6) => ({ x, z, r })
@@ -13,12 +13,13 @@ const awn = (x: number, z: number, color: string, label?: string): Deco => ({ ki
 export const LEVEL_C3L1 = L({
   ch: 'ch3', n: 1, title: 'Opening the Stall', next: 'ch3.l2',
   intro: 'Mama Folake has handed you the keys to her stall for the day. The sun is up, the crowd is gathering and nothing is ready.',
-  theme: { ground: '#c9b48a', floors: [{ x0: -12.4, x1: 12.4, z0: -2.8, z1: 2.8, color: '#e6dcc4' }], deco: [...MARKET, awn(4, -4.4, ORANGE, 'YOUR STALL'), awn(-6.5, -4.4, GREEN, 'GRAINS'), awn(9.6, -4.4, YELLOW, 'SPICES'), { kind: 'sign', x: 10.8, z: 0, label: 'SHUTTER', w: 1.8 }] },
+  bounds: STREET_BOUNDS,
+  theme: withStreet({ ground: '#c9b48a', floors: [{ x0: -12.4, x1: 12.4, z0: -2.8, z1: 2.8, color: '#e6dcc4' }], deco: [...MARKET, awn(4, -4.4, ORANGE, 'YOUR STALL'), awn(-6.5, -4.4, GREEN, 'GRAINS'), awn(9.6, -4.4, YELLOW, 'SPICES'), { kind: 'sign', x: 10.8, z: 0, label: 'SHUTTER', w: 1.8 }, { kind: 'sign', x: -12.2, z: -1.6, label: 'MARKET', w: 1.8 }] }),
   furniture: [F('stall', R(2, 6, -4.8, -3.4), 0.9, WOOD), F('crates', R(-8, -5, -4.8, -3.8), 0.7, DARK), F('spices', R(8, 11.2, -4.8, -3.6), 0.9, WOOD)],
-  spawn: { x: -10.6, z: 1 }, resume: { x: 0, z: 0 },
+  spawn: { x: -32, z: 0.4 }, resume: { x: 0, z: 0 },
   tasks: [
-    T('ch3.l1', 1, 'goto', 'Reach your stall', { purpose: 'Walk the morning market to your stall.', objective: 'Walk to your stall', success: 'You reach the stall.',
-      intro: [say('folake', 'Today you sell, my child. The stall is the one with the orange roof.', 'happy')], done: [say('player', 'It is smaller than I remembered. And dustier.', 'tired')], hint: 'Follow the ring to the orange roof in the middle.' }),
+    T('ch3.l1', 1, 'ride', 'Take the bus to the market', { purpose: 'The market is across town: wait at the stop, board the bus and ride to the market gate.', objective: 'Take the bus to the market', success: 'You get off at the market.',
+      intro: [say('folake', 'Today you sell, my child. Catch the bus to the market. The stall is the one with the orange roof.', 'happy')], done: [say('player', 'The market already smells like fried plantain and shouting.', 'happy')], hint: 'Walk to the BUS STOP sign, wait for the yellow bus and tap Board.' }),
     T('ch3.l1', 2, 'sequence', 'Set up the display', { purpose: 'A tidy stall sells more: cloth, crate, scale, price sign, in that order.', objective: 'Cloth, crate, scale, then the price sign', success: 'The display is set up in order.',
       intro: [say('folake', 'Cloth first, then the crate, then the scale, then the sign. A sign on a crooked table is a lie.', 'calm')], done: [say('folake', 'Beautiful. Now people will actually stop.', 'proud')], hint: 'Order: cloth, crate, scale, sign.' }),
     T('ch3.l1', 3, 'choose', 'Set your prices', { purpose: 'Your first trading decision: low, fair or high. All three can work.', objective: 'Choose your prices', success: 'You choose.',
@@ -36,11 +37,12 @@ export const LEVEL_C3L1 = L({
     { id: 'high', task: 2, x: 6.2, z: 1.2, label: 'High prices: earn more, sell less', color: RUST, shape: 'sign', y: 0 },
   ],
   sequences: { 1: ['cloth', 'crate', 'scale', 'sign'] },
-  guide: [RING(4, -2.2), { x: 4, z: -4, r: 3 }, { x: 3.4, z: 1.2, r: 4 }, RING(10.4, 0)],
-  goto: [RING(4, -2.2), null, null, RING(10.4, 0, 1.5)],
+  rides: { 0: { stop: { x: -30, z: 1.8 }, busZ: 4.4, from: 'home', to: 'the market' } },
+  guide: [{ x: -30, z: 1.8, r: 2 }, { x: 4, z: -4, r: 3 }, { x: 3.4, z: 1.2, r: 4 }, RING(10.4, 0)],
+  goto: [RING(-11.2, 0.8, 1.4), null, null, RING(10.4, 0, 1.5)],
   hazards: [D('cart', 5.8, -2.4, 2.4, 2.6, 0), D('cart', 8.2, -2.4, 2.4, 2.9, 1.2, GREEN)],
   timeLimit: 16,
-  crowd: [{ x: -4, z: 1.6, rot: 0.6 }, { x: 8, z: 4, rot: -2.2 }],
+  crowd: [{ x: -4, z: 1.6, rot: 0.6 }, { x: 8, z: 4, rot: -2.2 }, { x: -22, z: 0.4, rot: 1.6 }, { x: -17, z: 1.4, rot: -1.5 }],
   npcs: { folake: { x: -10.8, z: -4.6, rot: 0.8 }, tunde: { x: 11, z: 4.4, rot: -2.4 } }, choiceLabel: 'pricing',
   endBeat: { text: 'The shutter goes up. A woman with a very large bag is already looking at your tomatoes.', line: 'Your first stock run is next.' },
   starRules: ['Finish the level', 'Open the shutter before the timer ends', 'Be on time with two or fewer slips'],
@@ -99,8 +101,8 @@ export const LEVEL_C3L3 = L({
   tasks: [
     T('ch3.l3', 1, 'goto', 'Greet the first customer', { purpose: 'Step up to the front of the stall.', objective: 'Walk to the front of the counter', success: 'You reach the counter.',
       intro: [say('neighbour', 'Good morning! Tomatoes! Are they fresh? Are they cheap? Are they free?', 'cheeky')], done: [say('player', 'Good morning, madam. They are fresh and they are fair.', 'happy')], hint: 'The ring is at the front of the counter.' }),
-    T('ch3.l3', 2, 'sequence', 'Serve the order', { purpose: 'Weigh, bag, then take payment, in that order.', objective: 'Weigh it, bag it, then take payment', success: 'The order is done correctly.',
-      intro: [say('neighbour', 'One kilo, please. Weigh it, bag it, and I will pay.', 'calm')], done: [say('neighbour', 'Perfect! You are very professional.', 'happy')], hint: 'Order: weigh, bag, pay.' }),
+    T('ch3.l3', 2, 'serve', 'Serve the customers', { purpose: 'Three shoppers at once: greet each, read what they want, fetch it from the stall and hand it over.', objective: 'Serve all three shoppers', success: 'All three shoppers are served.',
+      intro: [say('neighbour', 'Good morning! I want tomatoes. She wants pepper. He wants onions. Do not mix us up!', 'calm')], done: [say('neighbour', 'Perfect! You are very professional.', 'happy')], hint: 'Greet a shopper, take what they asked for from the counter and bring it to them.' }),
     T('ch3.l3', 3, 'choose', 'Give a discount?', { purpose: 'Another customer asks for a discount. Full price, a little off or a lot: all fair.', objective: 'Decide on the discount', success: 'You choose.',
       intro: [say('helper', 'Make it cheaper! I am your regular customer! Today is my first day!', 'cheeky')], done: [say('helper', 'A pleasure doing business.', 'happy')], hint: 'Three signs on the ground by the counter.' }),
     T('ch3.l3', 4, 'reach', 'Chase the lost change', { purpose: 'A customer drops money and runs: catch up.', objective: 'Catch the customer to give back the change', success: 'You reach the customer before the timer ends.',
@@ -108,14 +110,18 @@ export const LEVEL_C3L3 = L({
       intro: [say('helper', 'My change! Where is my change?', 'worried')], done: [say('player', 'Honest trader, honest market.', 'proud')], hint: 'Cross behind the walkers and run to the right.' }),
   ],
   items: [
-    { id: 'weigh', task: 1, x: -1.5, z: -0.6, label: 'Weigh it', color: '#1c1b22', shape: 'stamp', y: 1.05 },
-    { id: 'bag', task: 1, x: 0, z: -0.6, label: 'Bag it', color: ORANGE, shape: 'crate', y: 1.05 },
-    { id: 'pay', task: 1, x: 1.5, z: -0.6, label: 'Take the payment', color: GREEN, shape: 'paper', y: 1.05 },
+    { id: 'tomato', task: 1, x: -1.5, z: -0.6, label: 'Take the tomatoes', color: '#d62828', shape: 'produce', y: 1.05 },
+    { id: 'pepper', task: 1, x: 0, z: -0.6, label: 'Take the pepper', color: ORANGE, shape: 'produce', y: 1.05 },
+    { id: 'onion', task: 1, x: 1.5, z: -0.6, label: 'Take the onions', color: '#a25ab0', shape: 'produce', y: 1.05 },
     { id: 'full', task: 2, x: -3, z: 2.6, label: 'Keep the full price', color: RUST, shape: 'sign', y: 0 },
     { id: 'some', task: 2, x: 0, z: 2.6, label: 'Give a small discount', color: YELLOW, shape: 'sign', y: 0 },
     { id: 'lots', task: 2, x: 3, z: 2.6, label: 'Give a big discount', color: GREEN, shape: 'sign', y: 0 },
   ],
-  sequences: { 1: ['weigh', 'bag', 'pay'] },
+  serves: { 1: { eatSecs: 2.5, verb: 'greet', guests: [
+    { id: 'ngozi', name: 'Madam Ngozi', order: 'Tomatoes', dish: 'tomato', x: -6, z: 2.4, seat: { x: -1.5, z: 1.5 }, table: { x: -1.5, z: 0.1 } },
+    { id: 'halima', name: 'Halima', order: 'Pepper', dish: 'pepper', x: -6, z: 4.2, seat: { x: 0, z: 1.5 }, table: { x: 0, z: 0.1 } },
+    { id: 'segun', name: 'Segun', order: 'Onions', dish: 'onion', x: -4.4, z: 3.4, seat: { x: 1.5, z: 1.5 }, table: { x: 1.5, z: 0.1 } },
+  ] } },
   guide: [RING(0, 1.6), { x: 0, z: -0.6, r: 3 }, { x: 0, z: 2.6, r: 4 }, RING(10.4, 1.6)],
   goto: [RING(0, 1.8, 1.5), null, null, RING(10.4, 1.6, 1.5)],
   hazards: [D('walker', 5.0, -0.6, 5.2, 2.4, 0), D('walker', 7.8, -0.6, 5.2, 2.7, 1.2, GREEN)],

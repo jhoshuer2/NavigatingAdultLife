@@ -135,13 +135,14 @@ export class TaskRunner {
     if (id.startsWith('g:')) {
       const g = sv.guests.find((x) => x.id === id.slice(2)); if (!g) return
       const st = this.guests[g.id]
-      if (st === 0) { this.guests[g.id] = 1; this.h.sfx?.('pick'); this.h.toast(`${g.name} sits down and wants ${g.order}`) }
-      else if (st === 1 && this.carry === g.dish) { this.guests[g.id] = 2; this.eatT[g.id] = 0; this.carry = null; this.h.sfx?.('ring'); this.h.toast(`${g.name} starts eating`) }
+      if (st === 0) { this.guests[g.id] = 1; this.h.sfx?.('pick'); this.h.toast(sv.verb === 'greet' ? `${g.name} steps up and wants ${g.order}` : `${g.name} sits down and wants ${g.order}`) }
+      else if (st === 1 && this.carry === g.dish) { this.guests[g.id] = 2; this.eatT[g.id] = 0; this.carry = null; this.h.sfx?.('ring'); this.h.toast(sv.verb === 'greet' ? `${g.name} takes it and counts the money` : `${g.name} starts eating`) }
       else if (st === 1 && this.carry) { this.mistakes++; this.h.sfx?.('nope'); this.h.toast(`Not that one! ${g.name} ordered ${g.order}`); this.carry = null }
       else return
     } else {
       const it = this.level.items.find((x) => x.id === id && x.task === this.idx); const g = sv.guests.find((x) => x.dish === id)
       if (!it || !g || this.carry === id || this.guests[g.id] >= 2) return
+      if (this.guests[g.id] === 0) { this.h.toast(`Seat ${g.name} first`); return }
       this.carry = id; this.h.sfx?.('pick'); this.h.toast(`Carrying ${g.order}`)
     }
     this.h.changed()
@@ -162,7 +163,7 @@ export class TaskRunner {
       if (sv) {
         for (const g of sv.guests) if (this.guests[g.id] === 2) {
           this.eatT[g.id] = (this.eatT[g.id] ?? 0) + dt
-          if (this.eatT[g.id] >= (sv.eatSecs ?? 3)) { this.guests[g.id] = 3; this.sinceProgress = 0; this.h.sfx?.('pick'); this.h.toast(`${g.name} loved it. ${this.fed}/${sv.guests.length}`); this.h.changed() }
+          if (this.eatT[g.id] >= (sv.eatSecs ?? 3)) { this.guests[g.id] = 3; this.sinceProgress = 0; this.h.sfx?.('pick'); this.h.toast(sv.verb === 'greet' ? `${g.name} paid and left happy. ${this.fed}/${sv.guests.length}` : `${g.name} loved it. ${this.fed}/${sv.guests.length}`); this.h.changed() }
         }
         if (this.fed === sv.guests.length) this.complete()
       }

@@ -1,6 +1,6 @@
 // Chapter 4 "Kitchen Rush": the player works a busy kitchen for a day, from prep to the last order. Same engine and helpers as the other chapters.
 import type { Deco, Theme } from './schema'
-import { L, T, R, F, say, D, WOOD, DARK } from './chapter1b'
+import { L, T, R, F, say, D, WOOD, DARK, STREET_BOUNDS, withStreet } from './chapter1b'
 
 const GREEN = '#2f5a3a', ORANGE = '#e07a1f', YELLOW = '#f5b91c', RUST = '#c4562a', BLUE = '#2b6ad0', STEEL = '#9aa3a8'
 const RING = (x: number, z: number, r = 1.6) => ({ x, z, r })
@@ -13,12 +13,13 @@ const KITCHEN = (extra: Deco[] = []): Theme => ({
 export const LEVEL_C4L1 = L({
   ch: 'ch4', n: 1, title: 'Opening the Kitchen', next: 'ch4.l2',
   intro: 'Mama Folake has a restaurant. Today you are the new hand in her kitchen, and the dinner rush is six hours away.',
-  theme: KITCHEN([{ kind: 'sign', x: 10.8, z: 0, label: 'DELIVERY', w: 1.8 }]),
+  bounds: STREET_BOUNDS,
+  theme: withStreet(KITCHEN([{ kind: 'sign', x: 10.8, z: 0, label: 'DELIVERY', w: 1.8 }, { kind: 'sign', x: -12.2, z: -2.4, label: 'BACK DOOR', w: 1.8 }])),
   furniture: [F('stove', R(-9.4, -6.2, -4.8, -3.6), 1.0, STEEL), F('prep', R(-4.6, -1.0, -4.8, -3.6), 0.95, WOOD), F('sink', R(-9.4, -7.2, 3.8, 5), 0.95, '#6a8ab8')],
-  spawn: { x: -10.8, z: 1 }, resume: { x: -4, z: 0 },
+  spawn: { x: -32, z: 0.4 }, resume: { x: -4, z: 0 },
   tasks: [
-    T('ch4.l1', 1, 'goto', 'Reach the kitchen', { purpose: 'Walk through the back door to your station.', objective: 'Walk to your station', success: 'You reach the station.',
-      intro: [say('folake', 'Welcome to my kitchen. Do not touch anything until I say. Okay, touch the apron.', 'calm')], done: [say('tunde', 'Chef Tunde. Rule one: never run with a knife.', 'confident')], hint: 'Follow the ring to the stove area.' }),
+    T('ch4.l1', 1, 'ride', 'Take the bus to work', { purpose: 'Your first day starts across town: wait at the stop, board the bus and ride to the restaurant.', objective: 'Take the bus to the restaurant', success: 'You get off at the restaurant.',
+      intro: [say('folake', 'First day! The bus stop is up the road. Be at the kitchen back door in ten minutes. Do not touch anything until I say.', 'calm')], done: [say('tunde', 'Chef Tunde. Rule one: never run with a knife. Rule two: never be late.', 'confident')], hint: 'Walk to the BUS STOP sign, wait for the yellow bus and tap Board.' }),
     T('ch4.l1', 2, 'sequence', 'Get ready', { purpose: 'Apron, hand wash, light the stove: in that order.', objective: 'Apron, wash your hands, light the stove', success: 'You are ready to cook.',
       intro: [say('tunde', 'Apron. Hands. Stove. In that order. A dirty hand starts a bad day.', 'angry')], done: [say('tunde', 'Clean. Dressed. Almost a cook.', 'happy')], hint: 'Order: apron, wash hands, stove.' }),
     T('ch4.l1', 3, 'choose', 'Pick your station', { purpose: 'The first choice of the day: grill, soup or fryer. The choice shapes your first order.', objective: 'Pick your station', success: 'You pick a station.',
@@ -35,11 +36,12 @@ export const LEVEL_C4L1 = L({
     { id: 'fryer', task: 2, x: 0.8, z: 1.6, label: 'Take the fryer station', color: YELLOW, shape: 'sign', y: 0 },
   ],
   sequences: { 1: ['apron', 'wash', 'stoveOn'] },
-  guide: [RING(-7.6, -2.4), { x: -5, z: -4, r: 6 }, { x: -1.6, z: 1.6, r: 4 }, RING(10.6, 0)],
-  goto: [RING(-7.6, -2.4), null, null, RING(10.6, 0, 1.5)],
+  rides: { 0: { stop: { x: -30, z: 1.8 }, busZ: 4.4, from: 'home', to: 'work' } },
+  guide: [{ x: -30, z: 1.8, r: 2 }, { x: -5, z: -4, r: 6 }, { x: -1.6, z: 1.6, r: 4 }, RING(10.6, 0)],
+  goto: [RING(-12, 0.6, 1.4), null, null, RING(10.6, 0, 1.5)],
   hazards: [D('cart', 1.0, -3, 3, 2.6, 0), D('cart', 4.4, -3, 3, 2.9, 1.2, GREEN), D('chair', 7.6, -3, 3, 2.4, 0.6, RUST)],
   timeLimit: 18,
-  crowd: [{ x: -2, z: 4.2, rot: 3.1 }, { x: 6, z: 4, rot: -2.4 }],
+  crowd: [{ x: -2, z: 4.2, rot: 3.1 }, { x: 6, z: 4, rot: -2.4 }, { x: -21, z: 0.6, rot: 1.6 }, { x: -16, z: 1.4, rot: -1.5 }],
   npcs: { folake: { x: -10.8, z: -4.6, rot: 0.8 }, tunde: { x: 5, z: -4.4, rot: 0.2 } }, choiceLabel: 'station',
   endBeat: { text: 'The delivery is in. Somebody shouts a table number. The kitchen has officially started pretending to be calm.', line: 'Prep time is next.' },
   starRules: ['Finish the level', 'Reach the delivery door before the timer ends', 'Be on time with two or fewer slips'],
@@ -145,7 +147,7 @@ export const LEVEL_C4L4 = L({
   tasks: [
     T('ch4.l4', 1, 'ride', 'Catch the bus to work', { purpose: 'You live across town. Wait at the stop, board the bus and ride to the restaurant.', objective: 'Take the bus to the restaurant', success: 'You get off at the restaurant.',
       intro: [say('folake', 'Lunch rush starts in ten minutes! The bus stop is just up the road. Do not miss it!', 'worried')], done: [say('helper', 'You made it. The bus driver says you stood too close to the door.', 'cheeky')], hint: 'Walk to the BUS STOP sign, wait for the yellow bus, then tap Board.' }),
-    T('ch4.l4', 2, 'serve', 'Seat and serve the guests', { purpose: 'Real waiting: show each guest to a chair, bring the dish they ordered and let them eat.', objective: 'Seat, serve and feed all three guests', success: 'All three guests are fed.',
+    T('ch4.l4', 2, 'serve', 'Seat and serve the guests', { purpose: 'Real waiting: show each guest to a chair, bring the dish they ordered and let them eat.', objective: 'Seat and serve all three guests', success: 'All three guests are fed.',
       intro: [say('tunde', 'Three guests at the door. Seat them, read what they want, fetch it from the counter and bring it over. Wrong plate, wrong day.', 'calm')], done: [say('neighbour', 'That was wonderful. Is the chef single?', 'happy')], hint: 'Walk to a guest to seat them. Take their dish from the counter. Carry it to them.' }),
     T('ch4.l4', 3, 'reach', 'Dash back to the kitchen', { purpose: 'The dining room is busy and does not part for you.', objective: 'Get back to the kitchen door through the busy room', success: 'You reach the door before the timer ends.',
       intro: [say('folake', 'The next ticket is up! Mind the customers! Mind the customers!', 'worried')], done: [say('player', 'Sorry! Hot plate! Sorry!', 'laughing')], hint: 'Cross behind the walkers and go left to the kitchen door.' }),

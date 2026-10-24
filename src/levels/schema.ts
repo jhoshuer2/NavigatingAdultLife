@@ -59,7 +59,7 @@ export interface LevelDef {
   /** sequence tasks: the item ids in the order they must be taken */
   sequences?: Record<number, string[]>
   /** serve tasks: seat each guest, bring them the dish they ordered, let them eat. `eatSecs` is how long a meal takes */
-  serves?: Record<number, { eatSecs?: number; guests: ServeGuest[] }>
+  serves?: Record<number, { eatSecs?: number; /** 'greet' for a market stall: customers step up to the counter instead of sitting down */ verb?: 'seat' | 'greet'; guests: ServeGuest[] }>
   /** ride tasks: the bus journey (the destination is the task's goto area) */
   rides?: Record<number, Ride>
   /** hold tasks: stand in the area for this long */

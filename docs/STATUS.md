@@ -250,3 +250,11 @@ All nine levels of "The Unexpected Day" exist (`src/levels/chapter1.ts` and `cha
 - Tasks, dialogue and endings are my own design (the spec has no task lists past chapter 1 level 1). Bot-tested; headless screenshots of all nine levels complete.
 - Fix: the `awning` deco is now a see-through canopy; it used to hide the stall items in Chapter 1 Level 5. Level 5's serve task now names the order in its objective.
 - Feedback to act on: levels feel linear. Wanted: travel between places (bus, walking across the city), acted-out everyday tasks (seat guests, bring food, let them eat), activities such as football.
+
+## More adventure: serve and ride tasks
+Feedback: levels felt like walk, tap, repeat. Two new acted-out task kinds (engine: `TaskRunner.serve*`, `LevelRenderer.stepGuests/stepBus`):
+- **serve**: guests wait with their order above their head. You seat them (they walk to a chair), take the matching dish from the counter, carry it over (wrong plate is sent back), and they eat before the task counts them fed. `verb: 'greet'` makes market customers step up to the counter instead of sitting.
+- **ride**: walk to the bus stop, the bus pulls up, tap Board, the camera rides across town and you are dropped at the destination. Walking there also works.
+- Used in: ch4 L4 (Rush Hour: bus to work, then seat and serve three guests), ch4 L1 (bus to work), ch3 L1 (bus to the market), ch3 L3 (serve three shoppers), ch1 L5 (serve three customers).
+- `STREET`/`withStreet` in `chapter1b.ts` add a town street with a bus stop west of any scene.
+- Not done: other levels still use the older walk-and-tap tasks; chapter 2 (Trial Day) has no bus ride yet.

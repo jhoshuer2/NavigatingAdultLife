@@ -445,7 +445,7 @@ export class LevelRenderer {
     const src = gp ?? (n.kind === 'spot' ? this.level.spots.find((x) => x.id === n.id) : this.level.items.find((x) => x.id === n.id))
     if (!src) { done(); return }
     const kind: ActKind = n.kind === 'item' || go ? 'take' : n.id === 'laundry' ? 'dig' : 'search'
-    this.act = { kind, x: src.x, z: src.z, id: n.id, label: go ? (n.label.startsWith('Seat') ? 'Showing them to a seat…' : 'Serving the plate…') : actLabel(kind, n.id), t: 0, dur: ACT_DUR[kind], walk: 0, done, beat: 0 }
+    this.act = { kind, x: src.x, z: src.z, id: n.id, label: go ? (n.label.startsWith('Seat') ? 'Showing them to a seat…' : n.label.startsWith('Greet') ? 'Greeting…' : 'Serving the plate…') : actLabel(kind, n.id), t: 0, dur: ACT_DUR[kind], walk: 0, done, beat: 0 }
     this.onAction?.(this.act.label, this.act.dur)
   }
 
@@ -514,7 +514,7 @@ export class LevelRenderer {
       if (run.task.kind === 'choose' && !run.choice) for (const it of L.items) if (it.task === idx) consider(it, 'item')
       if (run.task.kind === 'serve') {
         for (const g of run.serve?.guests ?? []) { const st = run.guests[g.id]; const o = this.guestObjs.get(g.id)!; const at = o.parts.group.position
-          if (st === 0) consider({ id: `g:${g.id}`, x: at.x, z: at.z, label: `Seat ${g.name}` } as unknown as Spot, 'spot')
+          if (st === 0) consider({ id: `g:${g.id}`, x: at.x, z: at.z, label: `${run.serve?.verb === 'greet' ? 'Greet' : 'Seat'} ${g.name}` } as unknown as Spot, 'spot')
           else if (st === 1 && run.carry) consider({ id: `g:${g.id}`, x: at.x, z: at.z, label: run.carry === g.dish ? `Serve ${g.name}` : `Give to ${g.name}` } as unknown as Spot, 'spot') }
         if (!run.carry) for (const it of L.items) if (it.task === idx) { const g = run.serve?.guests.find((x) => x.dish === it.id); if (g && run.guests[g.id] === 1) consider(it, 'item') }
       }

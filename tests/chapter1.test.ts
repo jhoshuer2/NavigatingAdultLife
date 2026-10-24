@@ -85,10 +85,29 @@ describe('chapter 1 and 2: every level', () => {
     expect(r.idx).toBe(2)
   })
   it('sequence task: a wrong order sends you back, the right order finishes', () => {
+    const L = LEVELS['ch1.l6']; const r = new TaskRunner(L, emptyProgress(), hooks(), 1)
+    const ord = L.sequences![1]
+    r.interact(ord[1]); expect(r.seqPos).toBe(0); expect(r.mistakes).toBe(1)
+    for (const id of ord) r.interact(id)
+    expect(r.idx).toBe(2)
+  })
+  it('serve task: seat, fetch the right dish, deliver, they eat; a wrong plate is sent back', () => {
     const L = LEVELS['ch1.l5']; const r = new TaskRunner(L, emptyProgress(), hooks(), 2)
-    r.interact('jollof'); r.interact('drink'); expect(r.seqPos).toBe(0); expect(r.mistakes).toBe(1)
-    for (const id of ['jollof', 'chicken', 'drink']) r.interact(id)
-    expect(r.idx).toBe(3)
+    expect(r.task.kind).toBe('serve')
+    r.interact('jollof'); expect(r.carry).toBeNull() // nobody is seated yet: there is nobody to take it to
+    r.interact('g:sade'); expect(r.guests.sade).toBe(1)
+    r.interact('jollof'); expect(r.carry).toBe('jollof')
+    r.interact('g:sade'); expect(r.guests.sade).toBe(2); expect(r.carry).toBeNull()
+    r.interact('g:mamaput'); r.interact('g:chidi'); r.interact('drink'); r.interact('g:chidi') // the wrong plate
+    expect(r.guests.chidi).toBe(1); expect(r.mistakes).toBe(1); expect(r.carry).toBeNull()
+    r.update(3.1, 0, 0); expect(r.guests.sade).toBe(3); expect(r.fed).toBe(1)
+    r.interact('chicken'); r.interact('g:chidi'); r.interact('drink'); r.interact('g:mamaput')
+    r.update(3.1, 0, 0); expect(r.idx).toBe(3)
+  })
+  it('ride task: finishes when you arrive at the destination (the bus drops you there)', () => {
+    const L = LEVELS['ch4.l4']; const r = new TaskRunner(L, emptyProgress(), hooks())
+    expect(r.task.kind).toBe('ride'); r.update(0.1, -20, 4); expect(r.idx).toBe(0)
+    const a = r.goalArea!; r.update(0.1, a.x, a.z); expect(r.idx).toBe(1)
   })
   it('hold task counts seconds in the ring and loses them outside', () => {
     const L = LEVELS['ch1.l5']; const r = new TaskRunner(L, emptyProgress(), hooks(), 1)

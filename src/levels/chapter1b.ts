@@ -46,6 +46,14 @@ export const L = (o: LOpts): LevelDef => ({
   starRules: o.starRules ?? ['Finish the level', 'Finish with the clock on your side', 'Finish on time with 2 mistakes or fewer'],
 })
 
+/** the stretch of town west of a level's main scene, for levels that start with a bus ride: pavement, road, shops, the stop. The bus stop is at x = -30. */
+export const STREET: { floor: Rect & { color: string }; deco: Deco[] } = {
+  floor: { x0: -34, x1: -12.4, z0: -6, z1: 3.2, color: '#d9cdb0' },
+  deco: [{ kind: 'road', x: -23.2, z: 4.4, w: 22.4, d: 2.6 }, { kind: 'wall', x: -23.2, z: -7.6, w: 23, d: 2, h: 3.2, color: '#f3e7cf' }, { kind: 'sign', x: -30, z: 1.6, label: 'BUS STOP', w: 1.8 },
+    { kind: 'tree', x: -24, z: -4.6 }, { kind: 'tree', x: -18, z: -4.8 }, { kind: 'lamp', x: -20, z: 2.2 }, { kind: 'lamp', x: -26, z: 2.2 }],
+}
+export const STREET_BOUNDS = R(-34, 12.4, -6, 6)
+export const withStreet = (t: Theme): Theme => ({ ...t, floors: [...t.floors, STREET.floor], deco: [...t.deco, ...STREET.deco] })
 const awnings = (xs: number[], z: number, colors: string[]): Deco[] => xs.map((x, i) => ({ kind: 'awning' as const, x, z, w: 3, d: 1.6, color: colors[i % colors.length] }))
 
 // ---------------------------------------------------------------------------------------------------------------- Level 2
@@ -180,6 +188,7 @@ export const LEVEL_C1L5 = L({
     { kind: 'sign', x: -7, z: -4.8, label: 'PHARMACY', w: 2 }, { kind: 'sign', x: -7, z: 0, label: 'FOOD', w: 2 }, { kind: 'sign', x: -7, z: 4.8, label: 'BUS TICKETS', w: 2 },
     { kind: 'awning', x: 8.6, z: 0, w: 4.4, d: 6.4, color: ORANGE }, { kind: 'sign', x: 9, z: -3.4, label: 'JOLLOF', w: 2 }, { kind: 'tree', x: 11, z: -5 }, { kind: 'tree', x: -11, z: -5 },
     { kind: 'wall', x: 0, z: -7.6, w: 28, d: 2, h: 3, color: '#d9b98a' },
+    { kind: 'chair', x: 1.4, z: -5.1, color: WOOD }, { kind: 'chair', x: 2.6, z: -5.1, color: WOOD }, { kind: 'chair', x: 2.0, z: 2.8, color: WOOD },
   ] },
   furniture: [F('counter', R(7.8, 9.6, -3, 3), 1.0, DARK), F('table1', R(1, 3, -4.6, -3.4), 0.8, WOOD), F('table2', R(1, 3, 3.4, 4.6), 0.8, WOOD)],
   spawn: { x: -11, z: 1 }, resume: { x: -3, z: 0 },
@@ -188,8 +197,8 @@ export const LEVEL_C1L5 = L({
       intro: [say('tunde', 'Food, food, food. Which line is the food line? Read the signs.', 'calm')], done: [say('helper', 'Welcome to the longest line in the world.', 'cheeky')], hint: 'The sign in the middle says FOOD.' }),
     T(5, 2, 'hold', 'Wait for your turn', { purpose: 'Patience: stand in the ring until the line reaches you.', objective: 'Wait in the line', success: 'You wait for the whole count.',
       intro: [say('helper', 'I was here first. I was here for a hundred years.', 'tired')], done: [say('tunde', 'Good. Patience is also a skill.', 'proud')], hint: 'Just stand inside the glowing ring.' }),
-    T(5, 3, 'sequence', 'Complete the order', { purpose: 'A short memory and sequence game.', objective: 'Serve: jollof, chicken, drink', success: 'The order is served correctly.',
-      intro: [say('helper', 'One jollof, then chicken, then a cold drink. In that order!', 'confident')], done: [say('helper', 'Perfect! You should work here.', 'happy')], hint: 'Order: jollof, then chicken, then drink. Plantain is not on the list.' }),
+    T(5, 3, 'serve', 'Serve the customers', { purpose: 'Help at the stall: show three hungry customers to a seat, bring each the plate they ordered and let them eat.', objective: 'Serve all three customers', success: 'All three customers are fed.',
+      intro: [say('helper', 'Three hungry people! Show each one to a seat, check what they ordered, fetch it from the counter and bring it over.', 'confident')], done: [say('helper', 'Perfect! You should work here.', 'happy')], hint: 'Walk to a customer to seat them. Take their plate from the counter. Carry it to their seat.' }),
     T(5, 4, 'choose', 'Recover from a mix-up', { purpose: 'The stall mixed up the plantain: pick how to fix it.', objective: 'Fix the mix-up', success: 'You settle the mix-up.',
       intro: [say('neighbour', 'Oh no. I gave the other table your plantain. Fix this how?', 'worried')], done: [say('player', 'Honestly, jollof is still jollof.', 'happy')], hint: 'Swap, pay a little extra or share. All end well.' }),
   ],
@@ -199,15 +208,18 @@ export const LEVEL_C1L5 = L({
     { id: 'q3', task: 0, x: -7, z: 3.4, label: 'Join this line', wrong: say('player', 'Bus tickets? I walked here. On purpose.', 'tired') },
   ],
   items: [
-    { id: 'jollof', task: 2, x: 8.7, z: -2.0, label: 'Serve the jollof', color: RUST, shape: 'plate', y: 1.1 },
-    { id: 'chicken', task: 2, x: 8.7, z: -0.7, label: 'Serve the chicken', color: '#a85a1f', shape: 'plate', y: 1.1 },
-    { id: 'plantain', task: 2, x: 8.7, z: 0.7, label: 'Serve the plantain', color: YELLOW, shape: 'plate', y: 1.1 },
-    { id: 'drink', task: 2, x: 8.7, z: 2.0, label: 'Serve the cold drink', color: '#6a8ab8', shape: 'cup', y: 1.1 },
+    { id: 'jollof', task: 2, x: 8.2, z: -1.6, label: 'Take the jollof', color: RUST, shape: 'plate', y: 1.1 },
+    { id: 'chicken', task: 2, x: 8.2, z: -0.3, label: 'Take the chicken', color: '#a85a1f', shape: 'plate', y: 1.1 },
+    { id: 'drink', task: 2, x: 8.2, z: 1.0, label: 'Take the cold drink', color: '#6a8ab8', shape: 'cup', y: 1.1 },
     { id: 'swap', task: 3, x: 6.2, z: -1.6, label: 'Swap the plates back', color: ORANGE, shape: 'plate', y: 0.5 },
     { id: 'extra', task: 3, x: 6.2, z: 0, label: 'Pay a little extra', color: GREEN, shape: 'plate', y: 0.5 },
     { id: 'share', task: 3, x: 6.2, z: 1.6, label: 'Share the plantain', color: YELLOW, shape: 'plate', y: 0.5 },
   ],
-  sequences: { 2: ['jollof', 'chicken', 'drink'] },
+  serves: { 2: { eatSecs: 3, guests: [
+    { id: 'sade', name: 'Sade', order: 'Jollof', dish: 'jollof', x: -1.2, z: -1.4, seat: { x: 1.4, z: -5.1 }, table: { x: 1.4, z: -4.1 } },
+    { id: 'chidi', name: 'Chidi', order: 'Chicken', dish: 'chicken', x: -1.2, z: 0.4, seat: { x: 2.6, z: -5.1 }, table: { x: 2.6, z: -4.1 } },
+    { id: 'mamaput', name: 'Mama Put', order: 'Cold drink', dish: 'drink', x: -1.2, z: 2.0, seat: { x: 2.0, z: 2.8 }, table: { x: 2.0, z: 3.9 } },
+  ] } },
   holds: { 1: { x: -3.2, z: 0, r: 1.6, secs: 6 } },
   guide: [{ x: -7, z: 0, r: 5 }, { x: -3.2, z: 0, r: 1.8 }, { x: 8, z: 0, r: 3 }, { x: 6.2, z: 0, r: 2.4 }],
   crowd: [{ x: -6.8, z: -2.4, rot: -1.5 }, { x: -6.8, z: 0.4, rot: -1.5 }, { x: -5.4, z: 0.4, rot: -1.5 }, { x: -6.8, z: 2.4, rot: -1.5 }, { x: -5.4, z: -2.4, rot: -1.5 }],
