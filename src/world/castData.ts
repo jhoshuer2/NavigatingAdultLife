@@ -53,3 +53,7 @@ export function neighbour(n: number, body: ToonSpec['body'] = (['man', 'woman', 
     accessories: [n % 2 ? 'crossbag' : 'backpack', ...(female ? (['earrings'] as const) : []), ...(n % 3 === 1 ? (['cap'] as const) : []), ...(n % 4 === 2 ? (['glasses'] as const) : [])],
   }
 }
+
+/** the two recurring side characters of chapter 1 */
+export const NEIGHBOUR: ToonSpec = { ...neighbour(1, 'woman'), name: 'The Neighbour' }
+export const HELPER: ToonSpec = { ...neighbour(2, 'man'), name: 'The Helper' }

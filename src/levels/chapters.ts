@@ -12,7 +12,7 @@ export interface ChapterDef {
 const placeholder = (n: number, title: string, blurb: string): ChapterDef => ({ id: `ch${n}`, number: n, title, blurb, levels: [], totalLevels: 9, built: false })
 
 export const CHAPTERS: ChapterDef[] = [
-  { id: CHAPTER1.id, number: 1, title: CHAPTER1.title, blurb: CHAPTER1.blurb, levels: CHAPTER1.levels, totalLevels: CHAPTER1.totalLevels, built: true, prototype: true },
+  { id: CHAPTER1.id, number: 1, title: CHAPTER1.title, blurb: CHAPTER1.blurb, levels: ['ch1.l1', 'ch1.l2', 'ch1.l3', 'ch1.l4', 'ch1.l5', 'ch1.l6', 'ch1.l7', 'ch1.l8', 'ch1.l9'], totalLevels: CHAPTER1.totalLevels, built: true },
   { id: 'ch2', number: 2, title: 'Trial Day', blurb: 'An open football trial, a loud coach and a number on your back.', levels: [LEVEL_C2L1.id, LEVEL_C2L2.id], totalLevels: 9, built: true, prototype: true },
   placeholder(3, 'Market Day', 'Buy, sell, bargain and keep your cool.'),
   placeholder(4, 'Kitchen Rush', 'Orders pile up and the pot will not wait.'),

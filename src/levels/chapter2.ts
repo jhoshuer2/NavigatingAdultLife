@@ -120,7 +120,7 @@ const tasks2: TaskDef[] = [
     hint: 'The two drills are on the table by the north fence, bottom right.',
   },
   {
-    id: 'ch2.l2.t4', kind: 'reach', title: 'Run the station', purpose: 'The timed run changes with your choice: short and fast, or long and steady.',
+    id: 'ch2.l2.t4', kind: 'reach', variant: true, title: 'Run the station', purpose: 'The timed run changes with your choice: short and fast, or long and steady.',
     objective: 'Run back to the circle in time', controls: 'Move with the stick, arrow keys or by tapping the pitch.',
     success: 'You reach the circle before the timer ends.', failure: 'Clipping a dummy costs 3 seconds.', recovery: 'A quick get-up, then you keep going. The level never restarts.',
     feedback: 'A timer on screen and a bump sound when you clip a dummy.', reward: '1 point the first time.', persistence: 'Saved when you reach the circle.',

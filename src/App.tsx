@@ -28,7 +28,7 @@ export default function App() {
   const { screen, toasts, init, tick, meta, openSheet, levelNonce } = useGame()
   const last = useRef(Date.now())
   const [rushKey, setRushKey] = useState(0)
-  useEffect(() => { init(); startAnalytics() }, [init])
+  useEffect(() => { init(); startAnalytics(); if (new URLSearchParams(location.search).get('debug') === '1') (window as unknown as Record<string, unknown>).__store = useGame }, [init])
   useEffect(() => { document.documentElement.classList.toggle('reduce-motion', meta.settings.reducedMotion) }, [meta.settings.reducedMotion])
 
   useEffect(() => { setAnalyticsContext({ mode: meta.settings.lite ? 'menu' : 'world', screen }) }, [meta.settings.lite, screen])

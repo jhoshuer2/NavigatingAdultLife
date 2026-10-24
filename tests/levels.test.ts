@@ -47,14 +47,14 @@ describe('chapter select', () => {
     p = finishLevel(p, 'a1', 2, null); expect(chapterState(p, chs, 1)).toBe('locked')
     p = finishLevel(p, 'a2', 1, null); expect(chs.map((_, i) => chapterState(p, chs, i))).toEqual(['done', 'active', 'locked'])
   })
-  it('while chapters are prototypes, finishing their built levels opens the next chapter; later chapters stay locked; the debug flag opens all', async () => {
+  it('chapter 1 needs all nine levels; chapter 2 is a prototype so its built levels are enough; the debug flag opens all', async () => {
     const { CHAPTERS } = await import('../src/levels/chapters')
     expect(CHAPTERS.length).toBe(10)
     let p = emptyProgress(); p = finishLevel(p, 'ch1.l1', 3, null)
     expect(chapterState(emptyProgress(), CHAPTERS, 1)).toBe('locked')
-    expect(chapterState(p, CHAPTERS, 1)).toBe('active')
+    expect(chapterState(p, CHAPTERS, 1)).toBe('locked') // chapter 1 now has all nine levels, one is not enough
     expect(chapterState(p, CHAPTERS, 2)).toBe('locked')
-    expect(chapterState(finishLevel(finishLevel(p, 'ch2.l1', 1, null), 'ch2.l2', 1, null), CHAPTERS, 2)).toBe('active')
+    expect(chapterState(finishLevel(finishLevel(p, 'ch2.l1', 1, null), 'ch2.l2', 1, null), CHAPTERS, 2)).toBe('active') // chapter 2 (a prototype with two built levels) is done once both have stars
     expect(chapterState(p, CHAPTERS, 5, true)).toBe('active')
   })
 })

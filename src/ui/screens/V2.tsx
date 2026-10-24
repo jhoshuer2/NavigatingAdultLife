@@ -122,6 +122,9 @@ export function LevelResult() {
   const p = progressOf(meta)
   const level = LEVELS[r?.levelId ?? 'ch1.l1']
   if (!r) return <Shell><V2Btn onClick={() => go('home')}>Home</V2Btn></Shell>
+  const chapter = CHAPTERS.find((c) => c.id === level.chapter)
+  const chapterDone = !level.next && !!chapter && chapter.levels.length >= chapter.totalLevels && chapter.levels[chapter.levels.length - 1] === level.id
+  const nextChapter = chapter ? CHAPTERS[chapter.number] : undefined
   const itemName = r.item ? r.item.replace('powerbank', 'power bank') : null
   return (
     <Shell>
@@ -141,11 +144,12 @@ export function LevelResult() {
         <div className="flex justify-center gap-3"><Pill>⭐ {p.points} points{r.points ? ` (+${r.points})` : ''}</Pill><Pill>🪙 {p.coins} coins</Pill></div>
         <div className="flex items-center gap-3 rounded-2xl p-3 text-left" style={{ background: FOREST, color: '#fff', border: `3px solid ${INK}` }}>
           <Portrait spec={BABA_TUNDE} expression="surprised" size={72} />
-          <div className="text-sm font-semibold">Baba Tunde: "{level.endBeat.text}"<div className="opacity-80 mt-1">{itemName ? `You took the ${itemName}. ${level.endBeat.line}` : `You went without. ${level.endBeat.line}`}</div></div>
+          <div className="text-sm font-semibold">Baba Tunde: "{level.endBeats?.[Math.max(0, r.stars - 1)] ?? level.endBeat.text}"<div className="opacity-80 mt-1">{itemName ? `You took the ${itemName}. ${level.endBeat.line}` : `You went without. ${level.endBeat.line}`}</div></div>
         </div>
         <Feedback levelId={r.levelId} />
+        {chapterDone && <div className="rounded-2xl p-3 font-extrabold" style={{ background: YELLOW, border: `3px solid ${INK}` }}>🏅 Chapter {chapter!.number} complete{level.badge ? `: badge "${level.badge}"` : ''}{nextChapter ? ` · Chapter ${nextChapter.number}, ${nextChapter.title}, is now open` : ''}</div>}
         <div className="grid gap-2">
-          {level.next ? <V2Btn onClick={() => startLevel(level.next!)}>Next level</V2Btn> : <V2Btn disabled>Next level · coming soon</V2Btn>}
+          {level.next ? <V2Btn onClick={() => startLevel(level.next!)}>Next level</V2Btn> : chapterDone ? <V2Btn onClick={() => go('chapters')}>Back to chapters</V2Btn> : <V2Btn disabled>Next level · coming soon</V2Btn>}
           <V2Btn tone="cream" onClick={() => { useGame.getState().saveProgress({ ...p, task: 0 }); openLevel(0) }}>Play this level again</V2Btn>
           <V2Btn tone="cream" onClick={() => go('home')}>Home</V2Btn>
         </div>

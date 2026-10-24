@@ -91,7 +91,7 @@ export const LEVEL1: LevelDef = {
   guideAreas: [{ x: -5.2, z: 0.6, r: 3.6 }, { x: 5.2, z: 0, r: 4 }, { x: 1.4, z: 3.8, r: 1.6 }, { x: 8.2, z: 0, r: 1.4 }],
   exitX: 7.7,
   timeLimit: 22,
-  next: null,
+  next: 'ch1.l2',
   starRules: ['Finish the level', 'Leave before the timer ends', 'Leave on time with 2 mistakes or fewer'],
 }
 

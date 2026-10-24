@@ -5,7 +5,7 @@ import { buildToon, type Expression, type ToonParts, type ToonSpec } from '../wo
 import { animateHuman } from '../world/characters'
 import { MAMA_FOLAKE, BABA_TUNDE, neighbour } from '../world/castData'
 import { moveWithCollision } from '../world/nav'
-import type { LevelDef, Item, Spot, Hazard } from './schema'
+import type { LevelDef, Item, Spot, Hazard, Speaker } from './schema'
 import type { TaskRunner } from './TaskRunner'
 
 const lam = (c: string | number) => new THREE.MeshLambertMaterial({ color: c })
@@ -95,12 +95,13 @@ export class LevelRenderer {
 
   private build() {
     const L = this.level
-    if (L.sceneKind === 'home') this.buildHomeShell(); else this.buildPitchShell()
+    if (L.sceneKind === 'home') this.buildHomeShell(); else if (L.sceneKind === 'pitch') this.buildPitchShell(); else this.buildSceneShell()
     for (const f of L.furniture) {
       const r = f.rect
       this.furn.set(f.name, this.box(r.x1 - r.x0, f.h, r.z1 - r.z0, f.color, (r.x0 + r.x1) / 2, f.h / 2, (r.z0 + r.z1) / 2))
     }
-    if (L.sceneKind === 'home') this.buildHomeDeco(); else this.buildPitchDeco()
+    if (L.sceneKind === 'home') this.buildHomeDeco(); else if (L.sceneKind === 'pitch') this.buildPitchDeco(); else this.buildSceneDeco()
+    for (const c of L.crowd ?? []) { if (L.sceneKind === 'scene') { const i = this.crowdParts.length; const sp = { ...neighbour(i + 5), accessories: [] as never[] }; const t = buildToon(sp); t.group.position.set(c.x, 0, c.z); t.group.rotation.y = c.rot; this.scene.add(t.group); this.crowdParts.push(t) } }
     // spots keep an invisible anchor so the scene can wobble them when the player gets close
     for (const s of L.spots) { const g = new THREE.Group(); g.position.set(s.x, 0, s.z); this.scene.add(g); this.spotMeshes.set(s.id, g) }
     for (const it of L.items) { const o = this.itemMesh(it); o.position.set(it.x, this.itemY(it), it.z); this.scene.add(o); this.itemMeshes.set(it.id, o) }
@@ -116,7 +117,10 @@ export class LevelRenderer {
     this.phoneMesh.visible = false; this.scene.add(this.phoneMesh)
     for (const h of this.level.hazards) {
       const g = new THREE.Group()
-      if (h.name === 'dummy') { const post = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.34, 1.5, 10), lam(h.color)); post.position.y = 0.8; g.add(post); const hd = new THREE.Mesh(new THREE.SphereGeometry(0.3, 10, 8), lam('#f3e7cf')); hd.position.y = 1.75; g.add(hd); const base = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.08, 12), lam('#1c1b22')); base.position.y = 0.05; g.add(base) }
+      if (h.name === 'walker') { const col = ['#2b3a8c', '#c4562a', '#2f5a3a', '#e0457b', '#6a8ab8'][this.hazardMeshes.length % 5]; const bd = new THREE.Mesh(new THREE.CapsuleGeometry(0.3, 0.8, 3, 8), lam(col)); bd.position.y = 1.0; g.add(bd); const hd = new THREE.Mesh(new THREE.SphereGeometry(0.26, 10, 8), lam('#7a4a2a')); hd.position.y = 1.85; g.add(hd) }
+      else if (h.name === 'cart') { const bx = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.6, 0.9), lam(h.color)); bx.position.y = 0.75; g.add(bx); for (const [x, z] of [[-0.45, -0.35], [0.45, -0.35], [-0.45, 0.35], [0.45, 0.35]]) { const w = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.1, 8), lam('#1c1b22')); w.rotation.x = Math.PI / 2; w.position.set(x, 0.2, z); g.add(w) }; const hn = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 1.0), lam('#555566')); hn.position.set(-0.7, 1.2, 0); g.add(hn) }
+      else if (h.name === 'chair') { const seat = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.12, 12), lam(h.color)); seat.position.y = 0.7; g.add(seat); const back = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.8, 0.1), lam(h.color)); back.position.set(0, 1.15, -0.35); g.add(back); const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.6, 6), lam('#555566')); pole.position.y = 0.35; g.add(pole); const base = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.05, 6), lam('#1c1b22')); base.position.y = 0.05; g.add(base) }
+      else if (h.name === 'dummy') { const post = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.34, 1.5, 10), lam(h.color)); post.position.y = 0.8; g.add(post); const hd = new THREE.Mesh(new THREE.SphereGeometry(0.3, 10, 8), lam('#f3e7cf')); hd.position.y = 1.75; g.add(hd); const base = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.08, 12), lam('#1c1b22')); base.position.y = 0.05; g.add(base) }
       else if (h.name === 'mop') { const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.8, 6), lam('#a87a50')); stick.rotation.z = 1.2; stick.position.y = 0.5; g.add(stick); const head = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.18, 0.35), lam(h.color)); head.position.set(-0.7, 0.1, 0); g.add(head) }
       else { for (const dz of [-0.28, 0.28]) { const s = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.12, 0.28), lam(h.color)); s.position.set(0, 0.07, dz); g.add(s) } }
       g.visible = false; this.scene.add(g); this.hazardMeshes.push(g)
@@ -201,7 +205,42 @@ export class LevelRenderer {
       g.position.set(-11 + i * 1.5, 0, -6.9 - (i % 2) * 0.8); this.scene.add(g) }
   }
 
-  private itemY(it: Item) { return it.shape === 'bag' ? 1.05 : it.id === 'wallet' ? 1.0 : it.id === 'keys' ? 1.5 : it.task === 2 ? 0.95 : 1 }
+  private label(text: string, w = 2.2): THREE.Sprite {
+    const c = document.createElement('canvas'); c.width = 256; c.height = 96
+    const g = c.getContext('2d')!; g.fillStyle = '#1c1b22'; g.fillRect(4, 8, 248, 80); g.fillStyle = '#f5b91c'; g.fillRect(10, 14, 236, 68); g.fillStyle = '#1c1b22'
+    g.font = '800 34px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text.toUpperCase().slice(0, 14), 128, 50)
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthWrite: false })); sp.scale.set(w, w * 0.375, 1); return sp
+  }
+
+  /** a data-driven scene (street, market, plaza, stall, office, flat, hall): ground, floor patches, low fence */
+  private buildSceneShell() {
+    const T = this.level.theme!, b = this.level.bounds
+    this.box(70, 0.1, 50, T.ground2 ?? T.ground, 0, -0.25, 0)
+    this.box(b.x1 - b.x0 + 4, 0.1, b.z1 - b.z0 + 3, T.ground, 0, -0.1, 0)
+    for (const f of T.floors) this.box(f.x1 - f.x0, 0.1, f.z1 - f.z0, f.color, (f.x0 + f.x1) / 2, -0.05, (f.z0 + f.z1) / 2)
+    if (T.fence) { const fc = '#f3e7cf'; this.box(b.x1 - b.x0 + 1, 0.8, 0.2, fc, 0, 0.4, b.z0 - 0.1); this.box(b.x1 - b.x0 + 1, 0.8, 0.2, fc, 0, 0.4, b.z1 + 0.1); this.box(0.2, 0.8, b.z1 - b.z0, fc, b.x0 - 0.1, 0.4, 0); this.box(0.2, 0.8, b.z1 - b.z0, fc, b.x1 + 0.1, 0.4, 0) }
+  }
+
+  private buildSceneDeco() {
+    for (const d of this.level.theme!.deco) {
+      const w = d.w ?? 2, dd = d.d ?? 2, h = d.h ?? 1, col = d.color ?? '#a87a50'
+      switch (d.kind) {
+        case 'awning': { this.box(w, 0.15, dd, col, d.x, 2.6, d.z); for (const sx of [-1, 1]) for (const sz of [-1, 1]) this.box(0.1, 2.6, 0.1, '#1c1b22', d.x + sx * (w / 2 - 0.1), 1.3, d.z + sz * (dd / 2 - 0.1)); break }
+        case 'stall': { this.box(w, 0.9, dd, '#a87a50', d.x, 0.45, d.z); this.box(w + 0.3, 0.15, dd + 0.5, col, d.x, 2.6, d.z); for (const sx of [-1, 1]) this.box(0.1, 2.6, 0.1, '#1c1b22', d.x + sx * (w / 2), 1.3, d.z - dd / 2); if (d.label) { const l = this.label(d.label, 2.0); l.position.set(d.x, 3.2, d.z); this.scene.add(l) } break }
+        case 'tree': { const tr = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.28, 2, 8), lam('#6b3a1e')); tr.position.set(d.x, 1, d.z); this.scene.add(tr); const cr = new THREE.Mesh(new THREE.SphereGeometry(1.3, 10, 8), lam(col === '#a87a50' ? '#2f5a3a' : col)); cr.position.set(d.x, 2.8, d.z); this.scene.add(cr); break }
+        case 'lamp': { this.box(0.14, 4, 0.14, '#44444e', d.x, 2, d.z); this.box(0.7, 0.14, 0.3, '#ffe9a6', d.x, 4, d.z); break }
+        case 'sign': { this.box(0.12, 2.2, 0.12, '#555566', d.x, 1.1, d.z); const l = this.label(d.label ?? '', w); l.position.set(d.x, 2.6, d.z); this.scene.add(l); break }
+        case 'wall': this.box(w, h, dd, col, d.x, h / 2, d.z); break
+        case 'window': this.box(w, h, 0.1, '#9ecbe6', d.x, 1.7, d.z); break
+        case 'road': { this.box(w, 0.04, dd, col === '#a87a50' ? '#3d3d46' : col, d.x, 0.0, d.z); for (let x = d.x - w / 2 + 1; x < d.x + w / 2 - 1; x += 3) this.box(1.4, 0.02, 0.14, '#f4f1e6', x, 0.04, d.z); break }
+        case 'rug': this.box(w, 0.03, dd, col, d.x, 0.02, d.z); break
+        case 'crate': this.box(w, h, dd, col, d.x, h / 2, d.z); break
+      }
+    }
+  }
+
+  private itemY(it: Item) { if (it.y !== undefined) return it.y; return it.shape === 'bag' ? 1.05 : it.id === 'wallet' ? 1.0 : it.id === 'keys' ? 1.5 : it.task === 2 ? 0.95 : 1 }
 
   private itemMesh(it: Item): THREE.Object3D {
     const g = new THREE.Group()
@@ -219,6 +258,16 @@ export class LevelRenderer {
       case 'bottle': add(new THREE.CylinderGeometry(0.1, 0.1, 0.4, 10), it.color); add(new THREE.CylinderGeometry(0.06, 0.08, 0.1, 10), '#fbf8f0', 0, 0.25, 0); break
       case 'ladder': for (let i = 0; i < 5; i++) add(new THREE.BoxGeometry(0.5, 0.04, 0.07), it.color, 0, 0, -0.4 + i * 0.2); for (const dx of [-0.25, 0.25]) add(new THREE.BoxGeometry(0.05, 0.04, 0.9), '#1c1b22', dx, 0, 0); break
       case 'cones': for (const [x, z] of [[-0.22, -0.2], [0.22, -0.2], [0, 0.22]]) add(new THREE.ConeGeometry(0.12, 0.3, 8), it.color, x, 0.12, z); break
+      case 'plate': add(new THREE.CylinderGeometry(0.28, 0.28, 0.04, 14), '#fbf8f0'); add(new THREE.SphereGeometry(0.2, 10, 6), it.color, 0, 0.1, 0); break
+      case 'cup': add(new THREE.CylinderGeometry(0.1, 0.08, 0.22, 10), it.color); add(new THREE.CylinderGeometry(0.1, 0.1, 0.02, 10), '#fbf8f0', 0, 0.12, 0); break
+      case 'folder': add(new THREE.BoxGeometry(0.5, 0.05, 0.38), it.color); add(new THREE.BoxGeometry(0.4, 0.06, 0.06), '#fbf8f0', 0, 0.02, 0.1); break
+      case 'paper': add(new THREE.BoxGeometry(0.4, 0.03, 0.3), '#fbf8f0'); add(new THREE.BoxGeometry(0.3, 0.035, 0.04), it.color, 0, 0.01, 0); break
+      case 'stamp': add(new THREE.CylinderGeometry(0.1, 0.12, 0.08, 10), it.color); add(new THREE.CylinderGeometry(0.04, 0.04, 0.2, 8), '#1c1b22', 0, 0.14, 0); break
+      case 'crate': add(new THREE.BoxGeometry(0.55, 0.35, 0.4), '#a87a50'); add(new THREE.BoxGeometry(0.5, 0.06, 0.35), it.color, 0, 0.2, 0); break
+      case 'produce': for (const [x, z] of [[-0.14, -0.08], [0.14, -0.08], [0, 0.14]]) add(new THREE.SphereGeometry(0.13, 10, 8), it.color, x, 0.1, z); break
+      case 'sign': add(new THREE.CylinderGeometry(0.05, 0.05, 1.3, 6), '#555566', 0, 0.2, 0); add(new THREE.BoxGeometry(0.9, 0.4, 0.06), it.color, 0, 0.9, 0); add(new THREE.ConeGeometry(0.2, 0.35, 3), it.color, 0.6, 0.9, 0).rotation.z = -Math.PI / 2; break
+      case 'blanket': add(new THREE.BoxGeometry(0.6, 0.12, 0.45), it.color); add(new THREE.BoxGeometry(0.6, 0.02, 0.1), '#fbf8f0', 0, 0.07, 0); break
+      case 'cake': add(new THREE.CylinderGeometry(0.3, 0.3, 0.18, 14), '#fbf8f0'); add(new THREE.CylinderGeometry(0.22, 0.22, 0.16, 14), it.color, 0, 0.16, 0); add(new THREE.CylinderGeometry(0.02, 0.02, 0.14, 6), '#f5b91c', 0, 0.3, 0); break
       default: add(new THREE.BoxGeometry(0.3, 0.3, 0.3), it.color)
     }
     return g
@@ -243,7 +292,7 @@ export class LevelRenderer {
     this.target = { x: Math.max(this.level.bounds.x0, Math.min(this.level.bounds.x1, o.x + d.x * k)), z: Math.max(this.level.bounds.z0, Math.min(this.level.bounds.z1, o.z + d.z * k)) }
   }
 
-  setExpression(who: 'folake' | 'tunde' | 'player', e: Expression) { (who === 'folake' ? this.folake : who === 'tunde' ? this.tunde : this.me).setExpression(e) }
+  setExpression(who: Speaker, e: Expression) { if (who === 'neighbour' || who === 'helper') return; (who === 'folake' ? this.folake : who === 'tunde' ? this.tunde : this.me).setExpression(e) }
   hazardPos(i: number, t = this.t) { return { x: this.level.hazards[i].x, z: hazardZ(this.level.hazards[i], t) } }
 
   private frame = (now: number) => {
@@ -290,7 +339,7 @@ export class LevelRenderer {
       const idx = run.idx
       for (const it of L.items) {
         const o = this.itemMeshes.get(it.id)!
-        const here = it.task === idx && !run.finished && !run.collected.includes(it.id) && !(it.task === 2 && run.choice)
+        const here = it.task === idx && !run.finished && !run.collected.includes(it.id) && !(run.task.kind === 'choose' && run.choice)
         o.visible = here
         if (here && !(this.act && this.act.id === it.id)) { o.position.y = this.itemY(it) + Math.sin(this.t * 3 + it.x) * 0.06; o.rotation.y = this.t * 1.5 }
       }
@@ -310,9 +359,9 @@ export class LevelRenderer {
       }
       if (this.ball) { this.ball.visible = reach; if (reach) { this.ball.position.set(this.px + Math.sin(this.facing) * 0.85, 0.24 + Math.abs(Math.sin(this.t * 9)) * 0.06, this.pz + Math.cos(this.facing) * 0.85); this.ball.rotation.x += dt * 10 } }
       // the marker ring: always on a goal area (walk-to and run-to tasks) and on the penalty spot; after 15 s without progress on the area of the next step
-      const area = L.gotoAreas?.[idx]
+      const area = run.task.kind === 'hold' ? L.holds?.[idx] ?? null : run.goalArea
       const kickMark = run.task.kind === 'kick' && L.kick ? { x: L.kick.x, z: L.kick.z, r: 0.9 } : null
-      const mark = !run.finished ? ((run.task.kind === 'goto' || run.task.kind === 'reach') && area ? area : kickMark) : null
+      const mark = !run.finished ? ((run.task.kind === 'goto' || run.task.kind === 'reach' || run.task.kind === 'hold') && area ? area : kickMark) : null
       this.ring.visible = !!mark || run.guideOn
       if (mark || run.guideOn) {
         const ga = mark ?? L.guideAreas[idx]; let gx = ga.x, gz = ga.z, gr = ga.r
@@ -427,7 +476,7 @@ export class LevelRenderer {
     const consider = (o: Spot | Item, kind: Nearby['kind']) => { const d = Math.hypot(o.x - this.px, o.z - this.pz); if (d < bd) { bd = d; best = { kind, id: o.id, label: o.label } } }
     if (!run.finished) {
       if (run.task.kind === 'find' && !run.found) for (const s of L.spots) if (s.task === idx) consider(s, 'spot')
-      if (run.task.kind === 'collect') for (const it of L.items) if (it.task === idx && !run.collected.includes(it.id)) consider(it, 'item')
+      if (run.task.kind === 'collect' || run.task.kind === 'sequence') for (const it of L.items) if (it.task === idx && !run.collected.includes(it.id)) consider(it, 'item')
       if (run.task.kind === 'choose' && !run.choice) for (const it of L.items) if (it.task === idx) consider(it, 'item')
       if (run.task.kind === 'kick' && L.kick && !this.kickAnim && Math.hypot(L.kick.x - this.px, L.kick.z - this.pz) < 1.3) best = { kind: 'spot', id: 'kick', label: 'Kick!' }
     }

@@ -7,7 +7,7 @@ import { LEVELS } from '../../levels/levels'
 import { progressOf, type ChapterProgress } from '../../levels/progress'
 import type { Line } from '../../levels/schema'
 import { Portrait } from '../Portrait'
-import { BABA_TUNDE, MAMA_FOLAKE } from '../../world/castData'
+import { BABA_TUNDE, MAMA_FOLAKE, NEIGHBOUR, HELPER } from '../../world/castData'
 import { charSpec, V2Btn, INK, CREAM, ORANGE, YELLOW, FOREST } from './V2'
 import { audio, type SfxName } from '@platform/audio'
 import { track } from '@platform/analytics'
@@ -137,9 +137,10 @@ export default function LevelPlay() {
   const rn = runner.current
   const task = rn?.task
   const p = rn?.progress ?? progressOf(meta)
-  const speakerSpec = (w: Line['who']) => (w === 'folake' ? MAMA_FOLAKE : w === 'tunde' ? BABA_TUNDE : spec)
-  const speakerName = (w: Line['who']) => (w === 'folake' ? 'Mama Folake' : w === 'tunde' ? 'Baba Tunde' : spec.name)
-  const collectInfo = task?.kind === 'collect' && rn ? ` (${rn.collected.length}/${level.items.filter((i) => i.task === rn.idx).length})` : task?.kind === 'kick' && rn ? ` (${rn.goals}/${level.kick?.goals ?? 3})` : ''
+  const speakerSpec = (w: Line['who']) => (w === 'folake' ? MAMA_FOLAKE : w === 'tunde' ? BABA_TUNDE : w === 'neighbour' ? NEIGHBOUR : w === 'helper' ? HELPER : spec)
+  const speakerName = (w: Line['who']) => (w === 'folake' ? 'Mama Folake' : w === 'tunde' ? 'Baba Tunde' : w === 'neighbour' ? 'The Neighbour' : w === 'helper' ? 'The Helper' : spec.name)
+  const collectInfo = !rn || !task ? '' : task.kind === 'collect' ? (rn.budgetLeft !== null ? ` (${rn.collected.length}/${level.budgets?.[rn.idx]?.need} · ₦${rn.budgetLeft} left)` : ` (${rn.collected.length}/${level.items.filter((i) => i.task === rn.idx).length})`)
+    : task.kind === 'kick' ? ` (${rn.goals}/${level.kick?.goals ?? 3})` : task.kind === 'hold' ? ` (${Math.floor(rn.holdT)}/${rn.holdNeed} s)` : task.kind === 'sequence' ? ` (${rn.seqPos}/${level.sequences?.[rn.idx]?.length ?? 0})` : ''
   const onStick = (e: React.PointerEvent<HTMLDivElement>, end = false) => {
     const el = e.currentTarget.getBoundingClientRect()
     if (end) { stick.current = { x: 0, z: 0 }; setKnob({ x: 0, y: 0 }); sync(); return }
@@ -210,6 +211,7 @@ export default function LevelPlay() {
           <div className="absolute w-14 h-14 rounded-full" style={{ left: `calc(50% - 28px + ${knob.x}px)`, top: `calc(50% - 28px + ${knob.y}px)`, background: INK }} />
         </div>
         <div className="grid gap-2 justify-items-end pointer-events-auto">
+          {task?.kind === 'collect' && rn && rn.budgetLeft !== null && rn.collected.length > 0 && <V2Btn tone="cream" className="!min-h-12 !text-lg" onClick={() => runner.current?.interact('reset')}>Start over</V2Btn>}
           {task?.kind === 'choose' && !rn?.choice && <V2Btn tone="cream" className="!min-h-12 !text-lg" onClick={() => runner.current?.interact('none')}>Go without</V2Btn>}
           <button disabled={!near || paused} onClick={act} className="rounded-full font-display text-xl px-5 min-h-20 min-w-24 text-center disabled:opacity-40 transition-opacity"
             style={{ background: near ? ORANGE : '#fff8', color: near ? '#fff' : INK, border: `3px solid ${INK}`, boxShadow: `0 5px 0 ${INK}` }}>
