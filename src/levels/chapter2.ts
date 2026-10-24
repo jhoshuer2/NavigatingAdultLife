@@ -18,13 +18,13 @@ const FURNITURE: Furn[] = [
 
 const tasks: TaskDef[] = [
   {
-    id: 'ch2.l1.t0', kind: 'ride', title: 'Take the bus to the trial', purpose: 'The trial ground is across town: wait at the stop, board the bus and ride there.',
-    objective: 'Take the bus to the trial ground', controls: 'Walk to the bus stop, wait for the bus and tap Board the bus.',
-    success: 'You get off at the gate of the trial ground.', failure: 'None. Miss the bus and the next one comes.', recovery: 'Walking to the gate works too, only slower.',
-    feedback: 'The bus pulls up, you board and the city rolls by.', reward: '1 point the first time.', persistence: 'Saved when you get off the bus.',
-    intro: [{ who: 'folake', text: 'Trial day! The bus stop is just up the road. Do not miss it, and do not forget your boots. You have no boots. Take the bus!', expr: 'worried' }],
-    done: [{ who: 'helper', text: 'Hundreds of hopefuls, and every one of them got the same bus as you.', expr: 'cheeky' }],
-    hint: 'Walk to the BUS STOP sign, wait for the yellow bus and tap Board the bus.',
+    id: 'ch2.l1.t0', kind: 'ride', title: 'Take the train to the trial', purpose: 'The trial ground is across town: wait at the stop, board the train and ride there.',
+    objective: 'Take the train to the trial ground', controls: 'Walk to the station, wait for the train and tap Board the train.',
+    success: 'You get off at the gate of the trial ground.', failure: 'None. Miss the train and the next one comes.', recovery: 'Walking to the gate works too, only slower.',
+    feedback: 'The train pulls up, you board and the city rolls by.', reward: '1 point the first time.', persistence: 'Saved when you get off the train.',
+    intro: [{ who: 'folake', text: 'Trial day! The station is just up the road. Do not miss it, and do not forget your boots. You have no boots. Take the train!', expr: 'worried' }],
+    done: [{ who: 'helper', text: 'Hundreds of hopefuls, and every one of them got the same train as you.', expr: 'cheeky' }],
+    hint: 'Walk to the STATION sign, wait for the train and tap Board the train.',
   },
   {
     id: 'ch2.l1.t1', kind: 'goto', title: 'Find the registration', purpose: 'Teach walking through a busy place toward a marked goal.',
@@ -71,7 +71,7 @@ export const LEVEL_C2L1: LevelDef = {
   bounds: STREET_BOUNDS,
   blockers: FURNITURE.map((f) => f.rect),
   furniture: FURNITURE,
-  rides: { 0: { stop: { x: -30, z: 1.8 }, busZ: 4.4, from: 'home', to: 'the trial ground' } },
+  rides: { 0: { vehicle: 'train', stop: { x: -30, z: 1.8 }, busZ: 4.4, from: 'home', to: 'the trial ground' } },
   spawn: { x: -32, z: 0.4 },
   spawnAfterFirst: { x: -4.5, z: -1.5 },
   spots: [],
@@ -176,7 +176,7 @@ export const LEVEL_C2L2: LevelDef = withBus({
   timeLimit: 20,
   next: 'ch2.l3',
   starRules: ['Finish the level', 'Get back to the circle before the timer ends', 'Do it on time with 2 mistakes or fewer'],
-}, { to: 'the training pitch', title: 'Afternoon session', purpose: 'The afternoon session is on the training pitch across town: wait at the stop, board the bus and ride there.', objective: 'Take the bus to the training pitch', success: 'You get off at the training pitch.', intro: [{ who: 'folake', text: 'The skills session is on the other pitch this afternoon. The bus stop is up the road, my champion!', expr: 'happy' }], done: [{ who: 'tunde', text: 'You are early. I do not trust early. Warm up.', expr: 'suspicious' }] })
+}, { vehicle: 'train', to: 'the training pitch', title: 'Afternoon session', purpose: 'The afternoon session is on the training pitch across town: wait at the stop, board the train and ride there.', objective: 'Take the train to the training pitch', success: 'You get off at the training pitch.', intro: [{ who: 'folake', text: 'The skills session is on the other pitch this afternoon. The station is up the road, my champion!', expr: 'happy' }], done: [{ who: 'tunde', text: 'You are early. I do not trust early. Warm up.', expr: 'suspicious' }] })
 
 // ---------------------------------------------------------------------------------------------------------------- Level 3
 const FURNITURE3: Furn[] = [
@@ -195,7 +195,7 @@ const tasks3: TaskDef[] = [
     feedback: 'The ring pulses where you should stand; the coach calls your position.', reward: '1 point the first time.', persistence: 'Saved when you reach the ring.',
     introByChoice: {
       striker: [say('tunde', 'Number 14, striker. Up front. Make me forget my last striker.', 'confident')],
-      winger: [say('tunde', 'Number 14, winger. The wing is yours. Run like the bus is leaving.', 'cheeky')],
+      winger: [say('tunde', 'Number 14, winger. The wing is yours. Run like the train is leaving.', 'cheeky')],
       defender: [say('tunde', 'Number 14, defender. Back there. Nobody scores past you.', 'calm')],
     },
     intro: [say('tunde', 'Number 14! Take your place.', 'confident')],
@@ -277,4 +277,4 @@ export const LEVEL_C2L3: LevelDef = withBus({
   timeLimit: 18,
   next: 'ch2.l4',
   starRules: ['Finish the level', 'Get through the defenders before the timer ends', 'Do it on time with 2 mistakes or fewer'],
-}, { to: 'the stadium', title: 'Bus to the stadium', purpose: 'The trial match is at the stadium across town: wait at the stop, board the bus and ride there.', objective: 'Take the bus to the stadium', success: 'You get off at the stadium.', intro: [{ who: 'folake', text: 'The trial match is at the stadium. Take the bus, eat something and do not be shy.', expr: 'calm' }], done: [{ who: 'helper', text: 'Real stadium. Real grass. Real nerves.', expr: 'worried' }] })
+}, { vehicle: 'train', to: 'the stadium', title: 'Train to the stadium', purpose: 'The trial match is at the stadium across town: wait at the stop, board the train and ride there.', objective: 'Take the train to the stadium', success: 'You get off at the stadium.', intro: [{ who: 'folake', text: 'The trial match is at the stadium. Take the train, eat something and do not be shy.', expr: 'calm' }], done: [{ who: 'helper', text: 'Real stadium. Real grass. Real nerves.', expr: 'worried' }] })

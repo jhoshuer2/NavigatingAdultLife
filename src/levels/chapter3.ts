@@ -15,12 +15,12 @@ export const LEVEL_C3L1 = L({
   ch: 'ch3', n: 1, title: 'Opening the Stall', next: 'ch3.l2',
   intro: 'Mama Folake has handed you the keys to her stall for the day. The sun is up, the crowd is gathering and nothing is ready.',
   bounds: STREET_BOUNDS,
-  theme: withStreet({ ground: '#c9b48a', floors: [{ x0: -12.4, x1: 12.4, z0: -2.8, z1: 2.8, color: '#e6dcc4' }], deco: [...MARKET, awn(4, -4.4, ORANGE, 'YOUR STALL'), awn(-6.5, -4.4, GREEN, 'GRAINS'), awn(9.6, -4.4, YELLOW, 'SPICES'), { kind: 'sign', x: 10.8, z: 0, label: 'SHUTTER', w: 1.8 }, { kind: 'sign', x: -12.2, z: -1.6, label: 'MARKET', w: 1.8 }] }),
+  theme: withStreet({ ground: '#c9b48a', floors: [{ x0: -12.4, x1: 12.4, z0: -2.8, z1: 2.8, color: '#e6dcc4' }], deco: [...MARKET, awn(4, -4.4, ORANGE, 'YOUR STALL'), awn(-6.5, -4.4, GREEN, 'GRAINS'), awn(9.6, -4.4, YELLOW, 'SPICES'), { kind: 'sign', x: 10.8, z: 0, label: 'SHUTTER', w: 1.8 }, { kind: 'sign', x: -12.2, z: -1.6, label: 'MARKET', w: 1.8 }] }, 'helicopter'),
   furniture: [F('stall', R(2, 6, -4.8, -3.4), 0.9, WOOD), F('crates', R(-8, -5, -4.8, -3.8), 0.7, DARK), F('spices', R(8, 11.2, -4.8, -3.6), 0.9, WOOD)],
   spawn: { x: -32, z: 0.4 }, resume: { x: 0, z: 0 },
   tasks: [
-    T('ch3.l1', 1, 'ride', 'Take the bus to the market', { purpose: 'The market is across town: wait at the stop, board the bus and ride to the market gate.', objective: 'Take the bus to the market', success: 'You get off at the market.',
-      intro: [say('folake', 'Today you sell, my child. Catch the bus to the market. The stall is the one with the orange roof.', 'happy')], done: [say('player', 'The market already smells like fried plantain and shouting.', 'happy')], hint: 'Walk to the BUS STOP sign, wait for the yellow bus and tap Board.' }),
+    T('ch3.l1', 1, 'ride', 'Take the helicopter to the market', { purpose: 'The market is across town: wait at the stop, board the helicopter and fly to the market gate.', objective: 'Take the helicopter to the market', success: 'You get off at the market.',
+      intro: [say('folake', 'Today you sell, my child. Catch the helicopter to the market. The stall is the one with the orange roof.', 'happy')], done: [say('player', 'The market already smells like fried plantain and shouting.', 'happy')], hint: 'Walk to the HELIPAD sign, wait for the helicopter and tap Board.' }),
     T('ch3.l1', 2, 'sequence', 'Set up the display', { purpose: 'A tidy stall sells more: cloth, crate, scale, price sign, in that order.', objective: 'Cloth, crate, scale, then the price sign', success: 'The display is set up in order.',
       intro: [say('folake', 'Cloth first, then the crate, then the scale, then the sign. A sign on a crooked table is a lie.', 'calm')], done: [say('folake', 'Beautiful. Now people will actually stop.', 'proud')], hint: 'Order: cloth, crate, scale, sign.' }),
     T('ch3.l1', 3, 'choose', 'Set your prices', { purpose: 'Your first trading decision: low, fair or high. All three can work.', objective: 'Choose your prices', success: 'You choose.',
@@ -38,7 +38,7 @@ export const LEVEL_C3L1 = L({
     { id: 'high', task: 2, x: 6.2, z: 1.2, label: 'High prices: earn more, sell less', color: RUST, shape: 'sign', y: 0 },
   ],
   sequences: { 1: ['cloth', 'crate', 'scale', 'sign'] },
-  rides: { 0: { stop: { x: -30, z: 1.8 }, busZ: 4.4, from: 'home', to: 'the market' } },
+  rides: { 0: { vehicle: 'helicopter', stop: { x: -30, z: 1.8 }, busZ: 4.4, from: 'home', to: 'the market' } },
   guide: [{ x: -30, z: 1.8, r: 2 }, { x: 4, z: -4, r: 3 }, { x: 3.4, z: 1.2, r: 4 }, RING(10.4, 0)],
   goto: [RING(-11.2, 0.8, 1.4), null, null, RING(10.4, 0, 1.5)],
   hazards: [D('cart', 5.8, -2.4, 2.4, 2.6, 0), D('cart', 8.2, -2.4, 2.4, 2.9, 1.2, GREEN)],
@@ -90,7 +90,7 @@ export const LEVEL_C3L2 = withBus(L({
   npcs: { folake: { x: 11, z: -4.6, rot: -2.2 }, tunde: { x: -10.8, z: -4.6, rot: 0.6 } }, choiceLabel: 'stock',
   endBeat: { text: 'The crates are back on the table. The tomatoes look at you with a little disappointment. You look back with a lot.', line: 'Your first customers are next.' },
   starRules: ['Finish the level', 'Get back before the timer ends', 'Be on time with two or fewer slips'],
-}), { vehicle: 'train', to: 'the wholesale depot', title: 'Train to the depot', purpose: 'The wholesale depot is out of town: wait at the station, board the train and ride there.', objective: 'Take the train to the depot', success: 'You get off at the depot.', intro: [{ who: 'folake', text: 'The best suppliers are at the wholesale depot, out of town. Take the train and keep hold of the money.', expr: 'calm' }], done: [{ who: 'helper', text: 'The depot train smells of onions and ambition.', expr: 'cheeky' }] })
+}), { vehicle: 'helicopter', to: 'the wholesale depot', title: 'Helicopter to the depot', purpose: 'The wholesale depot is out of town: wait at the helipad, board the helicopter and fly there.', objective: 'Take the helicopter to the depot', success: 'You get off at the depot.', intro: [{ who: 'folake', text: 'The best suppliers are at the wholesale depot, out of town. Take the helicopter and keep hold of the money.', expr: 'calm' }], done: [{ who: 'helper', text: 'The depot helicopter smells of onions and ambition.', expr: 'cheeky' }] })
 
 // ---------------------------------------------------------------------------------------------------------------- Level 3
 export const LEVEL_C3L3 = withBus(L({
@@ -131,7 +131,7 @@ export const LEVEL_C3L3 = withBus(L({
   npcs: { folake: { x: -10.8, z: -4.6, rot: 0.8 }, tunde: { x: 11, z: -4.2, rot: -2.2 } }, choiceLabel: 'discount',
   endBeat: { text: 'By noon you have sold more than your mother did on her first day. She will never admit it.', line: 'A hard haggler is coming.' },
   starRules: ['Finish the level', 'Catch the customer before the timer ends', 'Be on time with two or fewer slips'],
-}), { vehicle: 'train', to: 'the market', title: 'Train to the market', purpose: 'The stall is across town today: wait at the station, board the train and ride to the market.', objective: 'Take the train to the market', success: 'You get off at the market.', intro: [{ who: 'folake', text: 'Second day at the stall. Take the train, say good morning to everyone and smile at customers.', expr: 'happy' }], done: [{ who: 'player', text: 'Fresh day. Fresh tomatoes. Same crowded train.', expr: 'happy' }] })
+}), { vehicle: 'helicopter', to: 'the market', title: 'Helicopter to the market', purpose: 'The stall is across town today: wait at the helipad, board the helicopter and fly to the market.', objective: 'Take the helicopter to the market', success: 'You get off at the market.', intro: [{ who: 'folake', text: 'Second day at the stall. Take the helicopter, say good morning to everyone and smile at customers.', expr: 'happy' }], done: [{ who: 'player', text: 'Fresh day. Fresh tomatoes. Same crowded helicopter.', expr: 'happy' }] })
 
 // ---------------------------------------------------------------------------------------------------------------- Level 4
 export const LEVEL_C3L4 = withBus(L({
@@ -166,7 +166,7 @@ export const LEVEL_C3L4 = withBus(L({
   npcs: { folake: { x: -10.8, z: -4.6, rot: 0.8 }, tunde: { x: 11, z: -4.2, rot: -2.2 } }, choiceLabel: 'settlement',
   endBeat: { text: 'She leaves with tomatoes, a story and a tiny bit of your pride. She will be back tomorrow.', line: 'Count the takings next.' },
   starRules: ['Finish the level', 'Take your time: no timer here', 'Finish with two or fewer slips'],
-}), { vehicle: 'train', to: 'the market', title: 'Train to the market', purpose: 'Market day again: wait at the station, board the train and ride to the market.', objective: 'Take the train to the market', success: 'You get off at the market.', intro: [{ who: 'folake', text: 'A woman is coming to your stall who has never paid the first price in her life. Take the train and take your patience.', expr: 'worried' }], done: [{ who: 'tunde', text: 'Stay calm. Breathe. And do not agree to the first offer.', expr: 'confident' }] })
+}), { vehicle: 'helicopter', to: 'the market', title: 'Helicopter to the market', purpose: 'Market day again: wait at the helipad, board the helicopter and fly to the market.', objective: 'Take the helicopter to the market', success: 'You get off at the market.', intro: [{ who: 'folake', text: 'A woman is coming to your stall who has never paid the first price in her life. Take the helicopter and take your patience.', expr: 'worried' }], done: [{ who: 'tunde', text: 'Stay calm. Breathe. And do not agree to the first offer.', expr: 'confident' }] })
 
 // ---------------------------------------------------------------------------------------------------------------- Level 5
 export const LEVEL_C3L5 = withBus(L({
@@ -210,7 +210,7 @@ export const LEVEL_C3L5 = withBus(L({
   npcs: { folake: { x: 9.4, z: 3.4, rot: -2.4 }, tunde: { x: -9.6, z: -3.2, rot: 0.6 } }, choiceLabel: 'plan',
   endBeat: { text: 'The money is counted, set aside and mostly safe. A small voice says "business is good", and nobody argues.', line: 'The sky is going dark.' },
   starRules: ['Finish the level', 'Take your time: no timer here', 'Finish with two or fewer wrong notes or picks'],
-}), { vehicle: 'train', to: 'the market', title: 'Train after closing', purpose: 'The takings need counting: wait at the station, board the train and ride back to the market.', objective: 'Take the train to the market', success: 'You get off at the market.', intro: [{ who: 'folake', text: 'You left the money box at the stall. Take the train back and count it before anyone else does.', expr: 'worried' }], done: [{ who: 'player', text: 'Please let the box still be there.', expr: 'worried' }] })
+}), { vehicle: 'helicopter', to: 'the market', title: 'Helicopter after closing', purpose: 'The takings need counting: wait at the helipad, board the helicopter and fly back to the market.', objective: 'Take the helicopter to the market', success: 'You get off at the market.', intro: [{ who: 'folake', text: 'You left the money box at the stall. Take the helicopter back and count it before anyone else does.', expr: 'worried' }], done: [{ who: 'player', text: 'Please let the box still be there.', expr: 'worried' }] })
 
 // ---------------------------------------------------------------------------------------------------------------- Level 6
 export const LEVEL_C3L6 = withBus(L({
@@ -249,19 +249,19 @@ export const LEVEL_C3L6 = withBus(L({
   npcs: { folake: { x: 10.6, z: -4.6, rot: -2.4 }, tunde: { x: -10.8, z: -4.6, rot: 0.7 } }, choiceLabel: 'goods',
   endBeat: { text: 'Under the shelter, everyone is soaked, laughing and slightly in love with the stranger next to them.', line: 'Not everyone is so friendly next.' },
   starRules: ['Finish the level', 'Reach the shelter before the timer ends', 'Be on time with two or fewer slips'],
-}), { vehicle: 'train', to: 'the market', title: 'Train to the market', purpose: 'Dark clouds are gathering: wait at the station, board the train and ride to the market before the rain.', objective: 'Take the train to the market', success: 'You get off at the market.', intro: [{ who: 'folake', text: 'The sky looks angry. Take the train now and cover those goods before it rains!', expr: 'worried' }], done: [{ who: 'tunde', text: 'It will rain the second you arrive. Run.', expr: 'angry' }] })
+}), { vehicle: 'helicopter', to: 'the market', title: 'Helicopter to the market', purpose: 'Dark clouds are gathering: wait at the helipad, board the helicopter and fly to the market before the rain.', objective: 'Take the helicopter to the market', success: 'You get off at the market.', intro: [{ who: 'folake', text: 'The sky looks angry. Take the helicopter now and cover those goods before it rains!', expr: 'worried' }], done: [{ who: 'tunde', text: 'It will rain the second you arrive. Run.', expr: 'angry' }] })
 
 // ---------------------------------------------------------------------------------------------------------------- Level 7
 export const LEVEL_C3L7 = L({
   ch: 'ch3', n: 7, title: 'The Competitor', next: 'ch3.l8',
   intro: 'The stall across the lane has been selling the same tomatoes, to the same people, for a very different price. Something smells.',
   bounds: STREET_BOUNDS,
-  theme: withStreet({ ground: '#c9b48a', floors: [{ x0: -12.4, x1: 12.4, z0: -2.8, z1: 2.8, color: '#e6dcc4' }], deco: [...MARKET, awn(-5, -4.4, ORANGE, 'YOUR STALL'), awn(5, -4.4, RUST, 'LUCKY STALL')] }),
+  theme: withStreet({ ground: '#c9b48a', floors: [{ x0: -12.4, x1: 12.4, z0: -2.8, z1: 2.8, color: '#e6dcc4' }], deco: [...MARKET, awn(-5, -4.4, ORANGE, 'YOUR STALL'), awn(5, -4.4, RUST, 'LUCKY STALL')] }, 'helicopter'),
   furniture: [F('mine', R(-7, -3, -4.8, -3.4), 0.9, WOOD), F('his', R(3, 7, -4.8, -3.4), 0.9, WOOD), F('bins', R(-1, 1, 3.6, 4.8), 0.9, '#44444e')],
   spawn: { x: -32, z: 0.4 }, resume: { x: -3, z: 0 },
   tasks: [
-    T('ch3.l7', 1, 'ride', 'Take the bus to the Lucky Stall', { purpose: 'The competitor trades across town: wait at the stop, board the bus and ride to his market.', objective: 'Take the bus to the Lucky Stall', success: 'You get off at his market.',
-      intro: [say('helper', 'Lucky Stall is cheaper than yours. Suspiciously cheaper. Catch the bus and go and see.', 'suspicious')], done: [say('neighbour', 'Welcome to Lucky Stall! Everything is lucky!', 'cheeky')], hint: 'Walk to the BUS STOP sign, wait for the yellow bus and tap Board.' }),
+    T('ch3.l7', 1, 'ride', 'Take the helicopter to the Lucky Stall', { purpose: 'The competitor trades across town: wait at the stop, board the helicopter and fly to his market.', objective: 'Take the helicopter to the Lucky Stall', success: 'You get off at his market.',
+      intro: [say('helper', 'Lucky Stall is cheaper than yours. Suspiciously cheaper. Catch the helicopter and go and see.', 'suspicious')], done: [say('neighbour', 'Welcome to Lucky Stall! Everything is lucky!', 'cheeky')], hint: 'Walk to the HELIPAD sign, wait for the helicopter and tap Board.' }),
     T('ch3.l7', 2, 'find', 'Find who moved your sign', { purpose: 'Your price sign has been moved: find where it ended up.', objective: 'Find your missing price sign', success: 'You find the sign.',
       intro: [say('player', 'My sign has legs. Somebody gave it legs.', 'angry')], done: [say('helper', 'The bins! Of course the bins.', 'tired')], hint: 'Try the bins, the lane and the back of the stalls.' }),
     T('ch3.l7', 3, 'choose', 'Answer him', { purpose: 'No answer is wrong: confront, joke or let it go.', objective: 'Decide how to answer him', success: 'You choose.',
@@ -281,7 +281,7 @@ export const LEVEL_C3L7 = L({
     { id: 'letgo', task: 2, x: 2.6, z: 1.2, label: 'Let it go', color: GREEN, shape: 'sign', y: 0 },
   ],
   holds: { 3: { x: 3.2, z: 1.4, r: 1.6, secs: 6 } },
-  rides: { 0: { stop: { x: -30, z: 1.8 }, busZ: 4.4, from: 'home', to: 'the Lucky Stall district' } },
+  rides: { 0: { vehicle: 'helicopter', stop: { x: -30, z: 1.8 }, busZ: 4.4, from: 'home', to: 'the Lucky Stall district' } },
   guide: [{ x: -30, z: 1.8, r: 2 }, { x: 0, z: 1.5, r: 4 }, { x: 0, z: 1.2, r: 4 }, RING(3.2, 1.4)],
   goto: [RING(-11.2, 0.8, 1.4), null, null, null],
   crowd: [{ x: 6, z: 1.4, rot: -1.6 }, { x: -8, z: 4, rot: 0.4 }],
@@ -328,7 +328,7 @@ export const LEVEL_C3L8 = withBus(L({
   npcs: { folake: { x: -10.8, z: -4.6, rot: 0.8 }, tunde: { x: 10.6, z: -1.4, rot: -1.6 } }, choiceLabel: 'answer',
   endBeat: { text: 'He writes something down, nods, and moves on to the next stall. You do not breathe for a full minute afterwards.', line: 'The day is nearly over.' },
   starRules: ['Finish the level', 'Take your time: no timer here', 'Finish with two or fewer wrong searches or orders'],
-}), { vehicle: 'train', to: 'the market', title: 'Train to the market', purpose: 'Inspection day: wait at the station, board the train and ride to the market.', objective: 'Take the train to the market', success: 'You get off at the market.', intro: [{ who: 'folake', text: 'The inspector is coming today. Tidy, honest and early. Take the train and do not be late!', expr: 'worried' }], done: [{ who: 'helper', text: 'I hear the inspector carries a very small clipboard and a very big opinion.', expr: 'suspicious' }] })
+}), { vehicle: 'helicopter', to: 'the market', title: 'Helicopter to the market', purpose: 'Inspection day: wait at the helipad, board the helicopter and fly to the market.', objective: 'Take the helicopter to the market', success: 'You get off at the market.', intro: [{ who: 'folake', text: 'The inspector is coming today. Tidy, honest and early. Take the helicopter and do not be late!', expr: 'worried' }], done: [{ who: 'helper', text: 'I hear the inspector carries a very small clipboard and a very big opinion.', expr: 'suspicious' }] })
 
 // ---------------------------------------------------------------------------------------------------------------- Level 9
 export const LEVEL_C3L9 = withBus(L({
@@ -365,4 +365,4 @@ export const LEVEL_C3L9 = withBus(L({
   npcs: { folake: { x: 8.4, z: 3.4, rot: -2.4 }, tunde: { x: 9.6, z: -3.4, rot: -2 } }, choiceLabel: 'share',
   endBeat: { text: 'The shutter comes down. The lanterns flicker. Mama Folake says nothing, which from her is a standing ovation.', line: 'Chapter 3 is done. A new chapter is open.' },
   starRules: ['Finish the level', 'Take your time: no timer here', 'Finish with two or fewer wrong notes'],
-}), { vehicle: 'train', to: 'the market', title: 'Train to the market', purpose: 'The last trading day: wait at the station, board the train and ride to the market.', objective: 'Take the train to the market', success: 'You get off at the market.', intro: [{ who: 'folake', text: 'Last day of the season. Take the train, my child. We count the money together tonight.', expr: 'happy' }], done: [{ who: 'tunde', text: 'Whatever you earned, you earned it standing up.', expr: 'proud' }] })
+}), { vehicle: 'helicopter', to: 'the market', title: 'Helicopter to the market', purpose: 'The last trading day: wait at the helipad, board the helicopter and fly to the market.', objective: 'Take the helicopter to the market', success: 'You get off at the market.', intro: [{ who: 'folake', text: 'Last day of the season. Take the helicopter, my child. We count the money together tonight.', expr: 'happy' }], done: [{ who: 'tunde', text: 'Whatever you earned, you earned it standing up.', expr: 'proud' }] })

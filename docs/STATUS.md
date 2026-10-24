@@ -282,3 +282,8 @@ Feedback: levels felt like walk, tap, repeat. Two new acted-out task kinds (engi
 
 ## Chapter 4: train rides
 - Train ride (`withBus`, `vehicle: 'train'`) added to ch4 L2, L3, L5, L6, L7, L8, L9 (L1 and L4 already start on a bus). Played in headless Chrome: board, ride, arrive, next task. Players mid-level resume one step earlier.
+
+## One vehicle per chapter
+Feedback: each chapter should introduce its own means of transport, not repeat one. Now: Chapter 1 bus, Chapter 2 train, Chapter 3 helicopter, Chapter 4 ferry (replaces the earlier bus/train in those chapters).
+- `Ride.vehicle`: `'bus' | 'train' | 'helicopter' | 'ferry'`. `street.ts` has a setting per vehicle (`SETS`: road, rails, helipad, water and dock) and `VEHICLE_INFO` (names, sign, hint). The renderer draws each vehicle; the helicopter descends to land and climbs while flying with a spinning rotor, the ferry bobs on the water.
+- Texts were reworded per chapter (stop, station, helipad, dock). Played in headless Chrome: ch2 L1/L8 (train), ch3 L1/L4/L7 (helicopter), ch4 L1/L4/L8 (ferry).

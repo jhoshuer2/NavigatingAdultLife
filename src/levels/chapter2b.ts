@@ -48,7 +48,7 @@ export const LEVEL_C2L4 = withBus(L({
   npcs: { folake: { x: 10.6, z: 3.6, rot: -2.2 }, tunde: { x: 6, z: -4.2, rot: 0 } }, choiceLabel: 'entrance',
   endBeat: { text: 'The door closes behind you. The coach has a clipboard and a face that gives nothing away.', line: 'A fitness test is next.' },
   starRules: ['Finish the level', 'Take your time: no timer here', 'Finish with two or fewer wrong doors'],
-}), { to: 'the club', title: 'Bus to the club', purpose: 'The results are at the club office across town: wait at the stop, board the bus and ride there.', objective: 'Take the bus to the club', success: 'You get off at the club.', intro: [{ who: 'folake', text: 'They called. Come to the club office for the results. Take the bus and breathe.', expr: 'worried' }], done: [{ who: 'helper', text: 'This is the building where dreams get decided. Or posted on a notice board.', expr: 'cheeky' }] })
+}), { vehicle: 'train', to: 'the club', title: 'Train to the club', purpose: 'The results are at the club office across town: wait at the stop, board the train and ride there.', objective: 'Take the train to the club', success: 'You get off at the club.', intro: [{ who: 'folake', text: 'They called. Come to the club office for the results. Take the train and breathe.', expr: 'worried' }], done: [{ who: 'helper', text: 'This is the building where dreams get decided. Or posted on a notice board.', expr: 'cheeky' }] })
 
 // ---------------------------------------------------------------------------------------------------------------- Level 5
 export const LEVEL_C2L5 = withBus(L({
@@ -82,7 +82,7 @@ export const LEVEL_C2L5 = withBus(L({
   npcs: { folake: { x: -9.4, z: -4.8, rot: 0.7 }, tunde: { x: 1, z: -4.4, rot: 0 } }, choiceLabel: 'break',
   endBeat: { text: 'You are tired in places you did not know could be tired. The coach writes something and looks away.', line: 'Your kit needs sorting next.' },
   starRules: ['Finish the level', 'Sprint to the ring before the timer ends', 'Be on time with two or fewer wrong cones'],
-}), { to: 'the sports hall', title: 'Bus to the fitness test', purpose: 'The fitness test is at the sports ground across town: wait at the stop, board the bus and ride there.', objective: 'Take the bus to the sports ground', success: 'You get off at the sports ground.', intro: [{ who: 'folake', text: 'Fitness test this morning. The bus stop is up the road. Run for it if you have to. Practice!', expr: 'happy' }], done: [{ who: 'tunde', text: 'If you are tired already, we have a problem.', expr: 'cheeky' }] })
+}), { vehicle: 'train', to: 'the sports hall', title: 'Train to the fitness test', purpose: 'The fitness test is at the sports ground across town: wait at the stop, board the train and ride there.', objective: 'Take the train to the sports ground', success: 'You get off at the sports ground.', intro: [{ who: 'folake', text: 'Fitness test this morning. The station is up the road. Run for it if you have to. Practice!', expr: 'happy' }], done: [{ who: 'tunde', text: 'If you are tired already, we have a problem.', expr: 'cheeky' }] })
 
 // ---------------------------------------------------------------------------------------------------------------- Level 6
 export const LEVEL_C2L6 = withBus(L({
@@ -130,7 +130,7 @@ export const LEVEL_C2L6 = withBus(L({
   npcs: { folake: { x: -10.8, z: -4.8, rot: 0.7 }, tunde: { x: 10.8, z: -4.6, rot: -2 } }, choiceLabel: 'choice',
   endBeat: { text: 'You run onto the pitch with one new lace and a very old problem: the rival is already there.', line: 'Meet him in Level 7.' },
   starRules: ['Finish the level', 'Reach the door before the timer ends', 'Be on time with two or fewer slips'],
-}), { to: 'the changing rooms', title: 'Bus to the ground', purpose: 'You are running late: wait at the stop, board the bus and ride to the ground.', objective: 'Take the bus to the ground', success: 'You get off at the ground.', intro: [{ who: 'folake', text: 'You are late and your boot is missing. I can solve one of those. Take the bus!', expr: 'worried' }], done: [{ who: 'helper', text: 'Late and shoeless. Classic.', expr: 'cheeky' }] })
+}), { vehicle: 'train', to: 'the changing rooms', title: 'Train to the ground', purpose: 'You are running late: wait at the stop, board the train and ride to the ground.', objective: 'Take the train to the ground', success: 'You get off at the ground.', intro: [{ who: 'folake', text: 'You are late and your boot is missing. I can solve one of those. Take the train!', expr: 'worried' }], done: [{ who: 'helper', text: 'Late and shoeless. Classic.', expr: 'cheeky' }] })
 
 // ---------------------------------------------------------------------------------------------------------------- Level 7
 export const LEVEL_C2L7 = withBus(L({
@@ -163,7 +163,7 @@ export const LEVEL_C2L7 = withBus(L({
   npcs: { folake: { x: -9.4, z: -4.8, rot: 0.7 }, tunde: { x: 0, z: -4.4, rot: 0 } }, choiceLabel: 'ending',
   endBeat: { text: 'Kunle walks off, looking back once. Whatever he was going to say, he decided against it.', line: 'A friendly match is next.' },
   starRules: ['Finish the level', 'Take your time: no timer here', 'Finish with two or fewer missed penalties'],
-}), { to: 'the rival\'s ground', title: 'Bus to the rival\'s ground', purpose: 'The rival match is at his school\'s ground across town: wait at the stop, board the bus and ride there.', objective: 'Take the bus to the rival\'s ground', success: 'You get off at the rival\'s ground.', intro: [{ who: 'folake', text: 'His school is across town. Be polite, win politely and take the bus.', expr: 'calm' }], done: [{ who: 'helper', text: 'He has been telling everyone he will win.', expr: 'suspicious' }] })
+}), { vehicle: 'train', to: 'the rival\'s ground', title: 'Train to the rival\'s ground', purpose: 'The rival match is at his school\'s ground across town: wait at the stop, board the train and ride there.', objective: 'Take the train to the rival\'s ground', success: 'You get off at the rival\'s ground.', intro: [{ who: 'folake', text: 'His school is across town. Be polite, win politely and take the train.', expr: 'calm' }], done: [{ who: 'helper', text: 'He has been telling everyone he will win.', expr: 'suspicious' }] })
 
 // ---------------------------------------------------------------------------------------------------------------- Level 8
 const RINGS_BY_BOOTS = { striker: RING(8.2, 0), winger: RING(3, -3.8), defender: RING(-8, 0) }
@@ -204,7 +204,7 @@ export const LEVEL_C2L8 = withBus(L({
   npcs: { folake: { x: -9.4, z: -4.8, rot: 0.7 }, tunde: { x: 0, z: -4.4, rot: 0 } }, choiceLabel: 'celebration',
   endBeat: { text: 'The crowd is on its feet. For a moment you forget there is a verdict coming.', line: 'The coach wants to see you.' },
   starRules: ['Finish the level', 'Run the counter-attack before the timer ends', 'Be on time with two or fewer missed penalties'],
-}), { to: 'the stadium', title: 'Bus to the match', purpose: 'The friendly is at the big stadium: wait at the stop, board the bus and ride there.', objective: 'Take the bus to the stadium', success: 'You get off at the stadium.', intro: [{ who: 'folake', text: 'The friendly match! Everyone is coming to see you. Take the bus and hold your head high.', expr: 'happy' }], done: [{ who: 'tunde', text: 'Big crowd today. Do not look at it. Look at the ball.', expr: 'confident' }] })
+}), { vehicle: 'train', to: 'the stadium', title: 'Train to the match', purpose: 'The friendly is at the big stadium: wait at the stop, board the train and ride there.', objective: 'Take the train to the stadium', success: 'You get off at the stadium.', intro: [{ who: 'folake', text: 'The friendly match! Everyone is coming to see you. Take the train and hold your head high.', expr: 'happy' }], done: [{ who: 'tunde', text: 'Big crowd today. Do not look at it. Look at the ball.', expr: 'confident' }] })
 
 // ---------------------------------------------------------------------------------------------------------------- Level 9
 export const LEVEL_C2L9 = withBus(L({
@@ -244,4 +244,4 @@ export const LEVEL_C2L9 = withBus(L({
   npcs: { folake: { x: 8.4, z: 4.0, rot: -2.4 }, tunde: { x: -4, z: -4.2, rot: 0 } }, choiceLabel: 'answer',
   endBeat: { text: 'Whatever you said, you said it yourself. That is the part that counts.', line: 'Chapter 2 is done. A new chapter is open.' },
   starRules: ['Finish the level', 'Take your time: no timer here', 'Finish with two or fewer wrong forms'],
-}), { to: 'the club office', title: 'Bus to the verdict', purpose: 'The verdict is at the club office across town: wait at the stop, board the bus and ride there.', objective: 'Take the bus to the club office', success: 'You get off at the club office.', intro: [{ who: 'folake', text: 'Today they tell you. Whatever they say, I am proud. Now take the bus before I cry.', expr: 'worried' }], done: [{ who: 'tunde', text: 'Deep breath. Same bus, different day.', expr: 'calm' }] })
+}), { vehicle: 'train', to: 'the club office', title: 'Train to the verdict', purpose: 'The verdict is at the club office across town: wait at the stop, board the train and ride there.', objective: 'Take the train to the club office', success: 'You get off at the club office.', intro: [{ who: 'folake', text: 'Today they tell you. Whatever they say, I am proud. Now take the train before I cry.', expr: 'worried' }], done: [{ who: 'tunde', text: 'Deep breath. Same train, different day.', expr: 'calm' }] })

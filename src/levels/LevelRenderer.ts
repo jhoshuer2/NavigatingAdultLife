@@ -5,7 +5,7 @@ import { buildToon, type Expression, type ToonParts, type ToonSpec } from '../wo
 import { animateHuman } from '../world/characters'
 import { MAMA_FOLAKE, BABA_TUNDE, neighbour } from '../world/castData'
 import { moveWithCollision } from '../world/nav'
-import { STREET } from './street'
+import { SETS } from './street'
 import type { Deco, LevelDef, Item, Spot, Hazard, Speaker, ServeGuest } from './schema'
 import type { TaskRunner } from './TaskRunner'
 
@@ -74,6 +74,7 @@ export class LevelRenderer {
   private busX = 0
   private busPhase: 'away' | 'arriving' | 'waiting' | 'riding' | 'dropped' = 'away'
   private busT = 0
+  private vehicleKind: 'bus' | 'train' | 'helicopter' | 'ferry' = 'bus'
 
   constructor(private canvas: HTMLCanvasElement, private level: LevelDef, spec: ToonSpec, startTask = 0) {
     this.r = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false })
@@ -227,7 +228,19 @@ export class LevelRenderer {
   private buildBus() {
     const train = Object.values(this.level.rides ?? {})[0]?.vehicle === 'train'
     const g = new THREE.Group(), add = (w: number, h: number, d: number, c: string, x: number, y: number, z: number) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), lam(c)); m.position.set(x, y, z); g.add(m) }
-    if (train) { // three carriages behind the engine, which is at the origin
+    const kind = Object.values(this.level.rides ?? {})[0]?.vehicle ?? 'bus'
+    this.vehicleKind = kind
+    if (kind === 'helicopter') {
+      const body = new THREE.Mesh(new THREE.SphereGeometry(1, 14, 10), lam('#c4562a')); body.scale.set(1.7, 0.95, 1.0); body.position.y = 1.5; g.add(body)
+      const glass = new THREE.Mesh(new THREE.SphereGeometry(0.8, 12, 8), lam('#9ecbe6')); glass.scale.set(1, 0.8, 1.02); glass.position.set(1.0, 1.65, 0); g.add(glass)
+      add(2.6, 0.22, 0.22, '#c4562a', -2.6, 1.7, 0); add(0.14, 0.9, 0.1, '#1c1b22', -3.8, 1.9, 0)
+      const rotor = new THREE.Group(); rotor.position.set(0, 2.65, 0); rotor.name = 'rotor'; const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.3, 6), lam('#1c1b22')); mast.position.y = -0.1; rotor.add(mast); for (const a of [0, Math.PI / 2]) { const bl = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.05, 0.18), lam('#2b2b33')); bl.rotation.y = a; rotor.add(bl) } g.add(rotor)
+      for (const z of [-0.7, 0.7]) { add(3.0, 0.08, 0.1, '#1c1b22', 0, 0.35, z); add(0.08, 0.7, 0.08, '#1c1b22', -0.8, 0.7, z); add(0.08, 0.7, 0.08, '#1c1b22', 0.8, 0.7, z) }
+      const l = this.label('HELI', 1.4); l.position.set(0, 3.4, 0); g.add(l)
+    } else if (kind === 'ferry') {
+      add(6.4, 0.9, 2.3, '#fbf8f0', 0, 0.55, 0); add(6.42, 0.3, 2.32, '#2b6ad0', 0, 0.2, 0); add(3.2, 1.0, 1.8, '#fbf8f0', -0.4, 1.5, 0); add(3.0, 0.4, 1.84, '#9ecbe6', -0.4, 1.6, 0); add(0.5, 0.9, 0.5, '#e07a1f', -1.4, 2.4, 0); add(0.52, 0.2, 0.52, '#1c1b22', -1.4, 2.9, 0)
+      const l = this.label('FERRY', 1.5); l.position.set(0, 3.5, 0); g.add(l)
+    } else if (train) { // three carriages behind the engine, which is at the origin
       for (const [i, c] of ['#2f5a3a', '#e07a1f', '#e07a1f'].entries()) { const x = -i * 5; add(4.8, 1.7, 1.9, c, x, 1.25, 0); add(4.82, 0.2, 1.92, '#1c1b22', x, 0.55, 0); add(4.4, 0.55, 1.94, '#9ecbe6', x, 1.65, 0); add(4.9, 0.12, 2.0, '#fbf8f0', x, 2.15, 0); for (const wx of [-1.6, 1.6]) for (const wz of [-0.8, 0.8]) { const w = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.12, 10), lam('#1c1b22')); w.rotation.x = Math.PI / 2; w.position.set(x + wx, 0.3, wz); g.add(w) } }
       add(0.2, 0.5, 1.5, '#fbf8f0', 2.4, 1.2, 0)
       const l = this.label('TRAIN', 1.5); l.position.set(0, 2.9, 0); g.add(l)
@@ -258,9 +271,9 @@ export class LevelRenderer {
 
   /** the street a bus ride starts on, west of the fenced pitch */
   private buildPitchStreet() {
-    const f = STREET.floor
+    const set = SETS[Object.values(this.level.rides ?? {})[0]?.vehicle ?? 'bus'], f = set.floor
     this.box(-12.6 - f.x0, 0.1, f.z1 - f.z0, f.color, (f.x0 - 12.6) / 2, -0.03, (f.z0 + f.z1) / 2)
-    this.buildDeco(STREET.deco.map((d) => d.kind === 'road' ? { ...d, x: -23.7, w: 21.4 } : d.kind === 'wall' ? { ...d, x: -23.5, w: 21 } : d))
+    this.buildDeco(set.deco.map((d) => d.kind === 'road' || d.kind === 'rail' || d.kind === 'water' ? { ...d, x: -23.7, w: 21.4 } : d.kind === 'wall' ? { ...d, x: -23.5, w: 21 } : d))
   }
 
   private buildSceneDeco() { this.buildDeco(this.level.theme!.deco) }
@@ -279,6 +292,8 @@ export class LevelRenderer {
         case 'road': { this.box(w, 0.04, dd, col === '#a87a50' ? '#3d3d46' : col, d.x, 0.0, d.z); for (let x = d.x - w / 2 + 1; x < d.x + w / 2 - 1; x += 3) this.box(1.4, 0.02, 0.14, '#f4f1e6', x, 0.04, d.z); break }
         case 'rug': this.box(w, 0.03, dd, col, d.x, 0.02, d.z); break
         case 'crate': this.box(w, h, dd, col, d.x, h / 2, d.z); break
+        case 'water': { const wt = this.box(w, 0.05, dd, '#4a90c2', d.x, -0.02, d.z); const wm = wt.material as THREE.MeshLambertMaterial; wm.transparent = true; wm.opacity = 0.85; for (let x = d.x - w / 2 + 1; x < d.x + w / 2 - 1; x += 2.6) this.box(1.1, 0.02, 0.07, '#d9f0fb', x, 0.03, d.z + ((x * 7) % 1.2) - 0.6); break }
+        case 'pad': { this.box(w, 0.06, w, '#6f6f78', d.x, 0.02, d.z); const rim = new THREE.Mesh(new THREE.RingGeometry(w * 0.4, w * 0.44, 32), new THREE.MeshBasicMaterial({ color: '#f5b91c', side: THREE.DoubleSide })); rim.rotation.x = -Math.PI / 2; rim.position.set(d.x, 0.07, d.z); this.scene.add(rim); for (const dx of [-0.4, 0.4]) this.box(0.2, 0.02, 1.4, '#f5b91c', d.x + dx, 0.07, d.z); this.box(0.8, 0.02, 0.2, '#f5b91c', d.x, 0.07, d.z); break }
         case 'rail': { this.box(w, 0.06, dd, '#6f6a60', d.x, 0.0, d.z); for (const dz of [-0.55, 0.55]) this.box(w, 0.1, 0.1, '#b9bdc2', d.x, 0.1, d.z + dz); for (let x = d.x - w / 2 + 0.5; x < d.x + w / 2; x += 1.1) this.box(0.28, 0.06, dd, '#5b4636', x, 0.04, d.z); break }
         case 'chair': { this.box(0.7, 0.1, 0.7, col, d.x, 0.5, d.z); this.box(0.7, 0.8, 0.1, col, d.x, 0.95, d.z - 0.3); for (const sx of [-1, 1]) for (const sz of [-1, 1]) this.box(0.08, 0.5, 0.08, '#44444e', d.x + sx * 0.3, 0.25, d.z + sz * 0.3); break }
       }
@@ -536,7 +551,7 @@ export class LevelRenderer {
           else if (st === 1 && run.carry) consider({ id: `g:${g.id}`, x: at.x, z: at.z, label: run.carry === g.dish ? `Serve ${g.name}` : `Give to ${g.name}` } as unknown as Spot, 'spot') }
         if (!run.carry) for (const it of L.items) if (it.task === idx) { const g = run.serve?.guests.find((x) => x.dish === it.id); if (g && run.guests[g.id] === 1) consider(it, 'item') }
       }
-      if (run.task.kind === 'ride' && this.busPhase === 'waiting') { const r = L.rides?.[idx]; if (r && Math.hypot(this.px - r.stop.x, this.pz - r.stop.z) < 3.4) best = { kind: 'spot', id: 'bus', label: `Board the ${r.vehicle === 'train' ? 'train' : 'bus'} to ${r.to}` } }
+      if (run.task.kind === 'ride' && this.busPhase === 'waiting') { const r = L.rides?.[idx]; if (r && Math.hypot(this.px - r.stop.x, this.pz - r.stop.z) < 3.4) best = { kind: 'spot', id: 'bus', label: `Board the ${r.vehicle ?? 'bus'} to ${r.to}` } }
       if (run.task.kind === 'kick' && L.kick && !this.kickAnim && Math.hypot(L.kick.x - this.px, L.kick.z - this.pz) < 1.3) best = { kind: 'spot', id: 'kick', label: L.kick.pass ? 'Pass!' : 'Kick!' }
     }
     if (this.act) best = null
@@ -576,10 +591,10 @@ export class LevelRenderer {
   private stepBus(dt: number) {
     const run = this.runner, bus = this.bus; if (!bus || !run) return
     const r = this.level.rides?.[run.idx], on = !!r && run.task.kind === 'ride' && !run.finished
-    if (!on) { if (this.busPhase === 'dropped') { this.busX += 11 * dt; bus.position.x = this.busX; this.busT += dt; if (this.busT > 4) { bus.visible = false; this.busPhase = 'away' } } else { bus.visible = false; this.busPhase = 'away'; this.me.group.visible = true } return }
+    if (!on) { if (this.busPhase === 'dropped') { this.busX += 11 * dt; bus.position.x = this.busX; this.busT += dt; const rot = bus.getObjectByName('rotor'); if (rot) rot.rotation.y += 0.9; if (this.vehicleKind === 'helicopter') bus.position.y = this.busT * 2.5; if (this.busT > 4) { bus.visible = false; this.busPhase = 'away' } } else { bus.visible = false; this.busPhase = 'away'; this.me.group.visible = true } return }
     const stopX = r.stop.x + 1.4
     if (this.busPhase === 'dropped') { this.busPhase = 'away' }
-    bus.visible = true; bus.position.set(this.busX, 0, r.busZ)
+    bus.visible = true; bus.position.set(this.busX, this.vehicleY(r.stop.x + 1.4, run.goalArea ? run.goalArea.x - 1.2 : this.busX), r.busZ)
     if (this.busPhase === 'away') {
       if (!bus.userData.started) { this.busX = r.stop.x - 34; bus.userData.started = true }
       if (Math.hypot(this.px - r.stop.x, this.pz - r.stop.z) < 9) { this.busPhase = 'arriving'; this.onFx?.('pop') }
@@ -591,6 +606,17 @@ export class LevelRenderer {
       this.busX += Math.min(Math.max(0, tx - this.busX), 9 * dt); this.px = this.busX; this.pz = r.busZ; this.me.group.visible = false
       if (this.busX >= tx - 0.01 && dest) { this.me.group.visible = true; this.px = dest.x; this.pz = dest.z; this.busPhase = 'dropped'; this.busT = 0; bus.userData.started = false; this.onFx?.('pop') }
     }
+  }
+
+  /** helicopters descend to land and climb while flying; ferries bob on the water; the rotor never stops */
+  private vehicleY(stopX: number, destX: number): number {
+    const bus = this.bus!, rotor = bus.getObjectByName('rotor'); if (rotor) rotor.rotation.y += 0.9
+    if (this.vehicleKind === 'ferry') return Math.sin(this.t * 2) * 0.05 - 0.15
+    if (this.vehicleKind !== 'helicopter') return 0
+    if (this.busPhase === 'away') return 7
+    if (this.busPhase === 'arriving') return Math.min(7, Math.max(0, (stopX - this.busX) * 0.7))
+    if (this.busPhase === 'riding') return Math.max(0, Math.min(3.5, (this.busX - stopX) * 0.9, (destX - this.busX) * 0.9))
+    return 0
   }
 
   /** the Board button: you climb on and the camera rides along */
