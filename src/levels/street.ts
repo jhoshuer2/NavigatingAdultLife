@@ -18,6 +18,7 @@ export const SETS: Record<Vehicle, StreetSet> = {
   shuttle: base({ kind: 'road', x: -23.2, z: 4.4, w: 22.4, d: 2.6, color: '#4a4a52' }, 'SHUTTLE STOP', [{ kind: 'tree', x: -31, z: 3 }], '#d4dcc0'),
   ambulance: base({ kind: 'road', x: -23.2, z: 4.4, w: 22.4, d: 2.6, color: '#5a5a62' }, 'AMBULANCE BAY', [{ kind: 'rug', x: -28.6, z: 3.4, w: 3.6, d: 1.2, color: '#c9372c' }], '#dfe4e6'),
   van: base({ kind: 'road', x: -23.2, z: 4.4, w: 22.4, d: 2.6, color: '#6a6258' }, 'VAN PARK', [{ kind: 'crate', x: -27, z: 1, w: 1.2, d: 1.2, h: 0.8, color: '#a87a50' }], '#e2d8bc'),
+  car: base({ kind: 'road', x: -23.2, z: 4.4, w: 22.4, d: 2.6 }, 'CAR PARK', [{ kind: 'tree', x: -31, z: 3 }], '#d8d4c4'),
   ferry: base({ kind: 'water', x: -23.2, z: 4.9, w: 22.4, d: 3.6 }, 'FERRY DOCK', [{ kind: 'rug', x: -28.6, z: 3.4, w: 4.6, d: 1.2, color: '#a87a50' }], '#d6c9a8'),
 }
 export const STREET = SETS.bus
@@ -33,5 +34,6 @@ export const VEHICLE_INFO: Record<Vehicle, { noun: string; sign: string; hint: s
   shuttle: { noun: 'shuttle', sign: 'SHUTTLE STOP', hint: 'Walk to the SHUTTLE STOP sign, wait for the green shuttle and tap Board the shuttle.' },
   ambulance: { noun: 'ambulance', sign: 'AMBULANCE BAY', hint: 'Walk to the AMBULANCE BAY sign, wait for the ambulance and tap Board the ambulance.' },
   van: { noun: 'van', sign: 'VAN PARK', hint: 'Walk to the VAN PARK sign, wait for the orange van and tap Board the van.' },
+  car: { noun: 'car', sign: 'CAR PARK', hint: 'Walk to the CAR PARK sign, wait for the family car and tap Board the car.' },
   ferry: { noun: 'ferry', sign: 'FERRY DOCK', hint: 'Walk to the FERRY DOCK sign, wait for the ferry and tap Board the ferry.' },
 }

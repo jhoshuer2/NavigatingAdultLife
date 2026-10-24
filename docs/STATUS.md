@@ -364,3 +364,16 @@ Nine levels in `src/levels/chapter9.ts`, each opening with a ride in an orange c
 8. The Campsite: collect, sequence, serve, hold
 9. Arrival in Calabar: talk, hold, choose, goto (badge "Road Trip")
 New poses: crank, photo. Chapter 10 remains a locked placeholder.
+
+## Chapter 10: Family Weekend (family car)
+Nine levels in `src/levels/chapter10.ts`, each opening with a ride in the teal family car. Grandma, Uncle Chidi, Aunty Bisi and the cousins visit for the weekend; story, places and dialogue are my own design. All ten chapters are now built (the placeholder helper is removed).
+1. Pick Up the Family: talk, find, collect, goto
+2. Tidy the Flat: sequence, hold, collect, choose
+3. Cooking for Everyone: collect (budget), sequence, serve, talk
+4. Grandma's Welcome: reach, talk, serve, hold (hug)
+5. Game Night: choose, hold, talk, find
+6. The Broken TV: find, sequence, talk, reach
+7. The Cousins: reach, collect, serve, choose
+8. Sunday Service: talk, hold, sequence, goto
+9. The Last Dinner: serve, talk, hold (dance), goto (badge "Family Weekend")
+New poses: hug, dance.
