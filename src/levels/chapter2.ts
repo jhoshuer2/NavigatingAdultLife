@@ -263,6 +263,6 @@ export const LEVEL_C2L3: LevelDef = {
   endBeat: { text: 'The coach writes a number next to your name. You are not allowed to see it.', line: 'Your position will matter in Level 4.' }, choiceLabel: 'decision',
   exitX: 0,
   timeLimit: 18,
-  next: null,
+  next: 'ch2.l4',
   starRules: ['Finish the level', 'Get through the defenders before the timer ends', 'Do it on time with 2 mistakes or fewer'],
 }

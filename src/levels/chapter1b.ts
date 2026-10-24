@@ -2,10 +2,10 @@
 // every task still carries the full template fields (see TASK_FIELDS).
 import type { LevelDef, TaskDef, TaskKind, Line, Rect, Furn, Item, Spot, Hazard, Deco, Theme } from './schema'
 
-const R = (x0: number, x1: number, z0: number, z1: number): Rect => ({ x0, x1, z0, z1 })
-const F = (name: string, rect: Rect, h: number, color: string): Furn => ({ name, rect, h, color })
+export const R = (x0: number, x1: number, z0: number, z1: number): Rect => ({ x0, x1, z0, z1 })
+export const F = (name: string, rect: Rect, h: number, color: string): Furn => ({ name, rect, h, color })
 const B = R(-12.4, 12.4, -6, 6)
-const WOOD = '#a87a50', DARK = '#6b3a1e', GREEN = '#2f5a3a', ORANGE = '#e07a1f', YELLOW = '#f5b91c', RUST = '#c4562a'
+export const WOOD = '#a87a50', DARK = '#6b3a1e', GREEN = '#2f5a3a', ORANGE = '#e07a1f', YELLOW = '#f5b91c', RUST = '#c4562a'
 
 const DEFAULTS: Record<TaskKind, { failure: string; recovery: string; feedback: string; controls: string }> = {
   goto: { failure: 'None.', recovery: 'A ring on the ground marks the place.', feedback: 'The ring pulses and the guide reacts when you arrive.', controls: 'Move with the stick, arrow keys or by tapping the ground.' },
@@ -18,24 +18,26 @@ const DEFAULTS: Record<TaskKind, { failure: string; recovery: string; feedback: 
   sequence: { failure: 'Taking things in the wrong order sends you back to the start of the list.', recovery: 'Try again; the Hint button repeats the order.', feedback: 'A counter shows how far you are; a funny line for a wrong order.', controls: 'Walk to each item and tap the action button, in the right order.' },
 }
 
-interface TOpts { purpose: string; objective: string; success: string; intro: Line[]; done: Line[]; hint: string; introByChoice?: Record<string, Line[]>; variant?: boolean }
-const T = (level: number, n: number, kind: TaskKind, title: string, o: TOpts): TaskDef => ({
-  id: `ch1.l${level}.t${n}`, kind, title, ...DEFAULTS[kind], reward: '1 point the first time.', persistence: 'Saved when the task is done.', ...o,
+interface TOpts { purpose: string; objective: string; success: string; intro: Line[]; done: Line[]; hint: string; introByChoice?: Record<string, Line[]>; variant?: boolean; flag?: string }
+export const T = (level: number | string, n: number, kind: TaskKind, title: string, o: TOpts): TaskDef => ({
+  id: typeof level === 'string' ? `${level}.t${n}` : `ch1.l${level}.t${n}`, kind, title, ...DEFAULTS[kind], reward: '1 point the first time.', persistence: 'Saved when the task is done.', ...o,
 })
-const say = (who: Line['who'], text: string, expr?: Line['expr']): Line => ({ who, text, expr })
+export const say = (who: Line['who'], text: string, expr?: Line['expr']): Line => ({ who, text, expr })
 
-const D = (name: Hazard['name'], x: number, z0: number, z1: number, speed: number, phase: number, color = ORANGE): Hazard => ({ name, x, z0, z1, speed, phase, color })
-const NO_HAZ: { timeLimit: number; hazards: Hazard[] } = { timeLimit: 0, hazards: [] }
+export const D = (name: Hazard['name'], x: number, z0: number, z1: number, speed: number, phase: number, color = ORANGE): Hazard => ({ name, x, z0, z1, speed, phase, color })
+export const NO_HAZ: { timeLimit: number; hazards: Hazard[] } = { timeLimit: 0, hazards: [] }
 
 interface LOpts {
+  /** chapter id (default 'ch1'), scene kind and kit for the other chapters */
+  ch?: string; kind?: 'scene' | 'pitch'; kit?: boolean; kick?: LevelDef['kick']
   n: number; title: string; intro: string; tasks: TaskDef[]; theme: Theme; furniture: Furn[]; spawn: { x: number; z: number }; resume?: { x: number; z: number }
   spots?: Spot[]; items?: Item[]; guide: { x: number; z: number; r: number }[]; goto?: ({ x: number; z: number; r: number } | null)[]
   hazards?: Hazard[]; variants?: LevelDef['variants']; budgets?: LevelDef['budgets']; sequences?: LevelDef['sequences']; holds?: LevelDef['holds']
   crowd?: LevelDef['crowd']; npcs: LevelDef['npcs']; endBeat: LevelDef['endBeat']; endBeats?: LevelDef['endBeats']; choiceLabel?: string; timeLimit?: number; badge?: string
   starRules?: LevelDef['starRules']; next: string | null
 }
-const L = (o: LOpts): LevelDef => ({
-  id: `ch1.l${o.n}`, sceneKind: 'scene', chapter: 'ch1', title: o.title, subtitle: `Level ${o.n}`, intro: o.intro, tasks: o.tasks, theme: o.theme,
+export const L = (o: LOpts): LevelDef => ({
+  id: `${o.ch ?? 'ch1'}.l${o.n}`, sceneKind: o.kind ?? 'scene', kit: o.kit, kick: o.kick, chapter: o.ch ?? 'ch1', title: o.title, subtitle: `Level ${o.n}`, intro: o.intro, tasks: o.tasks, theme: o.theme,
   bounds: B, blockers: o.furniture.map((f) => f.rect), furniture: o.furniture, spawn: o.spawn, spawnAfterFirst: o.resume ?? o.spawn,
   spots: o.spots ?? [], items: o.items ?? [], guideAreas: o.guide, gotoAreas: o.goto, hazards: o.hazards ?? [], variants: o.variants, budgets: o.budgets, sequences: o.sequences, holds: o.holds,
   crowd: o.crowd, npcs: o.npcs, endBeat: o.endBeat, endBeats: o.endBeats, choiceLabel: o.choiceLabel ?? 'choice', exitX: 0, timeLimit: o.timeLimit ?? 20, next: o.next, badge: o.badge,
