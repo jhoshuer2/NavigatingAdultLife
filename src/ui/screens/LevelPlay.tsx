@@ -95,7 +95,23 @@ export default function LevelPlay() {
   const stick = useRef({ x: 0, z: 0 })
   const sync = () => { const s = scene.current; if (!s) return; s.input.x = paused ? 0 : keys.current.x || stick.current.x; s.input.z = paused ? 0 : keys.current.z || stick.current.z }
   useEffect(() => { sync(); if (scene.current) scene.current.paused = paused }, [paused])
-  const act = useCallback(() => { const rn = runner.current, sc = scene.current; if (rn && sc && near && !paused && !sc.busy) sc.perform(near, () => rn.interact(near.id)) }, [near, paused])
+  // penalty task: a needle swings across a bar; Kick stops it, and the green zone decides whether it is a goal
+  const needleRef = useRef(0.5)
+  const [needle, setNeedle] = useState(0.5)
+  const kickReady = !!near && near.id === 'kick' && !paused
+  useEffect(() => {
+    if (!kickReady) return
+    let raf = 0; const t0 = performance.now()
+    const loop = () => { const v = 0.5 + 0.5 * Math.sin(((performance.now() - t0) / 1000) * 3.2); needleRef.current = v; setNeedle(v); raf = requestAnimationFrame(loop) }
+    raf = requestAnimationFrame(loop)
+    return () => cancelAnimationFrame(raf)
+  }, [kickReady])
+  const act = useCallback(() => {
+    const rn = runner.current, sc = scene.current
+    if (!rn || !sc || !near || paused || sc.busy) return
+    if (near.id === 'kick') { const v = needleRef.current, ok = Math.abs(v - 0.5) < rn.kickBand; sc.kickBall(ok, v, () => rn.kickResult(ok)); return }
+    sc.perform(near, () => rn.interact(near.id))
+  }, [near, paused])
   useEffect(() => {
     const down = new Set<string>()
     const upd = () => { keys.current = { x: (down.has('d') || down.has('arrowright') ? 1 : 0) - (down.has('a') || down.has('arrowleft') ? 1 : 0), z: (down.has('s') || down.has('arrowdown') ? 1 : 0) - (down.has('w') || down.has('arrowup') ? 1 : 0) }; sync() }
@@ -123,7 +139,7 @@ export default function LevelPlay() {
   const p = rn?.progress ?? progressOf(meta)
   const speakerSpec = (w: Line['who']) => (w === 'folake' ? MAMA_FOLAKE : w === 'tunde' ? BABA_TUNDE : spec)
   const speakerName = (w: Line['who']) => (w === 'folake' ? 'Mama Folake' : w === 'tunde' ? 'Baba Tunde' : spec.name)
-  const collectInfo = task?.kind === 'collect' && rn ? ` (${rn.collected.length}/${level.items.filter((i) => i.task === rn.idx).length})` : ''
+  const collectInfo = task?.kind === 'collect' && rn ? ` (${rn.collected.length}/${level.items.filter((i) => i.task === rn.idx).length})` : task?.kind === 'kick' && rn ? ` (${rn.goals}/${level.kick?.goals ?? 3})` : ''
   const onStick = (e: React.PointerEvent<HTMLDivElement>, end = false) => {
     const el = e.currentTarget.getBoundingClientRect()
     if (end) { stick.current = { x: 0, z: 0 }; setKnob({ x: 0, y: 0 }); sync(); return }
@@ -180,6 +196,14 @@ export default function LevelPlay() {
         </div>
       )}
 
+      {kickReady && rn && (
+        <div className="absolute inset-x-0 flex justify-center pointer-events-none" style={{ bottom: 'calc(14.2rem + var(--safe-b))' }}>
+          <div className="relative h-7 rounded-full overflow-hidden" style={{ width: 260, background: CREAM, border: `3px solid ${INK}` }} aria-label="Kick timing">
+            <div className="absolute inset-y-0" style={{ left: `${(0.5 - rn.kickBand) * 100}%`, width: `${rn.kickBand * 200}%`, background: '#7fc48a' }} />
+            <div className="absolute inset-y-0 w-1.5" style={{ left: `calc(${needle * 100}% - 3px)`, background: INK }} />
+          </div>
+        </div>
+      )}
       <div className="absolute inset-x-0 bottom-0 flex items-end justify-between px-5 pointer-events-none" style={{ paddingBottom: 'calc(1.4rem + var(--safe-b))' }}>
         <div className="relative w-36 h-36 rounded-full pointer-events-auto" style={{ background: '#fff6', border: `3px solid ${INK}` }} aria-label="Move stick"
           onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); onStick(e) }} onPointerMove={(e) => { if (e.buttons) onStick(e) }} onPointerUp={(e) => onStick(e, true)} onPointerCancel={(e) => onStick(e, true)}>

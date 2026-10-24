@@ -2,7 +2,7 @@
 // failure and recovery rules written down.
 import type { Expression } from '../world/toon'
 
-export type TaskKind = 'find' | 'collect' | 'choose' | 'reach' | 'goto'
+export type TaskKind = 'find' | 'collect' | 'choose' | 'reach' | 'goto' | 'kick'
 export type Speaker = 'folake' | 'tunde' | 'player'
 
 export interface Line { who: Speaker; text: string; expr?: Expression }
@@ -31,7 +31,7 @@ export interface TaskDef {
 }
 
 export interface Spot { id: string; task: number; x: number; z: number; label: string; wrong?: Line; right?: boolean; icon?: string }
-export interface Item { id: string; task: number; x: number; z: number; label: string; color: string; shape: 'box' | 'bag' | 'phone' | 'keys' | 'wallet' | 'umbrella' | 'snack' | 'bank' | 'boots' | 'shinpad' | 'bib' | 'bottle' }
+export interface Item { id: string; task: number; x: number; z: number; label: string; color: string; shape: 'box' | 'bag' | 'phone' | 'keys' | 'wallet' | 'umbrella' | 'snack' | 'bank' | 'boots' | 'shinpad' | 'bib' | 'bottle' | 'ladder' | 'cones' }
 export interface Rect { x0: number; x1: number; z0: number; z1: number }
 export interface Furn { name: string; rect: Rect; h: number; color: string }
 
@@ -47,6 +47,12 @@ export interface LevelDef {
   npcs: { folake: { x: number; z: number; rot: number }; tunde: { x: number; z: number; rot: number } }
   /** for 'goto' tasks: the area to walk into, per task index */
   gotoAreas?: ({ x: number; z: number; r: number } | null)[]
+  /** a penalty-kick task: stand on the spot, tap Kick with the needle in the green, score `goals` times */
+  kick?: { x: number; z: number; goals: number; goal: { x: number; z: number } }
+  /** the timed task changes with the choice made before it: its own time limit and hazards */
+  variants?: Record<string, { timeLimit: number; hazards: Hazard[]; label: string }>
+  /** other hopefuls standing about, drawn as characters */
+  crowd?: { x: number; z: number; rot: number }[]
   /** the closing beat shown on the result screen */
   endBeat: { text: string; line: string }
   /** what the optional choice is called, for the result screen */

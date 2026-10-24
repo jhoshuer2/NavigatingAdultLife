@@ -37,7 +37,15 @@ export class TaskRunner {
   buzzing = false
   /** seconds since the player last made progress in this task; after 15 the scene shows a soft guide ring */
   sinceProgress = 0
-  get guideOn() { return this.sinceProgress > 15 && !this.finished && this.task.kind !== 'reach' && this.task.kind !== 'goto' }
+  get guideOn() { return this.sinceProgress > 15 && !this.finished && this.task.kind !== 'reach' && this.task.kind !== 'goto' && this.task.kind !== 'kick' }
+  /** penalty task: goals so far, and how wide the green zone is (a few misses widen it a little so nobody is stuck) */
+  goals = 0
+  misses = 0
+  get kickBand() { return 0.16 + 0.03 * Math.min(5, this.misses) }
+  /** what the timed task uses: the variant picked in the choice before it, or the level's own */
+  get variant() { const c = this.progress.flags[this.flagKey]; return c ? this.level.variants?.[c] : undefined }
+  get hazards() { return this.variant?.hazards ?? this.level.hazards }
+  get timeLimit() { return this.variant?.timeLimit ?? this.level.timeLimit }
 
   constructor(public level: LevelDef, progress: ChapterProgress, private h: RunnerHooks, startTask = 0) {
     this.progress = progress
@@ -51,8 +59,8 @@ export class TaskRunner {
 
   private begin() {
     this.sinceProgress = 0
-    this.wrong = 0; this.found = false; this.collected = []; this.buzzing = false
-    if (this.task.kind === 'reach') this.timeLeft = this.level.timeLimit
+    this.wrong = 0; this.found = false; this.collected = []; this.buzzing = false; this.goals = 0; this.misses = 0
+    if (this.task.kind === 'reach') this.timeLeft = this.timeLimit
     this.h.taskStarted(this.idx)
     for (const l of this.task.intro) this.h.say(l)
     this.h.changed()
@@ -90,11 +98,26 @@ export class TaskRunner {
       const before = this.timeLeft
       this.timeLeft = Math.max(0, this.timeLeft - dt)
       if (before > 0 && this.timeLeft === 0) { this.h.taskFailed(this.idx, 'timer'); this.h.toast('Late! Keep going, the door is still there'); this.h.changed() }
-      if (px >= this.level.exitX) this.complete()
+      const area = this.level.gotoAreas?.[this.idx]
+      if (area ? Math.hypot(px - area.x, _pz - area.z) < area.r : px >= this.level.exitX) this.complete()
     } else if (this.task.kind === 'goto') {
       const g = this.level.gotoAreas?.[this.idx]
       if (g && Math.hypot(px - g.x, _pz - g.z) < g.r) this.complete()
     }
+  }
+
+  /** the result of one penalty: the scene has played the shot, now the rule is applied */
+  kickResult(success: boolean): void {
+    if (this.finished || this.task.kind !== 'kick') return
+    this.sinceProgress = 0
+    const need = this.level.kick?.goals ?? 3
+    if (success) {
+      this.goals++; this.h.sfx?.('pick'); this.h.toast(`GOAL! ${this.goals}/${need}`)
+      if (this.goals >= need) { this.complete(); return }
+    } else {
+      this.misses++; this.mistakes++; this.h.sfx?.('nope'); this.h.toast('Wide! Try again')
+    }
+    this.h.changed()
   }
 
   /** tripping over something: costs seconds, never the level */

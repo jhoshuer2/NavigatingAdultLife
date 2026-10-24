@@ -118,7 +118,7 @@ export function LevelIntro() {
 }
 
 export function LevelResult() {
-  const { lastLevel: r, meta, go, openLevel } = useGame()
+  const { lastLevel: r, meta, go, openLevel, startLevel } = useGame()
   const p = progressOf(meta)
   const level = LEVELS[r?.levelId ?? 'ch1.l1']
   if (!r) return <Shell><V2Btn onClick={() => go('home')}>Home</V2Btn></Shell>
@@ -145,7 +145,7 @@ export function LevelResult() {
         </div>
         <Feedback levelId={r.levelId} />
         <div className="grid gap-2">
-          <V2Btn disabled>Next level · coming soon</V2Btn>
+          {level.next ? <V2Btn onClick={() => startLevel(level.next!)}>Next level</V2Btn> : <V2Btn disabled>Next level · coming soon</V2Btn>}
           <V2Btn tone="cream" onClick={() => { useGame.getState().saveProgress({ ...p, task: 0 }); openLevel(0) }}>Play this level again</V2Btn>
           <V2Btn tone="cream" onClick={() => go('home')}>Home</V2Btn>
         </div>

@@ -54,7 +54,7 @@ describe('chapter select', () => {
     expect(chapterState(emptyProgress(), CHAPTERS, 1)).toBe('locked')
     expect(chapterState(p, CHAPTERS, 1)).toBe('active')
     expect(chapterState(p, CHAPTERS, 2)).toBe('locked')
-    expect(chapterState(finishLevel(p, 'ch2.l1', 1, null), CHAPTERS, 2)).toBe('active')
+    expect(chapterState(finishLevel(finishLevel(p, 'ch2.l1', 1, null), 'ch2.l2', 1, null), CHAPTERS, 2)).toBe('active')
     expect(chapterState(p, CHAPTERS, 5, true)).toBe('active')
   })
 })
@@ -134,5 +134,34 @@ describe('chapter 2 level 1 (Trial Day)', () => {
     const { LEVEL_C2L1: L } = await import('../src/levels/chapter2')
     for (const h of L.hazards) { expect(h.z0).toBeGreaterThan(L.bounds.z0); expect(h.z1).toBeLessThan(L.bounds.z1) }
     for (const it of L.items) expect(L.blockers.some((b) => it.x > b.x0 && it.x < b.x1 && it.z > b.z0 && it.z < b.z1), it.id).toBe(true) // items sit on benches/rack
+  })
+})
+
+describe('chapter 2 level 2 (Skills Stations)', () => {
+  it('has the full task template and chains from level 1', async () => {
+    const { LEVEL_C2L1, LEVEL_C2L2: L } = await import('../src/levels/chapter2')
+    for (const t of L.tasks) for (const f of TASK_FIELDS) expect((t as any)[f], `${t.id}.${f}`).toBeTruthy()
+    expect(LEVEL_C2L1.next).toBe('ch2.l2')
+  })
+  it('plays through: circle, three penalties (misses widen the green zone), a drill choice that changes the run', async () => {
+    const { LEVEL_C2L2: L } = await import('../src/levels/chapter2')
+    const r = new TaskRunner(L, emptyProgress(), hooks())
+    r.update(0.1, L.gotoAreas![0]!.x, L.gotoAreas![0]!.z); expect(r.task.kind).toBe('kick')
+    const band0 = r.kickBand; r.kickResult(false); r.kickResult(false); expect(r.kickBand).toBeGreaterThan(band0); expect(r.mistakes).toBe(2)
+    r.kickResult(true); r.kickResult(true); expect(r.idx).toBe(1); r.kickResult(true); expect(r.idx).toBe(2); r.kickResult(true) // ignored: now on the choice
+    r.interact('sprint')
+    expect(r.task.kind).toBe('reach'); expect(r.timeLimit).toBe(14); expect(r.hazards.length).toBe(2); expect(r.timeLeft).toBe(14)
+    r.update(1, 0, 0); expect(r.finished).toBe(true); expect(r.progress.points).toBe(4); expect(r.progress.flags['ch2.l2.item']).toBe('sprint')
+  })
+  it('the safe drill gives more time and more dummies, and the base hazard set is the largest', async () => {
+    const { LEVEL_C2L2: L } = await import('../src/levels/chapter2')
+    const r = new TaskRunner(L, emptyProgress(), hooks(), 2)
+    r.interact('passing'); expect(r.timeLimit).toBe(24); expect(r.hazards.length).toBe(3)
+    for (const v of Object.values(L.variants!)) expect(v.hazards.length).toBeLessThanOrEqual(L.hazards.length)
+  })
+  it('items sit on the drill table and the finish ring is walkable', async () => {
+    const { LEVEL_C2L2: L } = await import('../src/levels/chapter2')
+    for (const it of L.items) expect(L.blockers.some((b) => it.x > b.x0 && it.x < b.x1 && it.z > b.z0 && it.z < b.z1)).toBe(true)
+    expect(L.blockers.some((b) => 0 > b.x0 && 0 < b.x1 && 0 > b.z0 && 0 < b.z1)).toBe(false)
   })
 })

@@ -3,7 +3,7 @@
 import * as THREE from 'three'
 import { buildToon, type Expression, type ToonParts, type ToonSpec } from '../world/toon'
 import { animateHuman } from '../world/characters'
-import { MAMA_FOLAKE, BABA_TUNDE } from '../world/castData'
+import { MAMA_FOLAKE, BABA_TUNDE, neighbour } from '../world/castData'
 import { moveWithCollision } from '../world/nav'
 import type { LevelDef, Item, Spot, Hazard } from './schema'
 import type { TaskRunner } from './TaskRunner'
@@ -47,6 +47,10 @@ export class LevelRenderer {
   private furn = new Map<string, THREE.Mesh>()
   private pillow?: THREE.Mesh
   private ball?: THREE.Mesh
+  private shotBall?: THREE.Mesh
+  private keeper?: THREE.Group
+  private crowdParts: ToonParts[] = []
+  private kickAnim: { t: number; dur: number; success: boolean; side: number; done: () => void } | null = null
   private fx: { m: THREE.Mesh; v: THREE.Vector3; life: number }[] = []
   private phoneMesh!: THREE.Group
   private clothes = ['#c4562a', '#f5b91c', '#2f5a3a', '#fbf8f0', '#6a8ab8']
@@ -58,7 +62,7 @@ export class LevelRenderer {
   private moved = false
   onAction?: (label: string | null, dur: number) => void
   onFx?: (n: 'tap' | 'pop') => void
-  get busy() { return !!this.act }
+  get busy() { return !!this.act || !!this.kickAnim }
   onNearby?: (n: Nearby | null) => void
   private lastNear = ''
 
@@ -174,6 +178,21 @@ export class LevelRenderer {
     this.box(0.1, 0.1, 4.3, '#fbf8f0', 12.0, 1.6, 0); const net = this.box(0.8, 1.5, 4.1, '#ffffff', 12.5, 0.8, 0); (net.material as THREE.MeshLambertMaterial).transparent = true; (net.material as THREE.MeshLambertMaterial).opacity = 0.25
     for (const [x, z] of [[-9, 3], [-8.2, -1.2], [-6.8, 4.6], [-3, -1.5], [5, -4.4], [9.4, 4.8]]) { const c = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.45, 8), lam('#e07a1f')); c.position.set(x, 0.22, z); this.scene.add(c) }
     this.ball = new THREE.Mesh(new THREE.SphereGeometry(0.24, 12, 10), lam('#fbf8f0')); this.ball.visible = false; this.scene.add(this.ball)
+    const K = this.level.kick
+    if (K) {
+      const spot = new THREE.Mesh(new THREE.CircleGeometry(0.22, 16), new THREE.MeshBasicMaterial({ color: '#fbf8f0' })); spot.rotation.x = -Math.PI / 2; spot.position.set(K.x + 0.9, 0.035, K.z); this.scene.add(spot)
+      this.shotBall = new THREE.Mesh(new THREE.SphereGeometry(0.24, 12, 10), lam('#fbf8f0')); this.shotBall.position.set(K.x + 0.9, 0.24, K.z); this.shotBall.visible = false; this.scene.add(this.shotBall)
+      const kg = new THREE.Group()
+      const kb = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.36, 1.5, 10), lam('#e07a1f')); kb.position.y = 0.8; kg.add(kb)
+      const kh = new THREE.Mesh(new THREE.SphereGeometry(0.3, 10, 8), lam('#f3e7cf')); kh.position.y = 1.75; kg.add(kh)
+      for (const sx of [-1, 1]) { const gl = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.2, 0.2), lam('#fbf8f0')); gl.position.set(0, 1.0, sx * 0.5); kg.add(gl) } // gloves
+      kg.position.set(K.goal.x - 0.4, 0, 0); this.scene.add(kg); this.keeper = kg
+    }
+    for (const c of this.level.crowd ?? []) { // other hopefuls in kits, standing about
+      const i = this.crowdParts.length
+      const sp = { ...neighbour(i + 5), top: 'tee' as const, topColor: ['#2b3a8c', '#c4562a', '#f5b91c', '#6a8ab8', '#e0457b'][i % 5], innerColor: undefined, bottom: 'shorts' as const, bottomColor: '#fbf8f0', accessories: [] }
+      const t = buildToon(sp); t.group.position.set(c.x, 0, c.z); t.group.rotation.y = c.rot; this.scene.add(t.group); this.crowdParts.push(t)
+    }
     // spectators and other hopefuls standing about outside the north fence
     const cols = ['#2b3a8c', '#c4562a', '#2f5a3a', '#e0457b', '#f5b91c', '#6a8ab8']
     for (let i = 0; i < 16; i++) { const g = new THREE.Group(); const col = cols[i % cols.length]
@@ -198,6 +217,8 @@ export class LevelRenderer {
       case 'shinpad': add(new THREE.BoxGeometry(0.22, 0.46, 0.06), it.color); add(new THREE.BoxGeometry(0.16, 0.34, 0.07), '#e07a1f', 0, 0, 0); break
       case 'bib': add(new THREE.BoxGeometry(0.5, 0.55, 0.05), it.color); add(new THREE.BoxGeometry(0.2, 0.2, 0.06), '#1c1b22', 0, 0, 0); break
       case 'bottle': add(new THREE.CylinderGeometry(0.1, 0.1, 0.4, 10), it.color); add(new THREE.CylinderGeometry(0.06, 0.08, 0.1, 10), '#fbf8f0', 0, 0.25, 0); break
+      case 'ladder': for (let i = 0; i < 5; i++) add(new THREE.BoxGeometry(0.5, 0.04, 0.07), it.color, 0, 0, -0.4 + i * 0.2); for (const dx of [-0.25, 0.25]) add(new THREE.BoxGeometry(0.05, 0.04, 0.9), '#1c1b22', dx, 0, 0); break
+      case 'cones': for (const [x, z] of [[-0.22, -0.2], [0.22, -0.2], [0, 0.22]]) add(new THREE.ConeGeometry(0.12, 0.3, 8), it.color, x, 0.12, z); break
       default: add(new THREE.BoxGeometry(0.3, 0.3, 0.3), it.color)
     }
     return g
@@ -244,7 +265,8 @@ export class LevelRenderer {
     }
     const m = Math.hypot(mx, mz); if (m > 1) { mx /= m; mz /= m }
     const actState = this.act ? this.stepAct(dt) : null
-    const moving = !stumbling && !this.act && m > 0.12 && !(run?.finished)
+    if (this.kickAnim) this.stepKick(dt)
+    const moving = !stumbling && !this.act && !this.kickAnim && m > 0.12 && !(run?.finished)
     if (moving) {
       const sp = 4.6 * dt
       const n = moveWithCollision(L.blockers, this.px, this.pz, mx * sp, mz * sp, L.bounds)
@@ -273,24 +295,28 @@ export class LevelRenderer {
         if (here && !(this.act && this.act.id === it.id)) { o.position.y = this.itemY(it) + Math.sin(this.t * 3 + it.x) * 0.06; o.rotation.y = this.t * 1.5 }
       }
       const reach = run.task.kind === 'reach' && !run.finished
-      for (let i = 0; i < this.level.hazards.length; i++) {
-        const g = this.hazardMeshes[i]; g.visible = reach
-        if (reach) {
-          const z = hazardZ(this.level.hazards[i], this.t); g.position.set(this.level.hazards[i].x, 0, z)
-          if (!stumbling && Math.hypot(this.px - this.level.hazards[i].x, this.pz - z) < 0.85) {
+      const hz = run.hazards // the choice before the timed task can change how many dummies there are and how fast they slide
+      for (let i = 0; i < this.hazardMeshes.length; i++) {
+        const g = this.hazardMeshes[i], on = reach && i < hz.length
+        g.visible = on
+        if (this.strips[i]) { this.strips[i].visible = on; if (on) this.strips[i].position.x = hz[i].x }
+        if (on) {
+          const z = hazardZ(hz[i], this.t); g.position.set(hz[i].x, 0, z)
+          if (!stumbling && Math.hypot(this.px - hz[i].x, this.pz - z) < 0.85) {
             this.stumbleT = 1.1; run.stumble()
             const n = moveWithCollision(L.blockers, this.px, this.pz, -0.7, 0, L.bounds); this.px = n.x; this.pz = n.z
           }
         }
       }
-      for (const st of this.strips) st.visible = reach
       if (this.ball) { this.ball.visible = reach; if (reach) { this.ball.position.set(this.px + Math.sin(this.facing) * 0.85, 0.24 + Math.abs(Math.sin(this.t * 9)) * 0.06, this.pz + Math.cos(this.facing) * 0.85); this.ball.rotation.x += dt * 10 } }
-      // soft guide ring on the area of the next step after 15 s without progress
-      const gotoOn = run.task.kind === 'goto' && !run.finished
-      this.ring.visible = run.guideOn || gotoOn
-      if (run.guideOn || gotoOn) {
-        const ga = L.guideAreas[idx]; let gx = ga.x, gz = ga.z, gr = ga.r
-        if (run.task.kind === 'collect') { const nx = L.items.find((i) => i.task === idx && !run.collected.includes(i.id)); if (nx) { gx = nx.x; gz = nx.z; gr = 1.1 } }
+      // the marker ring: always on a goal area (walk-to and run-to tasks) and on the penalty spot; after 15 s without progress on the area of the next step
+      const area = L.gotoAreas?.[idx]
+      const kickMark = run.task.kind === 'kick' && L.kick ? { x: L.kick.x, z: L.kick.z, r: 0.9 } : null
+      const mark = !run.finished ? ((run.task.kind === 'goto' || run.task.kind === 'reach') && area ? area : kickMark) : null
+      this.ring.visible = !!mark || run.guideOn
+      if (mark || run.guideOn) {
+        const ga = mark ?? L.guideAreas[idx]; let gx = ga.x, gz = ga.z, gr = ga.r
+        if (!mark && run.task.kind === 'collect') { const nx = L.items.find((i) => i.task === idx && !run.collected.includes(i.id)); if (nx) { gx = nx.x; gz = nx.z; gr = 1.1 } }
         const k = (this.t * 1.2) % 1; this.ring.position.set(gx, 0.05, gz); this.ring.scale.setScalar(gr * (0.9 + k * 0.15)); (this.ring.material as THREE.MeshBasicMaterial).opacity = 0.75 - k * 0.5
       }
       this.buzz.visible = run.buzzing && idx === 0 && !run.found
@@ -305,6 +331,29 @@ export class LevelRenderer {
     this.cam.position.y = off.y
     this.cam.position.z += (tz + off.z - this.cam.position.z) * Math.min(1, dt * 4)
     this.cam.lookAt(this.cam.position.x, 0.6, this.cam.position.z - off.z * 0.9)
+  }
+
+  /** One penalty: the player swings, the ball flies to the left or right of the goal (a goal if the timing was good, wide if not), the keeper dives. `done` runs when it ends. */
+  kickBall(success: boolean, needle: number, done: () => void): void {
+    const K = this.level.kick; if (!K || this.kickAnim || !this.shotBall) return
+    const side = needle < 0.5 ? -1 : 1 // where the needle was decides which side
+    this.kickAnim = { t: 0, dur: 1.1, success, side, done }
+    this.shotBall.visible = true; this.shotBall.position.set(K.x + 0.9, 0.24, K.z)
+    this.facing = Math.atan2(K.goal.x - this.px, K.goal.z - this.pz); this.onFx?.('tap')
+  }
+
+  private stepKick(dt: number) {
+    const a = this.kickAnim!, K = this.level.kick!, ball = this.shotBall!
+    a.t += dt; const u = Math.min(1, a.t / a.dur)
+    const from = { x: K.x + 0.9, z: K.z }
+    const tz = a.success ? a.side * 1.1 : a.side * 3.2 // goals go inside the posts, misses go wide
+    const tx = K.goal.x + 0.4
+    const e = u < 0.25 ? 0 : (u - 0.25) / 0.75 // a short wind-up, then the ball flies
+    ball.position.set(from.x + (tx - from.x) * e, 0.24 + Math.sin(e * Math.PI) * 0.9, from.z + (tz - from.z) * e)
+    // leg swing
+    this.me.legR.rotation.x = u < 0.25 ? -0.9 * (u / 0.25) : 1.4 * (1 - Math.min(1, (u - 0.25) / 0.2)) - 0.2
+    if (this.keeper) this.keeper.position.z += (((a.success ? -a.side * 1.0 : a.side * 0.9) * (u > 0.3 ? 1 : 0)) - this.keeper.position.z) * Math.min(1, dt * 6)
+    if (u >= 1) { const cb = a.done; this.kickAnim = null; ball.visible = false; this.me.legR.rotation.x = 0; if (this.keeper) this.keeper.position.z = 0; cb() }
   }
 
   /** Play the action for what the player is next to; `done` runs when the animation ends (that is when the task rule is applied). */
@@ -380,6 +429,7 @@ export class LevelRenderer {
       if (run.task.kind === 'find' && !run.found) for (const s of L.spots) if (s.task === idx) consider(s, 'spot')
       if (run.task.kind === 'collect') for (const it of L.items) if (it.task === idx && !run.collected.includes(it.id)) consider(it, 'item')
       if (run.task.kind === 'choose' && !run.choice) for (const it of L.items) if (it.task === idx) consider(it, 'item')
+      if (run.task.kind === 'kick' && L.kick && !this.kickAnim && Math.hypot(L.kick.x - this.px, L.kick.z - this.pz) < 1.3) best = { kind: 'spot', id: 'kick', label: 'Kick!' }
     }
     if (this.act) best = null
     const key = best ? `${(best as Nearby).kind}:${(best as Nearby).id}` : ''
