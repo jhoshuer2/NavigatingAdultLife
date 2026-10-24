@@ -140,51 +140,51 @@ describe('chapter 2 level 1 (Trial Day)', () => {
 
 describe('chapter 2 level 2 (Skills Stations)', () => {
   it('has the full task template and chains from level 1', async () => {
-    const { LEVEL_C2L1, LEVEL_C2L2: L } = await import('../src/levels/chapter2')
+    const { LEVEL_C2L1 } = await import('../src/levels/chapter2'); const { LEVEL_C2L2: L } = await import('../src/levels/chapter2c')
     for (const t of L.tasks) for (const f of TASK_FIELDS) expect((t as any)[f], `${t.id}.${f}`).toBeTruthy()
     expect(LEVEL_C2L1.next).toBe('ch2.l2')
   })
-  it('plays through: circle, three penalties (misses widen the green zone), a drill choice that changes the run', async () => {
-    const { LEVEL_C2L2: L } = await import('../src/levels/chapter2')
-    const r = new TaskRunner(L, emptyProgress(), hooks(), 1) // task 0 is the bus ride
-    r.update(0.1, L.gotoAreas![1]!.x, L.gotoAreas![1]!.z); expect(r.task.kind).toBe('kick')
+  it('plays through: coach talk, three penalties (misses widen the green zone), a drill choice that changes the run', async () => {
+    const { LEVEL_C2L2: L } = await import('../src/levels/chapter2c')
+    const r = new TaskRunner(L, emptyProgress(), hooks(), 1) // task 0 is the train ride
+    r.interact('t:dele'); r.interact('c:warm'); expect(r.task.kind).toBe('kick')
     const band0 = r.kickBand; r.kickResult(false); r.kickResult(false); expect(r.kickBand).toBeGreaterThan(band0); expect(r.mistakes).toBe(2)
     r.kickResult(true); r.kickResult(true); expect(r.idx).toBe(2); r.kickResult(true); expect(r.idx).toBe(3); r.kickResult(true) // ignored: now on the choice
     r.interact('sprint')
     expect(r.task.kind).toBe('reach'); expect(r.timeLimit).toBe(14); expect(r.hazards.length).toBe(2); expect(r.timeLeft).toBe(14)
-    r.update(1, 0, 0); expect(r.finished).toBe(true); expect(r.progress.points).toBe(4); expect(r.progress.flags['ch2.l2.item']).toBe('sprint')
+    r.update(1, 17, 0); expect(r.finished).toBe(true); expect(r.progress.points).toBe(4); expect(r.progress.flags['ch2.l2.item']).toBe('sprint')
   })
   it('the safe drill gives more time and more dummies, and the base hazard set is the largest', async () => {
-    const { LEVEL_C2L2: L } = await import('../src/levels/chapter2')
+    const { LEVEL_C2L2: L } = await import('../src/levels/chapter2c')
     const r = new TaskRunner(L, emptyProgress(), hooks(), 3)
     r.interact('passing'); expect(r.timeLimit).toBe(24); expect(r.hazards.length).toBe(3)
     for (const v of Object.values(L.variants!)) expect(v.hazards.length).toBeLessThanOrEqual(L.hazards.length)
   })
   it('items sit on the drill table and the finish ring is walkable', async () => {
-    const { LEVEL_C2L2: L } = await import('../src/levels/chapter2')
+    const { LEVEL_C2L2: L } = await import('../src/levels/chapter2c')
     for (const it of L.items) expect(L.blockers.some((b) => it.x > b.x0 && it.x < b.x1 && it.z > b.z0 && it.z < b.z1)).toBe(true)
-    expect(L.blockers.some((b) => 0 > b.x0 && 0 < b.x1 && 0 > b.z0 && 0 < b.z1)).toBe(false)
+    expect(L.blockers.some((b) => 17 > b.x0 && 17 < b.x1 && 0 > b.z0 && 0 < b.z1)).toBe(false)
   })
 })
 
 describe('chapter 2 level 3 (The Trial Match)', () => {
   const start = async (boots?: string, at = 1) => {
-    const { LEVEL_C2L3: L } = await import('../src/levels/chapter2')
+    const { LEVEL_C2L3: L } = await import('../src/levels/chapter2c')
     const p = emptyProgress(); if (boots) p.flags['ch2.l1.item'] = boots
     return { L, r: new TaskRunner(L, p, hooks(), at) }
   }
-  it('level 2 chains into it', async () => { const { LEVEL_C2L2 } = await import('../src/levels/chapter2'); expect(LEVEL_C2L2.next).toBe('ch2.l3') })
+  it('level 2 chains into it', async () => { const { LEVEL_C2L2 } = await import('../src/levels/chapter2c'); expect(LEVEL_C2L2.next).toBe('ch2.l3') })
   it('the boots chosen in level 1 decide the position ring, the time and the defenders', async () => {
     const st = await start('striker'), de = await start('defender'), no = await start()
-    expect(st.r.goalArea).toEqual({ x: 8.2, z: 0, r: 1.6 }); expect(de.r.goalArea).toEqual({ x: -8, z: 0, r: 1.6 })
-    expect(no.r.goalArea).toEqual({ x: 3, z: -3.8, r: 1.6 }) // no boots on record: the wing
+    expect(st.r.goalArea).toEqual({ x: 24, z: 0, r: 1.6 }); expect(de.r.goalArea).toEqual({ x: 4, z: 0, r: 1.6 })
+    expect(no.r.goalArea).toEqual({ x: 14, z: -8, r: 1.6 }) // no boots on record: the wing
     for (const [r, secs, n] of [[st.r, 14, 2], [de.r, 24, 3]] as const) { r.update(0.1, r.goalArea!.x, r.goalArea!.z); expect(r.task.kind).toBe('kick'); r.kickResult(true); r.kickResult(true); expect(r.task.kind).toBe('reach'); expect(r.timeLimit).toBe(secs); expect(r.hazards.length).toBe(n) }
-    expect(st.r.goalArea).toEqual({ x: 9.6, z: 0, r: 1.6 }) // the run to the goal ring is the same for everybody
+    expect(st.r.goalArea).toEqual({ x: 30, z: 0, r: 1.8 }) // the run to the goal ring is the same for everybody
   })
   it('the pass task has no keeper in its data, widens on misses, and the coach reacts to the decision', async () => {
     const { L, r } = await start('winger', 2)
     expect(L.kick?.pass).toBe(true); const b0 = r.kickBand; r.kickResult(false); expect(r.kickBand).toBeGreaterThan(b0)
-    r.kickResult(true); r.kickResult(true); r.update(1, 9.6, 0); expect(r.task.kind).toBe('choose'); r.interact('hold'); expect(r.task.kind).toBe('goto')
+    r.kickResult(true); r.kickResult(true); r.update(1, 30, 0); expect(r.task.kind).toBe('choose'); r.interact('hold'); expect(r.task.kind).toBe('goto')
     expect(L.tasks[5].introByChoice!.hold[0].text).toMatch(/held the ball/)
   })
 })

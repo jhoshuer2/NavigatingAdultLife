@@ -4,15 +4,15 @@
 import type { Deco, Furn, Rect } from './schema'
 import { L, T, R, F, say, sayAs, D, WOOD, DARK, STREET_BOUNDS, withStreet } from './chapter1b'
 
-const GREEN = '#2f5a3a', ORANGE = '#e07a1f', YELLOW = '#f5b91c', RUST = '#c4562a', BLUE = '#2b6ad0', CREAM = '#f3e7cf'
-const RING = (x: number, z: number, r = 1.6) => ({ x, z, r })
+export const GREEN = '#2f5a3a', ORANGE = '#e07a1f', YELLOW = '#f5b91c', RUST = '#c4562a', BLUE = '#2b6ad0', CREAM = '#f3e7cf'
+export const RING = (x: number, z: number, r = 1.6) => ({ x, z, r })
 /** a building: a solid block (it blocks walking), windows on its front and a sign over the door */
-const B = (name: string, x0: number, x1: number, z0: number, z1: number, color: string, label: string, h = 3.4): { f: Furn; d: Deco[] } => {
+export const B = (name: string, x0: number, x1: number, z0: number, z1: number, color: string, label: string, h = 3.4): { f: Furn; d: Deco[] } => {
   const cx = (x0 + x1) / 2, w = x1 - x0
   return { f: F(name, R(x0, x1, z0, z1), h, color), d: [{ kind: 'window', x: cx - w * 0.28, z: z1 + 0.06, w: Math.min(2.4, w * 0.25), h: 1.1 }, { kind: 'window', x: cx + w * 0.28, z: z1 + 0.06, w: Math.min(2.4, w * 0.25), h: 1.1 }, { kind: 'sign', x: cx, z: z1 + 0.5, label, w: Math.min(3, w * 0.4) }] }
 }
-const TREES = (xs: [number, number][]): Deco[] => xs.map(([x, z]) => ({ kind: 'tree' as const, x, z }))
-const LAMPS = (xs: [number, number][]): Deco[] => xs.map(([x, z]) => ({ kind: 'lamp' as const, x, z }))
+export const TREES = (xs: [number, number][]): Deco[] => xs.map(([x, z]) => ({ kind: 'tree' as const, x, z }))
+export const LAMPS = (xs: [number, number][]): Deco[] => xs.map(([x, z]) => ({ kind: 'lamp' as const, x, z }))
 const BIG = R(-34, 30, -12, 12)
 
 // ---------------------------------------------------------------------------------------------------------------- Level 2

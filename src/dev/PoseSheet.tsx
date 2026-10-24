@@ -8,8 +8,9 @@ import { neighbour } from '../world/castData'
 export default function PoseSheet() {
   const ref = useRef<HTMLCanvasElement>(null)
   useEffect(() => {
-    const cv = ref.current!, names = Object.keys(POSES) as Pose[]
-    const cols = 7, rows = Math.ceil(names.length / cols)
+    const only = new URLSearchParams(location.search).get('only')?.split(',')
+    const cv = ref.current!, names = (Object.keys(POSES) as Pose[]).filter((n) => !only || only.includes(n))
+    const cols = Math.min(7, names.length), rows = Math.ceil(names.length / cols)
     const r = new THREE.WebGLRenderer({ canvas: cv, antialias: true }); r.setSize(cols * 200, rows * 260, false)
     const sc = new THREE.Scene(); sc.background = new THREE.Color('#f1d9a8')
     sc.add(new THREE.HemisphereLight(0xfff1d6, 0x7a6a58, 1.2)); const sun = new THREE.DirectionalLight(0xffe2b0, 0.9); sun.position.set(-4, 8, 6); sc.add(sun)

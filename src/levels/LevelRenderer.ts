@@ -17,7 +17,7 @@ export const REACH = 2.3
 type ActKind = 'dig' | 'search' | 'take'
 interface Act { pose?: Pose; kind: ActKind; x: number; z: number; id: string; label: string; t: number; dur: number; walk: number; done: () => void; beat: number; phone?: boolean }
 const ACT_DUR: Record<ActKind, number> = { dig: 2.4, search: 1.3, take: 1.3 }
-const POSE_LABEL: Partial<Record<Pose, string>> = { lift: 'Lifting…', write: 'Writing…', chop: 'Chopping…', stir: 'Stirring…', pour: 'Seasoning…', countMoney: 'Counting the money…', pickLow: 'Bending down…', reachHigh: 'Reaching up…', stamp: 'Stamping…', grab: 'Taking it…', carryBox: 'Picking it up…' }
+const POSE_LABEL: Partial<Record<Pose, string>> = { lift: 'Lifting…', write: 'Writing…', chop: 'Chopping…', stir: 'Stirring…', pour: 'Seasoning…', countMoney: 'Counting the money…', pickLow: 'Bending down…', reachHigh: 'Reaching up…', stamp: 'Stamping…', grab: 'Taking it…', carryBox: 'Picking it up…', kneelTie: 'Getting dressed…', dribble: 'Weaving round the cone…' }
 const POSE_DUR: Partial<Record<Pose, number>> = { write: 1.8, stamp: 1.5, pickLow: 1.5, lift: 1.6, handOver: 1.2, shakeHands: 1.5, point: 1.1, wave: 1.2 }
 export const actLabel = (kind: ActKind, id: string) => kind === 'dig' ? 'Digging through the laundry…' : kind === 'search' ? (id === 'pillow' ? 'Lifting the pillow…' : id === 'drawer' ? 'Opening the drawer…' : 'Checking…') : 'Picking it up…'
 
@@ -117,7 +117,7 @@ export class LevelRenderer {
       const r = f.rect
       this.furn.set(f.name, this.box(r.x1 - r.x0, f.h, r.z1 - r.z0, f.color, (r.x0 + r.x1) / 2, f.h / 2, (r.z0 + r.z1) / 2))
     }
-    if (L.sceneKind === 'home') this.buildHomeDeco(); else if (L.sceneKind === 'pitch') { this.buildPitchDeco(); if (L.rides) this.buildPitchStreet() } else this.buildSceneDeco()
+    if (L.sceneKind === 'home') this.buildHomeDeco(); else if (L.sceneKind === 'pitch') { this.buildPitchDeco(); if (L.rides) this.buildPitchStreet() } else { this.buildSceneDeco(); if (L.kit || L.kick) this.buildKickRig() }
     for (const c of L.crowd ?? []) { if (L.sceneKind === 'scene') { const i = this.crowdParts.length; const sp = { ...neighbour(i + 5), accessories: [] as never[] }; const t = buildToon(sp); t.group.position.set(c.x, 0, c.z); t.group.rotation.y = c.rot; this.scene.add(t.group); this.crowdParts.push(t) } }
     for (const [ti, sv] of Object.entries(L.serves ?? {})) for (const g of sv.guests) {
       const i = this.guestObjs.size, sp = { ...neighbour(i + 9), accessories: [] as never[] }, parts = buildToon(sp)
@@ -203,16 +203,8 @@ export class LevelRenderer {
     this.box(0.3, 2.6, 0.3, '#2f5a3a', b.x0 - 0.1, 1.3, -1.6); this.box(0.3, 2.6, 0.3, '#2f5a3a', b.x0 - 0.1, 1.3, 1.6); this.box(0.3, 0.5, 3.5, '#e07a1f', b.x0 - 0.1, 2.65, 0)
   }
 
-  private buildPitchDeco() {
-    // registration tent (orange canopy over the desk), kit benches with their kit laid out, boots rack, goal frames with nets, a few cones, a stand of spectators
-    const tent = this.box(3.4, 0.15, 2.4, '#e07a1f', -5.5, 2.6, -4.1)
-    for (const [x, z] of [[-7.1, -5.2], [-3.9, -5.2], [-7.1, -3.0], [-3.9, -3.0]]) this.box(0.12, 2.6, 0.12, '#1c1b22', x, 1.3, z)
-    void tent
-    this.box(1.8, 0.45, 0.06, '#fbf8f0', -5.5, 1.25, -3.3); this.box(1.5, 0.12, 0.5, '#2f5a3a', -5.5, 1.1, -4.1) // sign board and a clipboard on the desk
-    for (const [x, z] of [[-1.5, 4.1], [1.5, -4.4], [3.7, 4.1]]) this.box(1.6, 0.05, 0.7, '#e07a1f', x, 0.62, z)
-    for (const z of [-2.05, 2.05]) this.box(0.1, 1.6, 0.1, '#fbf8f0', 12.0, 0.8, z)
-    this.box(0.1, 0.1, 4.3, '#fbf8f0', 12.0, 1.6, 0); const net = this.box(0.8, 1.5, 4.1, '#ffffff', 12.5, 0.8, 0); (net.material as THREE.MeshLambertMaterial).transparent = true; (net.material as THREE.MeshLambertMaterial).opacity = 0.25
-    for (const [x, z] of [[-9, 3], [-8.2, -1.2], [-6.8, 4.6], [-3, -1.5], [5, -4.4], [9.4, 4.8]]) { const c = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.45, 8), lam('#e07a1f')); c.position.set(x, 0.22, z); this.scene.add(c) }
+  /** the ball you dribble, and the penalty spot, ball, keeper or pass target of a kick task: works in any scene */
+  private buildKickRig() {
     this.ball = new THREE.Mesh(new THREE.SphereGeometry(0.24, 12, 10), lam('#fbf8f0')); this.ball.visible = false; this.scene.add(this.ball)
     const K = this.level.kick
     if (K) {
@@ -225,6 +217,19 @@ export class LevelRenderer {
       if (!K.pass) { kg.position.set(K.goal.x - 0.4, 0, 0); this.scene.add(kg); this.keeper = kg }
       else { const tm = buildToon({ ...neighbour(40), top: 'tee', topColor: '#2f5a3a', bottom: 'shorts', bottomColor: '#fbf8f0', accessories: [] }); tm.group.position.set(K.goal.x, 0, K.goal.z); tm.group.rotation.y = Math.atan2(K.x - K.goal.x, K.z - K.goal.z); this.scene.add(tm.group); this.crowdParts.push(tm) }
     }
+  }
+
+  private buildPitchDeco() {
+    // registration tent (orange canopy over the desk), kit benches with their kit laid out, boots rack, goal frames with nets, a few cones, a stand of spectators
+    const tent = this.box(3.4, 0.15, 2.4, '#e07a1f', -5.5, 2.6, -4.1)
+    for (const [x, z] of [[-7.1, -5.2], [-3.9, -5.2], [-7.1, -3.0], [-3.9, -3.0]]) this.box(0.12, 2.6, 0.12, '#1c1b22', x, 1.3, z)
+    void tent
+    this.box(1.8, 0.45, 0.06, '#fbf8f0', -5.5, 1.25, -3.3); this.box(1.5, 0.12, 0.5, '#2f5a3a', -5.5, 1.1, -4.1) // sign board and a clipboard on the desk
+    for (const [x, z] of [[-1.5, 4.1], [1.5, -4.4], [3.7, 4.1]]) this.box(1.6, 0.05, 0.7, '#e07a1f', x, 0.62, z)
+    for (const z of [-2.05, 2.05]) this.box(0.1, 1.6, 0.1, '#fbf8f0', 12.0, 0.8, z)
+    this.box(0.1, 0.1, 4.3, '#fbf8f0', 12.0, 1.6, 0); const net = this.box(0.8, 1.5, 4.1, '#ffffff', 12.5, 0.8, 0); (net.material as THREE.MeshLambertMaterial).transparent = true; (net.material as THREE.MeshLambertMaterial).opacity = 0.25
+    for (const [x, z] of [[-9, 3], [-8.2, -1.2], [-6.8, 4.6], [-3, -1.5], [5, -4.4], [9.4, 4.8]]) { const c = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.45, 8), lam('#e07a1f')); c.position.set(x, 0.22, z); this.scene.add(c) }
+    this.buildKickRig()
     for (const c of this.level.crowd ?? []) { // other hopefuls in kits, standing about
       const i = this.crowdParts.length
       const sp = { ...neighbour(i + 5), top: 'tee' as const, topColor: ['#2b3a8c', '#c4562a', '#f5b91c', '#6a8ab8', '#e0457b'][i % 5], innerColor: undefined, bottom: 'shorts' as const, bottomColor: '#fbf8f0', accessories: [] }
@@ -307,6 +312,15 @@ export class LevelRenderer {
         case 'crate': this.box(w, h, dd, col, d.x, h / 2, d.z); break
         case 'water': { const wt = this.box(w, 0.05, dd, '#4a90c2', d.x, -0.02, d.z); const wm = wt.material as THREE.MeshLambertMaterial; wm.transparent = true; wm.opacity = 0.85; for (let x = d.x - w / 2 + 1; x < d.x + w / 2 - 1; x += 2.6) this.box(1.1, 0.02, 0.07, '#d9f0fb', x, 0.03, d.z + ((x * 7) % 1.2) - 0.6); break }
         case 'pad': { this.box(w, 0.06, w, '#6f6f78', d.x, 0.02, d.z); const rim = new THREE.Mesh(new THREE.RingGeometry(w * 0.4, w * 0.44, 32), new THREE.MeshBasicMaterial({ color: '#f5b91c', side: THREE.DoubleSide })); rim.rotation.x = -Math.PI / 2; rim.position.set(d.x, 0.07, d.z); this.scene.add(rim); for (const dx of [-0.4, 0.4]) this.box(0.2, 0.02, 1.4, '#f5b91c', d.x + dx, 0.07, d.z); this.box(0.8, 0.02, 0.2, '#f5b91c', d.x, 0.07, d.z); break }
+        case 'pitch': { // a football pitch inside a bigger place: stripes, lines, a centre circle
+          this.box(w, 0.05, dd, '#5fae4f', d.x, 0.0, d.z)
+          for (let i = 0; i < 8; i++) this.box(w / 8, 0.02, dd, i % 2 ? '#6bb95a' : '#5fae4f', d.x - w / 2 + (w / 8) * (i + 0.5), 0.04, d.z)
+          const ln = (lw: number, ld: number, x: number, z: number) => this.box(lw, 0.02, ld, '#fbf8f0', x, 0.06, z)
+          ln(w, 0.12, d.x, d.z - dd / 2 + 0.2); ln(w, 0.12, d.x, d.z + dd / 2 - 0.2); ln(0.12, dd - 0.4, d.x - w / 2 + 0.2, d.z); ln(0.12, dd - 0.4, d.x + w / 2 - 0.2, d.z); ln(0.12, dd - 0.4, d.x, d.z)
+          const circ = new THREE.Mesh(new THREE.RingGeometry(2.4, 2.52, 40), new THREE.MeshBasicMaterial({ color: '#fbf8f0', side: THREE.DoubleSide })); circ.rotation.x = -Math.PI / 2; circ.position.set(d.x, 0.07, d.z); this.scene.add(circ); break }
+        case 'goal': { // posts, bar and a see-through net; opens towards the west
+          for (const dz of [-dd / 2, dd / 2]) this.box(0.1, 1.6, 0.1, '#fbf8f0', d.x, 0.8, d.z + dz)
+          this.box(0.1, 0.1, dd, '#fbf8f0', d.x, 1.6, d.z); const nt = this.box(0.8, 1.5, dd, '#ffffff', d.x + 0.5, 0.8, d.z); const nm = nt.material as THREE.MeshLambertMaterial; nm.transparent = true; nm.opacity = 0.25; break }
         case 'rail': { this.box(w, 0.06, dd, '#6f6a60', d.x, 0.0, d.z); for (const dz of [-0.55, 0.55]) this.box(w, 0.1, 0.1, '#b9bdc2', d.x, 0.1, d.z + dz); for (let x = d.x - w / 2 + 0.5; x < d.x + w / 2; x += 1.1) this.box(0.28, 0.06, dd, '#5b4636', x, 0.04, d.z); break }
         case 'chair': { this.box(0.7, 0.1, 0.7, col, d.x, 0.5, d.z); this.box(0.7, 0.8, 0.1, col, d.x, 0.95, d.z - 0.3); for (const sx of [-1, 1]) for (const sz of [-1, 1]) this.box(0.08, 0.5, 0.08, '#44444e', d.x + sx * 0.3, 0.25, d.z + sz * 0.3); break }
       }

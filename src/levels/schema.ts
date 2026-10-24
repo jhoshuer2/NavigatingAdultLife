@@ -42,7 +42,7 @@ export interface Rect { x0: number; x1: number; z0: number; z1: number }
 export interface Furn { name: string; rect: Rect; h: number; color: string }
 
 export interface Hazard { x: number; z0: number; z1: number; speed: number; phase: number; name: 'slippers' | 'mop' | 'dummy' | 'walker' | 'cart' | 'chair'; color: string }
-export interface Deco { kind: 'awning' | 'tree' | 'lamp' | 'sign' | 'stall' | 'wall' | 'window' | 'road' | 'rug' | 'crate' | 'chair' | 'rail' | 'water' | 'pad'; x: number; z: number; w?: number; d?: number; h?: number; color?: string; label?: string }
+export interface Deco { kind: 'awning' | 'tree' | 'lamp' | 'sign' | 'stall' | 'wall' | 'window' | 'road' | 'rug' | 'crate' | 'chair' | 'rail' | 'water' | 'pad' | 'pitch' | 'goal'; x: number; z: number; w?: number; d?: number; h?: number; color?: string; label?: string }
 /** a guest in a serve task: waits at (x, z), is seated at `seat`, eats from a plate on `table`, and wants the dish whose item id is `dish` */
 export interface ServeGuest { id: string; name: string; order: string; dish: string; x: number; z: number; seat: { x: number; z: number }; table: { x: number; z: number } }
 /** a bus ride: walk to `stop`, wait for the bus on the road at `busZ`, board, and be dropped in the task's goto area */

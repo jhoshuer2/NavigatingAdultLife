@@ -301,3 +301,8 @@ Feedback: each chapter should introduce its own means of transport, not repeat o
 - `Item.act` now picks the body for each item: lift, write, chop, stir, pour, count money. `hold` can have a `pose` (sit while waiting). Level text names its own people.
 - The dialogue, places and task order are my own design (the spec only has Level 1's tasks). Chapters 2 to 4 are unchanged until this pilot is approved.
 - Old Chapter 1 L2 to L9 task ids are reused (`ch1.l{n}.t{k}`), so saved progress in those levels will resume at an odd task.
+
+## Chapter 2 as a story (levels 2 to 9)
+- `src/levels/chapter2c.ts` replaces the old levels 2 to 9 (Level 1 stays the spec's, in `chapter2.ts`). Bigger places (about 46 wide) built from buildings, a `pitch` deco (stripes, lines, centre circle) and `goal` deco; football works in any scene now (`buildKickRig`). Each level starts with the train ride.
+- 2 Skills Stations (talk to the coach, penalties, drill, run) | 3 The Trial Match (position by boots, passes, run, decision, face the coach) | 4 Between Sessions (serve teammates in the canteen, sit for the physio, talk to a scout, find the door) | 5 Fitness Test (sprint, plank, cone drill, rest or push) | 6 Kit Trouble (find the boot, errands, get dressed in order, hurry) | 7 The Rival (talk to Chuka and the referee, shoot-out, centre circle, handshake) | 8 The Friendly Match (position, counter-attack by earlier choice, penalties, defend, celebrate) | 9 The Verdict (sit, talk to the coach and Mama, sign forms, walk on to the pitch).
+- New poses: plank, stretch, cheer, dribble, kneelTie, lean. `?poses=1&only=plank,sit` shows chosen poses.

@@ -2,7 +2,7 @@
 // the scene. Everything keyed by task index is shifted by one so the level's own tasks keep working.
 import type { LevelDef, Line, Vehicle } from './schema'
 import { T } from './chapter1b'
-import { STREET_BOUNDS, VEHICLE_INFO, withStreet } from './street'
+import { VEHICLE_INFO, withStreet } from './street'
 
 export interface BusOpts { /** default bus */ vehicle?: Vehicle; to: string; title: string; purpose: string; objective: string; success: string; intro: Line[]; done: Line[] }
 const shift = <V>(m: Record<number, V> | undefined): Record<number, V> | undefined => m && Object.fromEntries(Object.entries(m).map(([k, v]) => [Number(k) + 1, v]))
@@ -12,7 +12,7 @@ export function withBus(l: LevelDef, o: BusOpts): LevelDef {
   return {
     ...l,
     tasks: [task, ...l.tasks],
-    bounds: STREET_BOUNDS,
+    bounds: { x0: -34, x1: Math.max(12.4, l.bounds.x1), z0: Math.min(-6, l.bounds.z0), z1: Math.max(6, l.bounds.z1) },
     theme: l.sceneKind === 'scene' && l.theme ? withStreet(l.theme, o.vehicle) : l.theme,
     spawn: { x: -32, z: 0.4 },
     items: l.items.map((i) => ({ ...i, task: i.task + 1 })),
