@@ -1,5 +1,6 @@
 // Chapter 4 "Kitchen Rush": the player works a busy kitchen for a day, from prep to the last order. Same engine and helpers as the other chapters.
 import type { Deco, Theme } from './schema'
+import { withBus } from './bus'
 import { L, T, R, F, say, D, WOOD, DARK, STREET_BOUNDS, withStreet } from './chapter1b'
 
 const GREEN = '#2f5a3a', ORANGE = '#e07a1f', YELLOW = '#f5b91c', RUST = '#c4562a', BLUE = '#2b6ad0', STEEL = '#9aa3a8'
@@ -48,7 +49,7 @@ export const LEVEL_C4L1 = L({
 })
 
 // ---------------------------------------------------------------------------------------------------------------- Level 2
-export const LEVEL_C4L2 = L({
+export const LEVEL_C4L2 = withBus(L({
   ch: 'ch4', n: 2, title: 'Prep Time', next: 'ch4.l3',
   intro: 'Before a single plate goes out there are sacks of onions to cut, a pantry to check and a stew that insists on being watched.',
   theme: KITCHEN([{ kind: 'sign', x: 10, z: -3.4, label: 'PANTRY', w: 1.8 }]),
@@ -85,10 +86,10 @@ export const LEVEL_C4L2 = L({
   npcs: { folake: { x: -10.8, z: -4.6, rot: 0.8 }, tunde: { x: 4, z: -4.4, rot: 0.2 } }, choiceLabel: 'choice',
   endBeat: { text: 'The stew smells so good that two customers walk in, sit down and ask what time dinner starts. It is two in the afternoon.', line: 'Dinner service starts soon.' },
   starRules: ['Finish the level', 'Take your time: no timer here', 'Finish with two or fewer wrong picks'],
-})
+}), { vehicle: 'train', to: 'the restaurant', title: 'Train to work', purpose: 'Prep starts early: wait at the station, board the train and ride to the restaurant.', objective: 'Take the train to the restaurant', success: 'You get off at the restaurant.', intro: [{ who: 'folake', text: 'Prep time! Take the early train. The onions will not cut themselves, though they will make you cry.', expr: 'calm' }], done: [{ who: 'tunde', text: 'Early train, early cook. Sit down and wake up.', expr: 'cheeky' }] })
 
 // ---------------------------------------------------------------------------------------------------------------- Level 3
-export const LEVEL_C4L3 = L({
+export const LEVEL_C4L3 = withBus(L({
   ch: 'ch4', n: 3, title: 'First Orders', next: 'ch4.l4',
   intro: 'The door opens. The first customers walk in. Chef Tunde pushes a ticket into your hand and says "Go".',
   theme: KITCHEN([{ kind: 'sign', x: 3.4, z: -3.4, label: 'PASS', w: 1.4 }]),
@@ -124,7 +125,7 @@ export const LEVEL_C4L3 = L({
   npcs: { folake: { x: -10.8, z: -4.6, rot: 0.8 }, tunde: { x: 0, z: -4.4, rot: 0.1 } }, choiceLabel: 'style',
   endBeat: { text: 'Table four sends a compliment to the chef. The chef claims he did everything. The chef did not.', line: 'The dining room fills up next.' },
   starRules: ['Finish the level', 'Deliver the plate before the timer ends', 'Be on time with two or fewer slips'],
-})
+}), { vehicle: 'train', to: 'the restaurant', title: 'Train to work', purpose: 'The lunch tickets start soon: wait at the station, board the train and ride to the restaurant.', objective: 'Take the train to the restaurant', success: 'You get off at the restaurant.', intro: [{ who: 'folake', text: 'First orders today. Take the train and be at the pass before the first ticket prints.', expr: 'worried' }], done: [{ who: 'helper', text: 'The train was late. The tickets will not be.', expr: 'tired' }] })
 
 // ---------------------------------------------------------------------------------------------------------------- Level 4
 export const LEVEL_C4L4 = L({
@@ -178,7 +179,7 @@ export const LEVEL_C4L4 = L({
 })
 
 // ---------------------------------------------------------------------------------------------------------------- Level 5
-export const LEVEL_C4L5 = L({
+export const LEVEL_C4L5 = withBus(L({
   ch: 'ch4', n: 5, title: 'The Picky Customer', next: 'ch4.l6',
   intro: 'Table five is not happy. The jollof is "not like his mother\'s". Nobody has met his mother.',
   theme: KITCHEN([{ kind: 'chair', x: 6.2, z: -1.8, color: WOOD }]),
@@ -212,10 +213,10 @@ export const LEVEL_C4L5 = L({
   npcs: { folake: { x: -10.8, z: -4.6, rot: 0.8 }, tunde: { x: -4, z: -4.4, rot: 0.1 } }, choiceLabel: 'response',
   endBeat: { text: 'He finishes the plate, orders a second one and complains about that too. The kitchen counts it as a win.', line: 'Something is burning in the back.' },
   starRules: ['Finish the level', 'Take your time: no timer here', 'Finish with two or fewer wrong orders'],
-})
+}), { vehicle: 'train', to: 'the restaurant', title: 'Train to work', purpose: 'Something has gone wrong at table five: wait at the station, board the train and ride to the restaurant.', objective: 'Take the train to the restaurant', success: 'You get off at the restaurant.', intro: [{ who: 'folake', text: 'A customer is already complaining and you are not even here. Take the train. Be kind. Be quick.', expr: 'worried' }], done: [{ who: 'helper', text: 'He was rude to the waiter. He was rude to the menu.', expr: 'suspicious' }] })
 
 // ---------------------------------------------------------------------------------------------------------------- Level 6
-export const LEVEL_C4L6 = L({
+export const LEVEL_C4L6 = withBus(L({
   ch: 'ch4', n: 6, title: 'Kitchen Fire', next: 'ch4.l7',
   intro: 'There is a pan, there is oil and now there is a very bright orange problem. Stay calm. Then move quickly.',
   theme: KITCHEN([{ kind: 'sign', x: 10.2, z: 0, label: 'GAS VALVE', w: 2 }]),
@@ -254,10 +255,10 @@ export const LEVEL_C4L6 = L({
   npcs: { folake: { x: -10.8, z: -4.6, rot: 0.8 }, tunde: { x: -3, z: 3.8, rot: 0.2 } }, choiceLabel: 'announcement',
   endBeat: { text: 'The fire is out, the diners are clapping and the smoke alarm is still making a speech.', line: 'The delivery did not come.' },
   starRules: ['Finish the level', 'Reach the valve before the timer ends', 'Be on time with two or fewer slips'],
-})
+}), { vehicle: 'train', to: 'the restaurant', title: 'Train to work', purpose: 'Late shift: wait at the station, board the train and ride to the restaurant.', objective: 'Take the train to the restaurant', success: 'You get off at the restaurant.', intro: [{ who: 'folake', text: 'Evening shift. Take the train and keep your eyes open. Kitchens are hot places in more ways than one.', expr: 'calm' }], done: [{ who: 'tunde', text: 'If you smell smoke, say so. Loudly.', expr: 'confident' }] })
 
 // ---------------------------------------------------------------------------------------------------------------- Level 7
-export const LEVEL_C4L7 = L({
+export const LEVEL_C4L7 = withBus(L({
   ch: 'ch4', n: 7, title: 'Stock Shortage', next: 'ch4.l8',
   intro: 'The delivery van never arrived. The pantry is empty, the dining room is full and the menu still says "everything".',
   theme: KITCHEN([{ kind: 'sign', x: 8.6, z: -5.2, label: 'CORNER SHOP', w: 2.2 }]),
@@ -297,10 +298,10 @@ export const LEVEL_C4L7 = L({
   npcs: { folake: { x: -10.8, z: -4.6, rot: 0.8 }, tunde: { x: 11, z: 4.4, rot: -2.4 } }, choiceLabel: 'menu',
   endBeat: { text: 'The new menu has three items. The customers say it is "refreshingly honest". The cook says nothing.', line: 'A critic is on the way.' },
   starRules: ['Finish the level', 'Reach the shop before the timer ends', 'Be on time with two or fewer slips'],
-})
+}), { vehicle: 'train', to: 'the restaurant', title: 'Train to work', purpose: 'A bad delivery morning: wait at the station, board the train and ride to the restaurant.', objective: 'Take the train to the restaurant', success: 'You get off at the restaurant.', intro: [{ who: 'folake', text: 'The supplier did not come. Take the train and bring ideas, not complaints.', expr: 'worried' }], done: [{ who: 'helper', text: 'I counted the rice. Then I counted it again. It did not grow.', expr: 'tired' }] })
 
 // ---------------------------------------------------------------------------------------------------------------- Level 8
-export const LEVEL_C4L8 = L({
+export const LEVEL_C4L8 = withBus(L({
   ch: 'ch4', n: 8, title: 'The Critic', next: 'ch4.l9',
   intro: 'A quiet man in a good jacket sits at table one and orders the simplest dish on the menu. He writes something down. Everyone panics politely.',
   theme: KITCHEN([{ kind: 'sign', x: 8.4, z: -5.2, label: 'TABLE 1', w: 1.6 }, { kind: 'chair', x: 8.6, z: -2.0, color: WOOD }]),
@@ -333,10 +334,10 @@ export const LEVEL_C4L8 = L({
   npcs: { folake: { x: -10.8, z: -4.6, rot: 0.8 }, tunde: { x: -7, z: -4.4, rot: 0.2 } }, choiceLabel: 'description',
   endBeat: { text: 'The critic stands, buttons his jacket and says: "I will write about this." Nobody knows if that is good.', line: 'The last service is next.' },
   starRules: ['Finish the level', 'Take your time: no timer here', 'Finish with two or fewer wrong orders'],
-})
+}), { vehicle: 'train', to: 'the restaurant', title: 'Train to work', purpose: 'A special guest tonight: wait at the station, board the train and ride to the restaurant.', objective: 'Take the train to the restaurant', success: 'You get off at the restaurant.', intro: [{ who: 'folake', text: 'A critic is coming tonight. Take the train, wash your hands twice and look innocent.', expr: 'worried' }], done: [{ who: 'tunde', text: 'He eats in silence. We cook in terror.', expr: 'angry' }] })
 
 // ---------------------------------------------------------------------------------------------------------------- Level 9
-export const LEVEL_C4L9 = L({
+export const LEVEL_C4L9 = withBus(L({
   ch: 'ch4', n: 9, title: 'Last Order', next: null, badge: 'Kitchen Rush',
   intro: 'It is nearly midnight. One last table, one last order, and a whole kitchen that has somehow become a family.',
   theme: KITCHEN([{ kind: 'sign', x: 10.8, z: 0.4, label: 'FRONT DOOR', w: 2 }]),
@@ -372,4 +373,4 @@ export const LEVEL_C4L9 = L({
   npcs: { folake: { x: -10.8, z: -4.6, rot: 0.8 }, tunde: { x: -7, z: -4.4, rot: 0.2 } }, choiceLabel: 'closing',
   endBeat: { text: 'The lights go off one by one. Nobody wants to be the one who leaves first. Somehow, everyone leaves together.', line: 'Chapter 4 is done. A new chapter is open.' },
   starRules: ['Finish the level', 'Carry the plate before the timer ends', 'Be on time with two or fewer slips'],
-})
+}), { vehicle: 'train', to: 'the restaurant', title: 'Train to work', purpose: 'The last service of the week: wait at the station, board the train and ride to the restaurant.', objective: 'Take the train to the restaurant', success: 'You get off at the restaurant.', intro: [{ who: 'folake', text: 'Last service. Take the train, my child. Tonight we close the kitchen together.', expr: 'happy' }], done: [{ who: 'tunde', text: 'You were a beginner on day one. Look at you now.', expr: 'proud' }] })

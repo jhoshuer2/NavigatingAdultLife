@@ -279,3 +279,6 @@ Feedback: levels felt like walk, tap, repeat. Two new acted-out task kinds (engi
 - `Ride.vehicle: 'train'` draws a three-carriage train, rails instead of a road and a STATION sign (`STATION` in `street.ts`, deco kind `rail`). `withBus(level, { vehicle: 'train', ... })` adds it.
 - Added to ch3 L2, L3, L4, L5, L6, L8, L9 (L1 and L7 already start on a bus). Each has its own Folake/Tunde lines. Played in headless Chrome: board, ride, arrive, next task.
 - Players mid-level resume one step earlier in these levels.
+
+## Chapter 4: train rides
+- Train ride (`withBus`, `vehicle: 'train'`) added to ch4 L2, L3, L5, L6, L7, L8, L9 (L1 and L4 already start on a bus). Played in headless Chrome: board, ride, arrive, next task. Players mid-level resume one step earlier.
