@@ -17,7 +17,7 @@ export const REACH = 2.3
 type ActKind = 'dig' | 'search' | 'take'
 interface Act { pose?: Pose; kind: ActKind; x: number; z: number; id: string; label: string; t: number; dur: number; walk: number; done: () => void; beat: number; phone?: boolean }
 const ACT_DUR: Record<ActKind, number> = { dig: 2.4, search: 1.3, take: 1.3 }
-const POSE_LABEL: Partial<Record<Pose, string>> = { lift: 'Lifting…', write: 'Writing…', chop: 'Chopping…', stir: 'Stirring…', pour: 'Seasoning…', countMoney: 'Counting the money…', pickLow: 'Bending down…', reachHigh: 'Reaching up…', stamp: 'Stamping…', grab: 'Taking it…', carryBox: 'Picking it up…', kneelTie: 'Getting dressed…', push: 'Pushing…', tapeBox: 'Taping the box…', dribble: 'Weaving round the cone…' }
+const POSE_LABEL: Partial<Record<Pose, string>> = { lift: 'Lifting…', write: 'Writing…', chop: 'Chopping…', stir: 'Stirring…', pour: 'Seasoning…', countMoney: 'Counting the money…', pickLow: 'Bending down…', reachHigh: 'Reaching up…', stamp: 'Stamping…', grab: 'Taking it…', carryBox: 'Picking it up…', kneelTie: 'Getting dressed…', push: 'Pushing…', raiseHand: 'Raising a hand…', typing: 'Typing…', tapeBox: 'Taping the box…', dribble: 'Weaving round the cone…' }
 const POSE_DUR: Partial<Record<Pose, number>> = { write: 1.8, stamp: 1.5, pickLow: 1.5, lift: 1.6, handOver: 1.2, shakeHands: 1.5, point: 1.1, wave: 1.2 }
 export const actLabel = (kind: ActKind, id: string) => kind === 'dig' ? 'Digging through the laundry…' : kind === 'search' ? (id === 'pillow' ? 'Lifting the pillow…' : id === 'drawer' ? 'Opening the drawer…' : 'Checking…') : 'Picking it up…'
 
@@ -81,7 +81,7 @@ export class LevelRenderer {
   private peopleObjs = new Map<string, { parts: ToonParts; label: THREE.Sprite; p: TalkPerson; task: number }>()
   /** who is speaking now: they gesture while their line is on screen */
   private speaker: Speaker | null = null
-  private vehicleKind: 'bus' | 'train' | 'helicopter' | 'ferry' | 'keke' | 'truck' = 'bus'
+  private vehicleKind: 'bus' | 'train' | 'helicopter' | 'ferry' | 'keke' | 'truck' | 'shuttle' = 'bus'
 
   constructor(private canvas: HTMLCanvasElement, private level: LevelDef, spec: ToonSpec, startTask = 0) {
     this.r = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false })
@@ -264,6 +264,13 @@ export class LevelRenderer {
       add(0.8, 0.7, 0.8, '#a87a50', -1.6, 1.55, -0.4); add(0.9, 0.5, 0.8, '#c4562a', -0.4, 1.45, 0.4); add(0.7, 0.6, 0.7, '#a87a50', -1.2, 1.5, 0.5)
       for (const [wx, wz] of [[-1.6, -0.95], [-1.6, 0.95], [1.5, -0.95], [1.5, 0.95]]) { const w = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.22, 10), lam('#1c1b22')); w.rotation.x = Math.PI / 2; w.position.set(wx, 0.4, wz); g.add(w) }
       const l = this.label('TRUCK', 1.5); l.position.set(0, 2.7, 0); g.add(l)
+    } else if (kind === 'shuttle') { // an open campus cart: green body, striped canopy on poles, two bench rows
+      add(4.2, 0.6, 1.8, '#2f5a3a', 0, 0.7, 0); add(4.0, 0.12, 1.9, '#fbf8f0', 0, 2.2, 0); add(4.0, 0.06, 1.95, '#e07a1f', 0, 2.27, 0)
+      for (const px of [-1.8, 1.8]) for (const pz of [-0.85, 0.85]) add(0.08, 1.5, 0.08, '#1c1b22', px, 1.5, pz)
+      for (const bx of [-0.9, 0.7]) add(0.6, 0.12, 1.5, '#a87a50', bx, 1.15, 0)
+      add(0.8, 0.5, 1.7, '#9ecbe6', 2.1, 1.2, 0)
+      for (const [wx, wz] of [[-1.3, -0.9], [-1.3, 0.9], [1.4, -0.9], [1.4, 0.9]]) { const w = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.16, 10), lam('#1c1b22')); w.rotation.x = Math.PI / 2; w.position.set(wx, 0.3, wz); g.add(w) }
+      const l = this.label('SHUTTLE', 1.7); l.position.set(0, 2.9, 0); g.add(l)
     } else if (kind === 'ferry') {
       add(6.4, 0.9, 2.3, '#fbf8f0', 0, 0.55, 0); add(6.42, 0.3, 2.32, '#2b6ad0', 0, 0.2, 0); add(3.2, 1.0, 1.8, '#fbf8f0', -0.4, 1.5, 0); add(3.0, 0.4, 1.84, '#9ecbe6', -0.4, 1.6, 0); add(0.5, 0.9, 0.5, '#e07a1f', -1.4, 2.4, 0); add(0.52, 0.2, 0.52, '#1c1b22', -1.4, 2.9, 0)
       const l = this.label('FERRY', 1.5); l.position.set(0, 3.5, 0); g.add(l)

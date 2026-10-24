@@ -325,3 +325,16 @@ Feedback: each chapter should introduce its own means of transport, not repeat o
 - Built in full: `src/levels/chapter6.ts`, nine levels, replaces the placeholder. New vehicle **truck** (small yellow pickup with a boxed bed, TRUCK YARD sign). New poses `push` and `tapeBox`.
 - 1 The Notice (talk to the landlord, find the lease folder, sign the notice, pick a date) | 2 Boxes Everywhere (three boxes, pack the kitchen with wrap and tape, keep/donate/bin) | 3 Goodbye, Neighbours (three goodbyes, tea for each, race the warden) | 4 Hire the Truck (two dealers, supplies on a budget, cross the yard, pick the size) | 5 Loading Day (carry boxes, load heavy first, beat the warden) | 6 The Stubborn Sofa (find the tape, tilt, push and turn, squeeze the corridor, rest) | 7 The Long Road (cross the highway, find the keys, fuel and supplies, ask the way) | 8 The New Place (door, unload in order, meet Aunty Ngozi, water for the helpers) | 9 First Night (pizza on a box, sit on the floor, call home, the balcony). Badge "Move-Out Day"; finishing it opens Chapter 7 (placeholder).
 - Variety and vehicle test now covers chapter 6. Places, dialogue and task order are my own design.
+
+## Chapter 7: Campus Life (shuttle)
+Nine levels in `src/levels/chapter7.ts`, each opening with a campus shuttle ride (green open cart, striped canopy). The story, places and dialogue are my own design; the spec only names the chapter.
+1. Orientation Day: talk, find, collect, choose
+2. Hostel Life: goto, sequence, serve, hold
+3. The First Lecture: find, hold (raise hand), talk, sequence
+4. Library Hunt: find, collect, reach, talk
+5. Group Project: talk, sequence, choose, reach
+6. Cafeteria Rush: collect, serve, choose, goto
+7. Exam Week: reach, hold (typing/revise), find, choose
+8. Deadline Night: sequence, collect, reach, talk
+9. End of Term: talk, serve, hold, goto (badge "Campus Life")
+New poses: raiseHand, typing. Chapters 8 to 10 remain locked placeholders.
