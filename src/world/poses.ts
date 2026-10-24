@@ -5,7 +5,7 @@ import type { HumanParts } from './characters'
 
 export type Pose =
   | 'stand' | 'carryTray' | 'carryBox' | 'reachHigh' | 'pickLow' | 'grab' | 'handOver' | 'sit' | 'sitEat' | 'eat' | 'drink' | 'wave' | 'talk' | 'point'
-  | 'shakeHands' | 'knock' | 'write' | 'stamp' | 'chop' | 'stir' | 'pour' | 'sweep' | 'wipe' | 'countMoney' | 'phone' | 'lift' | 'dig' | 'digPhone' | 'search' | 'plank' | 'stretch' | 'cheer' | 'dribble' | 'kneelTie' | 'lean'
+  | 'shakeHands' | 'knock' | 'write' | 'stamp' | 'chop' | 'stir' | 'pour' | 'sweep' | 'wipe' | 'countMoney' | 'phone' | 'lift' | 'dig' | 'digPhone' | 'search' | 'plank' | 'stretch' | 'cheer' | 'dribble' | 'kneelTie' | 'lean' | 'push' | 'tapeBox'
 
 /** target angles, in radians (and `hy` for how far the hips drop). Missing means 0. Authored so that a negative arm, thigh or elbow x lifts it forward and a
  *  positive knee x tucks the shin back, and a positive body or head x leans forward and down; applyPose flips the signs for the limbs and head, whose axes
@@ -47,6 +47,8 @@ export const POSES: Record<Pose, (t: number) => J> = {
   cheer: (t) => ({ aLx: -2.7 + S(t * 9) * 0.2, aRx: -2.7 - S(t * 9) * 0.2, hy: Math.abs(S(t * 7)) * 0.25, nx: -0.2, ny: S(t * 3) * 0.2 }),
   dribble: (t) => ({ bx: 0.22, aLx: -0.5 + S(t * 8) * 0.3, aRx: -0.5 - S(t * 8) * 0.3, eLx: -0.5, eRx: -0.5, nx: 0.25 }),
   kneelTie: (t) => ({ hy: -0.75, lLx: -1.25, lRx: 0.4, kLx: 1.9, kRx: 1.6, bx: 0.7, aRx: -1.3, aLx: -1.3, eRx: -1.1 + S(t * 8) * 0.2, eLx: -1.0, nx: 0.5 }),
+  push: (t) => ({ bx: 0.5, aLx: -1.5, aRx: -1.5, eLx: -0.1, eRx: -0.1, lLx: 0.5 + S(t * 5) * 0.2, lRx: -0.4 - S(t * 5) * 0.2, kLx: 0.2, kRx: 0.2, nx: 0.1 }),
+  tapeBox: (t) => ({ hy: -0.7, bx: 0.8, lLx: -1.2, lRx: -1.0, kLx: 1.8, kRx: 1.7, aLx: -1.2, aRx: -1.1 + S(t * 6) * 0.2, eRx: -0.5, nx: 0.5 }),
   lean: (t) => ({ bz: 0.06, aLx: 0.15, aRx: -0.35, eRx: -1.0, hy: S(t * 1.2) * 0.01, ny: 0.15 }),
   search: (t) => ({ bx: 0.6, aLx: -1.3 + S(t * 18) * 0.4, aRx: -1.3, nx: 0.2 }),
 }

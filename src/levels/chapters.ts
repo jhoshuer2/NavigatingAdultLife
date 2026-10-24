@@ -17,7 +17,7 @@ export const CHAPTERS: ChapterDef[] = [
   { id: 'ch3', number: 3, title: 'Market Day', blurb: 'Buy, sell, bargain and keep your cool.', levels: Array.from({ length: 9 }, (_, i) => `ch3.l${i + 1}`), totalLevels: 9, built: true },
   { id: 'ch4', number: 4, title: 'Kitchen Rush', blurb: 'Orders pile up and the pot will not wait.', levels: Array.from({ length: 9 }, (_, i) => `ch4.l${i + 1}`), totalLevels: 9, built: true },
   { id: 'ch5', number: 5, title: 'Beach Weekend', blurb: 'Sun, sand and a plan that keeps changing.', levels: Array.from({ length: 9 }, (_, i) => `ch5.l${i + 1}`), totalLevels: 9, built: true },
-  placeholder(6, 'Move-Out Day', 'Boxes, keys and one stubborn sofa.'),
+  { id: 'ch6', number: 6, title: 'Move-Out Day', blurb: 'Boxes, keys and one stubborn sofa.', levels: Array.from({ length: 9 }, (_, i) => `ch6.l${i + 1}`), totalLevels: 9, built: true },
   placeholder(7, 'Campus Life', 'Lectures, deadlines and new friends.'),
   placeholder(8, 'Hospital Shift', 'A careful day behind the scenes.'),
   placeholder(9, 'Road Trip', 'Good music, bad directions.'),
