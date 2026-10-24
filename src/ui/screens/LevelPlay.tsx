@@ -27,6 +27,7 @@ export default function LevelPlay() {
   const [banner, setBanner] = useState<string | null>(null)
   const [done, setDone] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
+  const [doing, setDoing] = useState<string | null>(null)
   const [near, setNear] = useState<Nearby | null>(null)
   const [paused, setPaused] = useState(false)
   const [hint, setHint] = useState<string | null>(null)
@@ -73,7 +74,7 @@ export default function LevelPlay() {
       changed: () => bump(),
       sfx: (n) => audio.sfx(SFX[n] ?? 'click'),
     }, levelStart)
-    runner.current = rn; r.runner = rn; r.onNearby = setNear
+    runner.current = rn; r.runner = rn; r.onNearby = setNear; r.onAction = (l) => setDoing(l); r.onFx = (n) => audio.sfx(n === 'tap' ? 'tap' : 'prompt')
     track('level_started', { level: level.id, character: spec.id, resumed: levelStart > 0 })
     if (new URLSearchParams(location.search).get('debug') === '1') (window as unknown as Record<string, unknown>).__level = { runner: rn, scene: r }
     audio.playMusic('play')
@@ -89,7 +90,7 @@ export default function LevelPlay() {
   const stick = useRef({ x: 0, z: 0 })
   const sync = () => { const s = scene.current; if (!s) return; s.input.x = paused ? 0 : keys.current.x || stick.current.x; s.input.z = paused ? 0 : keys.current.z || stick.current.z }
   useEffect(() => { sync(); if (scene.current) scene.current.paused = paused }, [paused])
-  const act = useCallback(() => { const rn = runner.current; if (rn && near && !paused) rn.interact(near.id) }, [near, paused])
+  const act = useCallback(() => { const rn = runner.current, sc = scene.current; if (rn && sc && near && !paused && !sc.busy) sc.perform(near, () => rn.interact(near.id)) }, [near, paused])
   useEffect(() => {
     const down = new Set<string>()
     const upd = () => { keys.current = { x: (down.has('d') || down.has('arrowright') ? 1 : 0) - (down.has('a') || down.has('arrowleft') ? 1 : 0), z: (down.has('s') || down.has('arrowdown') ? 1 : 0) - (down.has('w') || down.has('arrowup') ? 1 : 0) }; sync() }
@@ -156,6 +157,7 @@ export default function LevelPlay() {
 
       {banner && <div className="absolute inset-x-0 flex justify-center pointer-events-none" style={{ top: '34%' }}><div className="pop rounded-2xl px-5 py-2 font-display text-2xl text-center" style={{ background: ORANGE, color: '#fff', border: `3px solid ${INK}`, boxShadow: `0 5px 0 ${INK}` }}>{banner}</div></div>}
       {done && <div className="absolute inset-x-0 flex justify-center pointer-events-none" style={{ top: '30%' }}><div className="pop rounded-2xl px-6 py-3 font-display text-3xl text-center" style={{ background: FOREST, color: '#fff', border: `3px solid ${INK}`, boxShadow: `0 5px 0 ${INK}` }}>{done}</div></div>}
+      {doing && <div className="absolute inset-x-0 flex justify-center pointer-events-none" style={{ top: '36%' }}><div className="pop rounded-full px-5 py-2 font-display text-2xl text-center" style={{ background: INK, color: '#fff', border: '3px solid #fff' }}>{doing}</div></div>}
       {toast && !done && <div className="absolute inset-x-0 flex justify-center pointer-events-none" style={{ top: '42%' }}><div className="pop rounded-full px-4 py-1 font-extrabold" style={{ background: '#fff', border: `2px solid ${INK}`, color: INK }}>{toast}</div></div>}
 
       {(line || hint) && (

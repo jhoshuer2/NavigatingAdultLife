@@ -7,8 +7,6 @@ import { ZURI, NAVI, BABA_TUNDE, MAMA_FOLAKE, PLAYABLE } from '../../world/castD
 import { progressOf, type CharacterId } from '../../levels/progress'
 import { CHAPTER1, LEVELS } from '../../levels/chapter1'
 import { track } from '@platform/analytics'
-import { ConsentScreen } from './Consent'
-import { analyticsAvailable } from '@platform/analytics'
 
 export const INK = '#1c1b22', CREAM = '#f3e7cf', ORANGE = '#e07a1f', FOREST = '#2f5a3a', YELLOW = '#f5b91c'
 
@@ -33,7 +31,6 @@ export function Pill({ children }: { children: React.ReactNode }) {
 export function Home() {
   const { meta, go } = useGame()
   const p = progressOf(meta)
-  const consentOpen = analyticsAvailable() && !meta.consentAsked
   const lvl = LEVELS[p.level]
   const inProgress = p.task > 0
   const doneLevels = Object.keys(p.stars).length
@@ -41,7 +38,6 @@ export function Home() {
   const play = () => { audio.unlock(); audio.playMusic('menu'); go('levelIntro') }
   return (
     <Shell>
-      {consentOpen && <ConsentScreen />}
       <header className="flex items-center justify-between px-4 pt-4" style={{ paddingTop: 'calc(1rem + var(--safe-t))' }}>
         <div className="flex gap-2"><Pill>⭐ {p.points} points</Pill><Pill>🪙 {p.coins}</Pill></div>
         <button aria-label="Settings" className="grid place-items-center w-11 h-11 rounded-full text-xl" style={{ background: '#fff8', border: `2px solid ${INK}` }} onClick={() => go('settings')}>⚙</button>

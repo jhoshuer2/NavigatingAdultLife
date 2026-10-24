@@ -207,6 +207,8 @@ export const useGame = create<Store>((set, get) => {
       const meta = refreshTokens(loadMeta())
       const qs = new URLSearchParams(location.search)
       if (qs.get('unlimited') === '1') { meta.tokens.unlimited = true; if (!qs.get('asklang')) { meta.langAsked = true; if (!qs.get('howto')) meta.tips = Object.fromEntries(Object.keys(HOWTO).map((k) => [k, 9])) } } // playtest/test mode skips the language question
+      // counting players is on by default (anonymous device code only, no popup); anyone who already answered keeps their answer, and Settings can switch it off
+      if (!meta.consentAsked) { meta.consentAnalytics = true; meta.consentAsked = true }
       saveMeta(meta)
       audio.configure(meta.settings)
       configureVoice({ on: meta.settings.sound && meta.settings.voice !== false, volume: meta.settings.volume })

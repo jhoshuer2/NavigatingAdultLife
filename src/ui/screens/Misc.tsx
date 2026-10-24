@@ -149,7 +149,7 @@ export function Settings() {
  <Toggle label="Simple menu mode (lighter on older phones)" on={s.lite} onChange={(v) => updateSettings({ lite: v })} />
         <Toggle label="Larger text" on={s.bigText} onChange={(v) => updateSettings({ bigText: v })} />
         <Toggle label="Dash assist mode (slower, forgiving)" on={s.assist} onChange={(v) => updateSettings({ assist: v })} />
-        <Toggle label="Share anonymous play statistics (optional)" on={meta.consentAnalytics} onChange={setConsent} />
+        <Toggle label="Count me in the anonymous play statistics (on by default, no personal data)" on={meta.consentAnalytics} onChange={setConsent} />
         <button className="text-xs underline opacity-70 text-left" onClick={() => setShowPrivacy(!showPrivacy)}>{showPrivacy ? 'Hide' : 'What is collected?'}</button>
         {showPrivacy && <div className="card p-3"><PrivacyDetails />{analyticsAvailable() && <div className="text-xs mt-2 opacity-70">Your device code: <b>{shortDeviceCode()}</b></div>}</div>}
         {analyticsAvailable() && <Btn variant="danger" onClick={async () => { if (!confirm('Delete the play statistics stored about this device?')) return; const ok = await forgetMe(); toast(ok ? 'Your statistics were deleted' : 'Could not reach the server. Try again later.') }}>🗑 Delete my statistics</Btn>}

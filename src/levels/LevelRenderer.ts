@@ -11,6 +11,12 @@ import type { TaskRunner } from './TaskRunner'
 const lam = (c: string | number) => new THREE.MeshLambertMaterial({ color: c })
 export const REACH = 2.3
 
+/** an action being played: the player walks up, then bends, digs or reaches, then the rule fires */
+type ActKind = 'dig' | 'search' | 'take'
+interface Act { kind: ActKind; x: number; z: number; id: string; label: string; t: number; dur: number; walk: number; done: () => void; beat: number; phone?: boolean }
+const ACT_DUR: Record<ActKind, number> = { dig: 2.4, search: 1.3, take: 1.0 }
+export const actLabel = (kind: ActKind, id: string) => kind === 'dig' ? 'Digging through the laundry…' : kind === 'search' ? (id === 'pillow' ? 'Lifting the pillow…' : id === 'drawer' ? 'Opening the drawer…' : 'Checking…') : 'Picking it up…'
+
 export interface Nearby { kind: 'spot' | 'item'; id: string; label: string }
 
 /** sliding clutter in the last task: position along z over time */
@@ -41,6 +47,15 @@ export class LevelRenderer {
   private last = 0
   runner?: TaskRunner
   paused = false
+  private act: Act | null = null
+  private furn = new Map<string, THREE.Mesh>()
+  private pillow!: THREE.Mesh
+  private fx: { m: THREE.Mesh; v: THREE.Vector3; life: number }[] = []
+  private phoneMesh!: THREE.Group
+  private clothes = ['#c4562a', '#f5b91c', '#2f5a3a', '#fbf8f0', '#6a8ab8']
+  onAction?: (label: string | null, dur: number) => void
+  onFx?: (n: 'tap' | 'pop') => void
+  get busy() { return !!this.act }
   onNearby?: (n: Nearby | null) => void
   private lastNear = ''
 
@@ -89,10 +104,10 @@ export class LevelRenderer {
     this.box(1.8, 0.04, 2.4, '#e07a1f', 8.2, 0.01, 0) // doormat
     for (const f of L.furniture) {
       const r = f.rect
-      this.box(r.x1 - r.x0, f.h, r.z1 - r.z0, f.color, (r.x0 + r.x1) / 2, f.h / 2, (r.z0 + r.z1) / 2)
+      this.furn.set(f.name, this.box(r.x1 - r.x0, f.h, r.z1 - r.z0, f.color, (r.x0 + r.x1) / 2, f.h / 2, (r.z0 + r.z1) / 2))
     }
     // pillow, rug, window, plant, clock: a little life
-    this.box(1.2, 0.18, 0.8, '#fbf8f0', -7.6, 0.8, -3)
+    this.pillow = this.box(1.2, 0.18, 0.8, '#fbf8f0', -7.6, 0.8, -3)
     this.box(3, 0.03, 2.2, '#2f5a3a', -3.2, 0.01, 0.3)
     this.box(1.6, 0.9, 0.12, '#9ecbe6', -3, 1.6, -5.05)
     this.box(1.6, 0.9, 0.12, '#9ecbe6', 2, 1.6, -5.05)
@@ -100,6 +115,10 @@ export class LevelRenderer {
     // spots keep an invisible anchor so the scene can wobble them when the player gets close
     for (const s of L.spots) { const g = new THREE.Group(); g.position.set(s.x, 0, s.z); this.scene.add(g); this.spotMeshes.set(s.id, g) }
     for (const it of L.items) { const o = this.itemMesh(it); o.position.set(it.x, this.itemY(it), it.z); this.scene.add(o); this.itemMeshes.set(it.id, o) }
+    this.phoneMesh = new THREE.Group()
+    const scr = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.32, 0.045), new THREE.MeshBasicMaterial({ color: '#9ecbe6' })); scr.position.z = 0.005
+    this.phoneMesh.add(new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.38, 0.04), lam('#1c1b22')), scr)
+    this.phoneMesh.visible = false; this.scene.add(this.phoneMesh)
     for (const h of HAZARDS) {
       const g = new THREE.Group()
       if (h.name === 'mop') { const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.8, 6), lam('#a87a50')); stick.rotation.z = 1.2; stick.position.y = 0.5; g.add(stick); const head = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.18, 0.35), lam(h.color)); head.position.set(-0.7, 0.1, 0); g.add(head) }
@@ -150,7 +169,8 @@ export class LevelRenderer {
     if (stumbling) this.stumbleT -= dt
     let mx = this.input.x, mz = this.input.z
     const m = Math.hypot(mx, mz); if (m > 1) { mx /= m; mz /= m }
-    const moving = !stumbling && m > 0.12 && !(run?.finished)
+    const actState = this.act ? this.stepAct(dt) : null
+    const moving = !stumbling && !this.act && m > 0.12 && !(run?.finished)
     if (moving) {
       const sp = 4.6 * dt
       const n = moveWithCollision(L.blockers, this.px, this.pz, mx * sp, mz * sp, L.bounds)
@@ -161,7 +181,8 @@ export class LevelRenderer {
     this.me.group.rotation.y += dr * Math.min(1, dt * 14)
     this.me.group.position.set(this.px, 0, this.pz)
     if (stumbling) { this.me.body.rotation.x = -1.2 * Math.min(1, (1.1 - this.stumbleT) * 8) * (this.stumbleT > 0.35 ? 1 : this.stumbleT / 0.35); this.me.body.position.y = 0; this.me.armL.rotation.x = this.me.armR.rotation.x = -2.4 }
-    else { this.me.body.rotation.x = 0; animateHuman(this.me, this.t, moving, 1.15) }
+    else { this.me.body.rotation.x = 0; animateHuman(this.me, this.t, moving || actState === 'walking', 1.15); if (this.act && actState === 'acting') this.actPose(this.act) }
+    for (let i = this.fx.length - 1; i >= 0; i--) { const f = this.fx[i]; f.life -= dt; f.v.y -= 9 * dt; f.m.position.addScaledVector(f.v, dt); f.m.rotation.x += dt * 6; if (f.life <= 0 || f.m.position.y < 0.05) { this.scene.remove(f.m); this.fx.splice(i, 1) } }
     // the others breathe, Folake waves her arms when she is cross
     this.folake.group.position.y = Math.sin(this.t * 2) * 0.02
     this.tunde.armR.rotation.x = Math.sin(this.t * 3) * 0.12
@@ -173,7 +194,7 @@ export class LevelRenderer {
         const o = this.itemMeshes.get(it.id)!
         const here = it.task === idx && !run.finished && !run.collected.includes(it.id) && !(it.task === 2 && run.choice)
         o.visible = here
-        if (here) { o.position.y = this.itemY(it) + Math.sin(this.t * 3 + it.x) * 0.06; o.rotation.y = this.t * 1.5 }
+        if (here && !(this.act && this.act.id === it.id)) { o.position.y = this.itemY(it) + Math.sin(this.t * 3 + it.x) * 0.06; o.rotation.y = this.t * 1.5 }
       }
       const reach = run.task.kind === 'reach' && !run.finished
       for (let i = 0; i < HAZARDS.length; i++) {
@@ -200,6 +221,69 @@ export class LevelRenderer {
     this.cam.lookAt(this.cam.position.x, 0.6, this.cam.position.z - off.z * 0.9)
   }
 
+  /** Play the action for what the player is next to; `done` runs when the animation ends (that is when the task rule is applied). */
+  perform(n: Nearby, done: () => void): void {
+    if (this.act) return
+    const src = n.kind === 'spot' ? this.level.spots.find((x) => x.id === n.id) : this.level.items.find((x) => x.id === n.id)
+    if (!src) { done(); return }
+    const kind: ActKind = n.kind === 'item' ? 'take' : n.id === 'laundry' ? 'dig' : 'search'
+    this.act = { kind, x: src.x, z: src.z, id: n.id, label: actLabel(kind, n.id), t: 0, dur: ACT_DUR[kind], walk: 0, done, beat: 0 }
+    this.onAction?.(this.act.label, this.act.dur)
+  }
+
+  private spawnCloth(x: number, z: number) {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.06, 0.22), lam(this.clothes[Math.floor(Math.random() * this.clothes.length)]))
+    m.position.set(x, 0.7, z); this.scene.add(m)
+    this.fx.push({ m, v: new THREE.Vector3((Math.random() - 0.5) * 3, 3 + Math.random() * 2, (Math.random() - 0.5) * 3), life: 1.1 })
+  }
+
+  private stepAct(dt: number): 'walking' | 'acting' {
+    const a = this.act!, L = this.level
+    const dx = a.x - this.px, dz = a.z - this.pz, d = Math.hypot(dx, dz)
+    this.facing = Math.atan2(dx, dz)
+    if (a.t === 0 && d > 1.45 && a.walk < 1.0) {
+      a.walk += dt
+      const sp = 4.2 * dt, n = moveWithCollision(L.blockers, this.px, this.pz, (dx / d) * sp, (dz / d) * sp, L.bounds); this.px = n.x; this.pz = n.z
+      return 'walking'
+    }
+    a.t += dt; a.beat += dt
+    if (a.beat > 0.28 && a.kind !== 'take') { a.beat = 0; this.onFx?.('tap') }
+    const k = Math.min(1, a.t / a.dur)
+    if (a.kind === 'dig') {
+      if (Math.random() < dt * 14) this.spawnCloth(a.x + (Math.random() - 0.5) * 1.2, a.z + (Math.random() - 0.5) * 1.0)
+      const lm = this.furn.get('laundry'); if (lm) { lm.position.x = a.x + Math.sin(a.t * 38) * 0.05; lm.scale.y = 1 - 0.35 * Math.sin(Math.min(1, k * 1.4) * Math.PI / 2) }
+      if (k > 0.72 && !a.phone) { a.phone = true; this.onFx?.('pop') }
+      if (a.phone) { this.phoneMesh.visible = true; this.phoneMesh.position.set(this.px + Math.sin(this.facing) * 0.3, 1.65 + Math.sin(a.t * 30) * 0.03, this.pz + Math.cos(this.facing) * 0.3); this.phoneMesh.rotation.z = Math.sin(a.t * 40) * 0.12 }
+    } else if (a.kind === 'search') {
+      if (a.id === 'pillow') { this.pillow.position.y = 0.8 + Math.sin(k * Math.PI) * 0.7; this.pillow.rotation.z = Math.sin(k * Math.PI) * 0.7 }
+      else { const f = this.furn.get(a.id === 'drawer' ? 'drawers' : 'bedside'); if (f) f.position.x += Math.sin(a.t * 30) * 0.004 }
+    } else {
+      const o = this.itemMeshes.get(a.id)
+      if (o && k > 0.35) { const u = Math.min(1, (k - 0.35) / 0.55); o.position.set(a.x + (this.px - a.x) * u, this.itemY(this.level.items.find((i) => i.id === a.id)!) * (1 - u) + 0.9 * u, a.z + (this.pz - a.z) * u); o.scale.setScalar(1 - 0.75 * u) }
+    }
+    if (a.t >= a.dur) this.finishAct()
+    return 'acting'
+  }
+
+  private finishAct() {
+    const a = this.act!; this.act = null
+    this.phoneMesh.visible = false
+    const lm = this.furn.get('laundry'); if (lm) { lm.scale.y = 1; lm.position.x = (this.level.furniture.find((f) => f.name === 'laundry')!.rect.x0 + this.level.furniture.find((f) => f.name === 'laundry')!.rect.x1) / 2 }
+    this.pillow.position.y = 0.8; this.pillow.rotation.z = 0
+    for (const [name, f] of this.furn) { const fd = this.level.furniture.find((x) => x.name === name); if (fd) f.position.x = (fd.rect.x0 + fd.rect.x1) / 2 }
+    const o = this.itemMeshes.get(a.id); if (o) o.scale.setScalar(1)
+    this.onAction?.(null, 0)
+    a.done()
+  }
+
+  /** the pose while acting: leaning over, arms busy */
+  private actPose(a: Act) {
+    const me = this.me, t = a.t
+    if (a.kind === 'dig') { me.body.rotation.x = 0.85; me.armL.rotation.x = -1.6 + Math.sin(t * 22) * 0.7; me.armR.rotation.x = -1.6 - Math.sin(t * 22) * 0.7; if (a.phone) { me.body.rotation.x = 0.1; me.armR.rotation.x = -2.8; me.armL.rotation.x = 0 } }
+    else if (a.kind === 'search') { me.body.rotation.x = 0.6; me.armL.rotation.x = -1.3 + Math.sin(t * 18) * 0.4; me.armR.rotation.x = -1.3 }
+    else { const k = Math.min(1, t / a.dur); me.body.rotation.x = 0.7 * Math.sin(Math.min(1, k * 2) * Math.PI / 2) * (k > 0.6 ? 1 - (k - 0.6) / 0.4 * 0.8 : 1); me.armR.rotation.x = -1.9 * (k < 0.6 ? 1 : 1 - (k - 0.6) / 0.4 * 0.7); me.armL.rotation.x = -0.4 }
+  }
+
   private reportNearby(run: TaskRunner) {
     const L = this.level, idx = run.idx
     let best: Nearby | null = null, bd = REACH
@@ -209,6 +293,7 @@ export class LevelRenderer {
       if (run.task.kind === 'collect') for (const it of L.items) if (it.task === idx && !run.collected.includes(it.id)) consider(it, 'item')
       if (run.task.kind === 'choose' && !run.choice) for (const it of L.items) if (it.task === idx) consider(it, 'item')
     }
+    if (this.act) best = null
     const key = best ? `${(best as Nearby).kind}:${(best as Nearby).id}` : ''
     if (key !== this.lastNear) { this.lastNear = key; this.onNearby?.(best) }
   }
