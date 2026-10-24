@@ -44,7 +44,7 @@ export default function LevelPlay() {
     const next = queue.current.shift()
     if (!next) { setLine(null); return }
     speaking.current = true; setLine(next); scene.current?.setExpression(next.who, next.expr ?? 'neutral')
-    later(() => { speaking.current = false; playQueue() }, 3000)
+    later(() => { speaking.current = false; playQueue() }, 2600)
   }, [])
 
   useEffect(() => {
@@ -155,18 +155,21 @@ export default function LevelPlay() {
         </div>
       )}
 
-      {banner && <div className="absolute inset-x-0 flex justify-center pointer-events-none" style={{ top: '34%' }}><div className="pop rounded-2xl px-5 py-2 font-display text-2xl text-center" style={{ background: ORANGE, color: '#fff', border: `3px solid ${INK}`, boxShadow: `0 5px 0 ${INK}` }}>{banner}</div></div>}
-      {done && <div className="absolute inset-x-0 flex justify-center pointer-events-none" style={{ top: '30%' }}><div className="pop rounded-2xl px-6 py-3 font-display text-3xl text-center" style={{ background: FOREST, color: '#fff', border: `3px solid ${INK}`, boxShadow: `0 5px 0 ${INK}` }}>{done}</div></div>}
-      {doing && <div className="absolute inset-x-0 flex justify-center pointer-events-none" style={{ top: '36%' }}><div className="pop rounded-full px-5 py-2 font-display text-2xl text-center" style={{ background: INK, color: '#fff', border: '3px solid #fff' }}>{doing}</div></div>}
-      {toast && !done && <div className="absolute inset-x-0 flex justify-center pointer-events-none" style={{ top: '42%' }}><div className="pop rounded-full px-4 py-1 font-extrabold" style={{ background: '#fff', border: `2px solid ${INK}`, color: INK }}>{toast}</div></div>}
+      {(() => {
+        // one small pill at the top, under the instruction, never over the scene: what is happening now, in priority order
+        const t = doing ?? done ?? toast ?? banner
+        if (!t) return null
+        const tone = done ? FOREST : doing ? INK : banner ? ORANGE : '#fff'
+        return <div className="absolute inset-x-0 flex justify-center pointer-events-none" style={{ top: 'calc(7.2rem + var(--safe-t))' }}><div key={t} className="fade-in rounded-full px-4 py-1 text-sm font-extrabold text-center" style={{ background: tone, color: tone === '#fff' ? INK : '#fff', border: `2px solid ${INK}`, opacity: 0.92 }}>{t}</div></div>
+      })()}
 
       {(line || hint) && (
-        <div className="absolute inset-x-0 px-3 pointer-events-none" style={{ bottom: 'calc(11rem + var(--safe-b))' }}>
-          {hint && !line && <div className="mx-auto max-w-md rounded-2xl p-3 font-bold text-center" style={{ background: YELLOW, border: `3px solid ${INK}`, color: INK }}>💡 {hint}</div>}
+        <div className="absolute inset-x-0 px-3 pointer-events-none" style={{ bottom: 'calc(9.6rem + var(--safe-b))' }}>
+          {hint && !line && <div className="mx-auto max-w-sm rounded-2xl p-2 text-sm font-bold text-center" style={{ background: YELLOW + 'ee', border: `3px solid ${INK}`, color: INK }}>💡 {hint}</div>}
           {line && (
-            <div className="mx-auto max-w-md flex items-center gap-2 rounded-2xl p-2 pr-4" style={{ background: '#fff', border: `3px solid ${INK}`, color: INK, boxShadow: `0 4px 0 ${INK}` }}>
-              <Portrait spec={speakerSpec(line.who)} expression={line.expr ?? 'neutral'} size={64} />
-              <div><div className="text-xs font-extrabold uppercase tracking-wide" style={{ color: ORANGE }}>{speakerName(line.who)}</div><div className="font-bold leading-snug">{line.text}</div></div>
+            <div className="mx-auto max-w-sm flex items-center gap-2 rounded-2xl p-1.5 pr-3 text-sm" style={{ background: '#ffffffe6', border: `3px solid ${INK}`, color: INK, boxShadow: `0 4px 0 ${INK}` }}>
+              <Portrait spec={speakerSpec(line.who)} expression={line.expr ?? 'neutral'} size={44} />
+              <div><div className="text-xs font-extrabold uppercase tracking-wide" style={{ color: ORANGE }}>{speakerName(line.who)}</div><div className="font-bold leading-tight">{line.text}</div></div>
             </div>
           )}
         </div>

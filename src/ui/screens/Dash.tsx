@@ -50,6 +50,8 @@ export default function Dash({ rush, again }: { rush?: boolean; again?: () => vo
   const [searchMsg, setSearchMsg] = useState('')
   const [offer, setOffer] = useState(false)
   const [count, setCount] = useState<string | null>(null)
+  const [ticker, setTicker] = useState<{ text: string; pct: number; done: boolean } | null>(null)
+  const lastMission = useRef('')
   const [banner, setBanner] = useState<{ n: number; name: string; tip: string } | null>(null)
   const timers = useRef<number[]>([])
   const searchRef = useRef<{ cancel: () => void } | null>(null)
@@ -66,8 +68,8 @@ export default function Dash({ rush, again }: { rush?: boolean; again?: () => vo
 
   const pop = useCallback((text: string) => {
     const id = popId.current++
-    setPops((p) => [...p.slice(-3), { id, text }])
-    setTimeout(() => setPops((p) => p.filter((x) => x.id !== id)), 1400)
+    setPops([{ id, text }]) // one at a time, small and short, so the road stays visible
+    setTimeout(() => setPops((p) => p.filter((x) => x.id !== id)), 1000)
   }, [])
 
   /** The run is over (out of hearts, ended, or the race clock ran out). In a race the computer runner has been stepping alongside, so scores compare at the same moment. */
@@ -99,7 +101,7 @@ export default function Dash({ rush, again }: { rush?: boolean; again?: () => vo
         case 'drop': audio.sfx('good'); pop(`💵 Fare ${naira(e.fare)}`); break
         case 'mission': audio.sfx('level'); pop(`✅ ${e.text}`); break
         case 'segment': pop(`📍 ${e.name}`); break
-        case 'level': audio.sfx('level'); setBanner({ n: e.n, name: e.name, tip: LEVELS[e.n - 1].tip }); window.setTimeout(() => setBanner((b) => (b && b.n === e.n ? null : b)), 2600); break
+        case 'level': audio.sfx('level'); setBanner({ n: e.n, name: e.name, tip: LEVELS[e.n - 1].tip }); window.setTimeout(() => setBanner((b) => (b && b.n === e.n ? null : b)), 1800); break
         case 'roof': audio.sfx('good'); pop('🚌 Bus surfer! +60'); break
         case 'over': audio.sfx('bad'); finishRun(false); break
       }
@@ -153,6 +155,19 @@ export default function Dash({ rush, again }: { rush?: boolean; again?: () => vo
     document.addEventListener('visibilitychange', onVis)
     return () => { cancelAnimationFrame(raf); ro.disconnect(); document.removeEventListener('visibilitychange', onVis); r.dispose(); rendRef.current = null; audio.playMusic('play') }
   }, [life, rush, config, dashMode, handleEvents, finishRun, pop])
+
+  // missions are not drawn all the time: one line appears for 3 s when the first open mission moves (or one is finished)
+  useEffect(() => {
+    if (!hud || phase !== 'run') return
+    const m = hud.missions.find((x) => !x.done) ?? hud.missions[hud.missions.length - 1]
+    if (!m) return
+    const key = `${m.text}|${Math.floor(m.pct * 10)}|${m.done}`
+    if (key === lastMission.current) return
+    const first = lastMission.current === ''
+    lastMission.current = key
+    if (first) return
+    setTicker(m); const t = window.setTimeout(() => setTicker(null), 3000); return () => clearTimeout(t)
+  }, [hud, phase])
 
   // controls
   const act = useCallback((a: 'left' | 'right' | 'jump' | 'slide') => { const st = simRef.current; if (st && phaseRef.current === 'run') st.queue.push(a) }, [])
@@ -250,34 +265,31 @@ export default function Dash({ rush, again }: { rush?: boolean; again?: () => vo
             {hud.rival !== null && (
               <div className="mt-2 rounded-xl px-3 py-1.5 text-xs font-extrabold" style={{ background: '#0b3a36e6', border: '1px solid #1ec8b4' }}>
                 <div className="flex justify-between items-center"><span>🏃 You <b className="num text-sm">{hud.score.toLocaleString()}</b></span><span className="num text-sm">⏱ {Math.ceil(hud.left)}s</span><span>🤖 {RIVAL_NAME} <b className="num text-sm">{hud.rival.toLocaleString()}</b>{hud.rivalOver ? ' 💥' : ''}</span></div>
-                <div className="bar mt-1 !h-1.5"><i style={{ width: `${Math.round((hud.score / Math.max(1, hud.score + hud.rival)) * 100)}%`, background: hud.score >= hud.rival ? '#2fd27b' : '#ff6a6a' }} /></div>
               </div>
             )}
-            <div className="mt-2 rounded-xl px-3 py-1.5 text-xs font-bold" style={{ background: '#1c1b22cc' }}>
-              <div className="flex justify-between"><span>📍 {hud.seg}</span><span>Next: {hud.next} · {hud.toNext} m</span></div>
-              <div className="bar mt-1"><i style={{ width: `${Math.round(hud.segPct * 100)}%`, background: '#ffd23f' }} /></div>
-            </div>
+            {hud.dist > 80 && !banner && !pops.length && (
+              <div className="mt-1.5 rounded-lg px-2 py-0.5 text-[11px] font-bold opacity-80" style={{ background: '#1c1b22a0' }}>
+                <div className="flex justify-between"><span>📍 {hud.seg}</span><span>Next: {hud.next} · {hud.toNext} m</span></div>
+                <div className="mt-0.5 h-[3px] rounded bg-white/20"><i className="block h-full rounded" style={{ width: `${Math.round(hud.segPct * 100)}%`, background: '#ffd23f' }} /></div>
+              </div>
+            )}
           </div>
           <div className="absolute left-2 bottom-24 pointer-events-none flex flex-col gap-1">
             <div className="chip" style={{ background: '#1c1b22cc' }}>{hud.speed} km/h · {hud.dist} m</div>
             {dashMode === 'danfo' && <div className="chip" style={{ background: '#1c1b22cc' }}>{city === 'abuja' ? '🚕' : '🚌'} {hud.aboard} on board · fares {naira(hud.fares)}</div>}
             {(['magnet', 'hop', 'suya'] as const).map((k) => hud.powers[k] > 0 && <div key={k} className="chip pop" style={{ background: '#2fd27bcc', color: '#06241a' }}>{k === 'magnet' ? '🧲' : k === 'hop' ? '🦘' : '🍢'} {hud.powers[k].toFixed(0)}s</div>)}
           </div>
-          <div className={`absolute right-2 ${hud.rival !== null ? 'top-44' : 'top-28'} pointer-events-none w-40 text-[11px] font-bold space-y-1`}>
-            {hud.missions.map((m, i) => <div key={i} className="rounded-lg px-2 py-1" style={{ background: m.done ? '#1d5a3acc' : '#1c1b22b0' }}>{m.done ? '✅ ' : ''}{m.text}<div className="bar mt-0.5 !h-1"><i style={{ width: `${m.pct * 100}%`, background: '#ffd23f' }} /></div></div>)}
-          </div>
+          {ticker && (
+            <div className="absolute right-2 pointer-events-none max-w-[11rem] text-[11px] font-bold rounded-lg px-2 py-1 opacity-90" style={{ top: hud.rival !== null ? '12rem' : '8.6rem', background: ticker.done ? '#1d5a3acc' : '#1c1b22b0' }}>
+              {ticker.done ? '✅ ' : '🎯 '}{ticker.text}<div className="mt-0.5 h-[3px] rounded bg-white/20"><i className="block h-full rounded" style={{ width: `${ticker.pct * 100}%`, background: '#ffd23f' }} /></div>
+            </div>
+          )}
         </>
       )}
-      <div className="absolute inset-x-0 top-40 flex flex-col items-center gap-1.5 pointer-events-none">{pops.map((p) => <div key={p.id} className="pop chip !text-base !px-3" style={{ background: '#1c1b22e0' }}>{p.text}</div>)}</div>
-      {banner && phase === 'run' && (
-        <div className="absolute inset-x-0 top-1/3 flex justify-center pointer-events-none">
-          <div className="pop text-center px-5 py-3 rounded-2xl" style={{ background: '#1c1b22ee', border: '2px solid #ffd23f' }}>
-            <div className="font-display text-3xl text-danfo leading-none">LEVEL {banner.n}</div>
-            <div className="font-display text-2xl text-white">{banner.name}</div>
-            <div className="text-xs font-bold opacity-80 mt-1 max-w-[16rem]">{banner.tip}</div>
-          </div>
-        </div>
-      )}
+      <div className="absolute inset-x-0 flex flex-col items-center gap-1 pointer-events-none" style={{ top: hud?.rival != null ? '8.6rem' : '7rem' }}>
+        {banner && phase === 'run' && <div className="rounded-full px-3 py-0.5 text-sm font-display text-danfo fade-in" style={{ background: '#1c1b22b8', border: '1px solid #ffd23f99' }}>LEVEL {banner.n} · {banner.name}</div>}
+        {pops.map((p) => <div key={p.id} className="chip !text-sm !px-3 !py-0.5 opacity-80" style={{ background: '#1c1b22b0' }}>{p.text}</div>)}
+      </div>
       {count && <div className="absolute inset-0 grid place-items-center pointer-events-none"><div key={count} className="pop font-display text-white drop-shadow-[0_6px_0_#1c1b22]" style={{ fontSize: 120 }}>{count}</div></div>}
       {phase === 'run' && (
         <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-2 px-3">

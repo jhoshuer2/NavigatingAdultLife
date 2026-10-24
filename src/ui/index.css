@@ -146,3 +146,6 @@ html.big-text { font-size: 18px; }
 .reduce-motion .guide-glow { animation: none; box-shadow: 0 0 0 3px var(--gold); }
 @keyframes guideNudge { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
 .guide-nudge { animation: guideNudge 1s ease-in-out infinite; }
+
+@keyframes fadein { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.fade-in { animation: fadein .25s ease-out; }
