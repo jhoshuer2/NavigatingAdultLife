@@ -338,3 +338,16 @@ Nine levels in `src/levels/chapter7.ts`, each opening with a campus shuttle ride
 8. Deadline Night: sequence, collect, reach, talk
 9. End of Term: talk, serve, hold, goto (badge "Campus Life")
 New poses: raiseHand, typing. Chapters 8 to 10 remain locked placeholders.
+
+## Chapter 8: Hospital Shift (ambulance)
+Nine levels in `src/levels/chapter8.ts`, each opening with an ambulance ride (white van, red stripe and cross, blue light). Story, places and dialogue are my own design; the spec only names the chapter.
+1. Day One: talk, find, collect, choose
+2. Morning Rounds: goto, sequence, serve, hold
+3. The Pharmacy: find, collect, choose, sequence
+4. Emergency: reach, talk, sequence (bandage), hold (pressure)
+5. Visiting Hours: talk, serve, choose, goto
+6. Lab Run: collect, reach, find, talk
+7. Night Shift: hold (pulse), sequence, find, reach
+8. The Delivery Ward: sequence, collect, talk, reach
+9. Last Round: talk, serve, hold, goto (badge "Hospital Shift")
+New poses: bandage, checkPulse. Chapters 9 and 10 remain locked placeholders.

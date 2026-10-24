@@ -19,7 +19,7 @@ export const CHAPTERS: ChapterDef[] = [
   { id: 'ch5', number: 5, title: 'Beach Weekend', blurb: 'Sun, sand and a plan that keeps changing.', levels: Array.from({ length: 9 }, (_, i) => `ch5.l${i + 1}`), totalLevels: 9, built: true },
   { id: 'ch6', number: 6, title: 'Move-Out Day', blurb: 'Boxes, keys and one stubborn sofa.', levels: Array.from({ length: 9 }, (_, i) => `ch6.l${i + 1}`), totalLevels: 9, built: true },
   { id: 'ch7', number: 7, title: 'Campus Life', blurb: 'Lectures, deadlines and new friends.', levels: Array.from({ length: 9 }, (_, i) => `ch7.l${i + 1}`), totalLevels: 9, built: true },
-  placeholder(8, 'Hospital Shift', 'A careful day behind the scenes.'),
+  { id: 'ch8', number: 8, title: 'Hospital Shift', blurb: 'A careful day behind the scenes.', levels: Array.from({ length: 9 }, (_, i) => `ch8.l${i + 1}`), totalLevels: 9, built: true },
   placeholder(9, 'Road Trip', 'Good music, bad directions.'),
   placeholder(10, 'Family Weekend', 'Everyone is coming. Everyone has opinions.'),
 ]
