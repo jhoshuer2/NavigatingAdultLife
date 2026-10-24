@@ -8,6 +8,7 @@ import { Ending } from './ui/screens/Ending'
 import { Achievements, History, Settings, Unlocks } from './ui/screens/Misc'
 import { lazy, Suspense } from 'react'
 const Dash = lazy(() => import('./ui/screens/Dash'))
+const CharacterSheet = lazy(() => import('./dev/CharacterSheet'))
 import { audio } from '@platform/audio'
 import { analyticsAvailable, setAnalyticsContext, startAnalytics } from '@platform/analytics'
 import { ConsentScreen } from './ui/screens/Consent'
@@ -23,6 +24,7 @@ function SoundPill({ enabled }: { enabled: boolean }) {
 }
 
 export default function App() {
+  if (typeof location !== 'undefined' && location.search.includes('sheet=1')) return <Suspense fallback={null}><CharacterSheet /></Suspense>
   const { screen, toasts, init, tick, meta, openSheet } = useGame()
   const last = useRef(Date.now())
   useEffect(() => { init(); startAnalytics() }, [init])
