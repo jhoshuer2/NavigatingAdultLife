@@ -47,11 +47,14 @@ describe('chapter select', () => {
     p = finishLevel(p, 'a1', 2, null); expect(chapterState(p, chs, 1)).toBe('locked')
     p = finishLevel(p, 'a2', 1, null); expect(chs.map((_, i) => chapterState(p, chs, i))).toEqual(['done', 'active', 'locked'])
   })
-  it('the real chapter list keeps chapter 2 locked while chapter 1 has only one of nine levels, and the debug flag opens all', async () => {
+  it('while chapters are prototypes, finishing their built levels opens the next chapter; later chapters stay locked; the debug flag opens all', async () => {
     const { CHAPTERS } = await import('../src/levels/chapters')
     expect(CHAPTERS.length).toBe(10)
     let p = emptyProgress(); p = finishLevel(p, 'ch1.l1', 3, null)
-    expect(chapterState(p, CHAPTERS, 1)).toBe('locked')
+    expect(chapterState(emptyProgress(), CHAPTERS, 1)).toBe('locked')
+    expect(chapterState(p, CHAPTERS, 1)).toBe('active')
+    expect(chapterState(p, CHAPTERS, 2)).toBe('locked')
+    expect(chapterState(finishLevel(p, 'ch2.l1', 1, null), CHAPTERS, 2)).toBe('active')
     expect(chapterState(p, CHAPTERS, 5, true)).toBe('active')
   })
 })
@@ -114,5 +117,22 @@ describe('level 1 task runner', () => {
     for (const [dx, dz] of steps) p = moveWithCollision(LEVEL1.blockers, p.x, p.z, dx, dz, LEVEL1.bounds)
     for (let i = 0; i < 40; i++) p = moveWithCollision(LEVEL1.blockers, p.x, p.z, 0.4, 0, LEVEL1.bounds)
     expect(p.x).toBeGreaterThan(LEVEL1.exitX)
+  })
+})
+
+describe('chapter 2 level 1 (Trial Day)', () => {
+  it('has the full task template, a goto area, and plays through with a stored boots choice', async () => {
+    const { LEVEL_C2L1: L } = await import('../src/levels/chapter2')
+    for (const t of L.tasks) for (const f of TASK_FIELDS) expect((t as any)[f], `${t.id}.${f}`).toBeTruthy()
+    const r = new TaskRunner(L, emptyProgress(), hooks())
+    r.update(0.1, L.gotoAreas![0]!.x, L.gotoAreas![0]!.z); expect(r.idx).toBe(1)
+    for (const id of ['bib', 'shinpads', 'water']) r.interact(id)
+    r.interact('striker'); expect(r.progress.flags['ch2.l1.item']).toBe('striker'); expect(r.idx).toBe(3)
+    r.update(1, L.exitX + 0.1, 0); expect(r.finished).toBe(true); expect(r.progress.points).toBe(4)
+  })
+  it('hazards stay inside the pitch and items are not inside furniture', async () => {
+    const { LEVEL_C2L1: L } = await import('../src/levels/chapter2')
+    for (const h of L.hazards) { expect(h.z0).toBeGreaterThan(L.bounds.z0); expect(h.z1).toBeLessThan(L.bounds.z1) }
+    for (const it of L.items) expect(L.blockers.some((b) => it.x > b.x0 && it.x < b.x1 && it.z > b.z0 && it.z < b.z1), it.id).toBe(true) // items sit on benches/rack
   })
 })

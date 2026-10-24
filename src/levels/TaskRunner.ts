@@ -37,7 +37,7 @@ export class TaskRunner {
   buzzing = false
   /** seconds since the player last made progress in this task; after 15 the scene shows a soft guide ring */
   sinceProgress = 0
-  get guideOn() { return this.sinceProgress > 15 && !this.finished && this.task.kind !== 'reach' }
+  get guideOn() { return this.sinceProgress > 15 && !this.finished && this.task.kind !== 'reach' && this.task.kind !== 'goto' }
 
   constructor(public level: LevelDef, progress: ChapterProgress, private h: RunnerHooks, startTask = 0) {
     this.progress = progress
@@ -91,6 +91,9 @@ export class TaskRunner {
       this.timeLeft = Math.max(0, this.timeLeft - dt)
       if (before > 0 && this.timeLeft === 0) { this.h.taskFailed(this.idx, 'timer'); this.h.toast('Late! Keep going, the door is still there'); this.h.changed() }
       if (px >= this.level.exitX) this.complete()
+    } else if (this.task.kind === 'goto') {
+      const g = this.level.gotoAreas?.[this.idx]
+      if (g && Math.hypot(px - g.x, _pz - g.z) < g.r) this.complete()
     }
   }
 

@@ -6,7 +6,7 @@ import { Confetti } from '../components'
 import { audio } from '@platform/audio'
 import { ZURI, NAVI, BABA_TUNDE, MAMA_FOLAKE, PLAYABLE } from '../../world/castData'
 import { progressOf, chapterState, type CharacterId } from '../../levels/progress'
-import { CHAPTER1, LEVELS } from '../../levels/chapter1'
+import { LEVELS } from '../../levels/levels'
 import { CHAPTERS } from '../../levels/chapters'
 import { track } from '@platform/analytics'
 
@@ -36,6 +36,7 @@ export function Home() {
   const p = progressOf(meta)
   const inProgress = p.task > 0
   const doneLevels = Object.keys(p.stars).length
+  const openChapters = CHAPTERS.filter((_, i) => chapterState(p, CHAPTERS, i) !== 'locked').length
   return (
     <Shell>
       <header className="flex items-center justify-between px-4 pt-4" style={{ paddingTop: 'calc(1rem + var(--safe-t))' }}>
@@ -51,8 +52,8 @@ export function Home() {
           <div className="text-xs font-extrabold tracking-[.18em] uppercase" style={{ color: YELLOW }}>Story</div>
           <h2 className="font-display text-3xl leading-none mt-1 pr-24">Chapters</h2>
           <p className="text-sm opacity-90 mt-1 max-w-[16rem]">Live a role for a day. One chapter at a time.</p>
-          <div className="mt-3 text-sm font-extrabold">{inProgress ? `Chapter 1 · task ${p.task + 1} of 4` : `${doneLevels} of ${CHAPTER1.totalLevels} levels done`} · 1 of {CHAPTERS.length} chapters open</div>
-          <div className="mt-2 h-2.5 rounded-full overflow-hidden" style={{ background: '#0004' }}><div className="h-full" style={{ width: `${(doneLevels / CHAPTER1.totalLevels) * 100}%`, background: YELLOW }} /></div>
+          <div className="mt-3 text-sm font-extrabold">{inProgress ? `Task ${p.task + 1} in progress` : `${doneLevels} level${doneLevels === 1 ? '' : 's'} done`} · {openChapters} of {CHAPTERS.length} chapters open</div>
+          <div className="mt-2 h-2.5 rounded-full overflow-hidden" style={{ background: '#0004' }}><div className="h-full" style={{ width: `${Math.min(100, (doneLevels / CHAPTERS.reduce((n, c) => n + c.totalLevels, 0)) * 100 * 3)}%`, background: YELLOW }} /></div>
           <div className="absolute right-2 top-3 flex -space-x-5 pointer-events-none"><Portrait spec={p.character === 'navi' ? NAVI : ZURI} expression="happy" size={84} /><Portrait spec={BABA_TUNDE} expression="proud" size={84} /></div>
           <V2Btn className="mt-4 w-full" onClick={() => { audio.unlock(); audio.playMusic('menu'); go('chapters') }}>Choose chapter</V2Btn>
         </section>
@@ -74,18 +75,19 @@ export function Home() {
 }
 
 export function LevelIntro() {
-  const { meta, go, openLevel, chooseCharacter, saveProgress } = useGame()
+  const { meta, go, openLevel, chooseCharacter, saveProgress, activeLevel } = useGame()
   const p = progressOf(meta)
-  const level = LEVELS[p.level] ?? LEVELS['ch1.l1']
+  const level = LEVELS[activeLevel] ?? LEVELS['ch1.l1']
+  const chapter = CHAPTERS.find((c) => c.id === level.chapter)
   const chosen = p.character
-  const resume = p.task > 0
+  const resume = p.level === level.id && p.task > 0
   const go1 = (task: number) => { audio.unlock(); if (task > 0) track('session_resume', { level: level.id, task }); openLevel(task) }
   return (
     <Shell>
       <header className="px-4 pt-4" style={{ paddingTop: 'calc(1rem + var(--safe-t))' }}><button className="font-extrabold underline" onClick={() => go('chapters')}>← Chapters</button></header>
       <div className="flex-1 overflow-y-auto px-5 pb-6 pt-3 max-w-xl w-full mx-auto grid content-start gap-4">
         <div className="text-center">
-          <div className="text-sm font-extrabold tracking-[.2em] uppercase" style={{ color: ORANGE }}>Chapter 1 · {CHAPTER1.title}</div>
+          <div className="text-sm font-extrabold tracking-[.2em] uppercase" style={{ color: ORANGE }}>Chapter {chapter?.number} · {chapter?.title}</div>
           <h1 className="font-display text-5xl leading-[.95] mt-1">{level.subtitle}<br />{level.title}</h1>
         </div>
         <p className="text-center text-lg font-semibold">{level.intro}</p>
@@ -139,12 +141,12 @@ export function LevelResult() {
         <div className="flex justify-center gap-3"><Pill>⭐ {p.points} points{r.points ? ` (+${r.points})` : ''}</Pill><Pill>🪙 {p.coins} coins</Pill></div>
         <div className="flex items-center gap-3 rounded-2xl p-3 text-left" style={{ background: FOREST, color: '#fff', border: `3px solid ${INK}` }}>
           <Portrait spec={BABA_TUNDE} expression="surprised" size={72} />
-          <div className="text-sm font-semibold">Baba Tunde: "Look at the street... something has changed out here."<div className="opacity-80 mt-1">{itemName ? `You took the ${itemName}. It will matter in Level 2.` : 'You travelled light. That will matter in Level 2.'}</div></div>
+          <div className="text-sm font-semibold">Baba Tunde: "{level.endBeat.text}"<div className="opacity-80 mt-1">{itemName ? `You took the ${itemName}. ${level.endBeat.line}` : `You went without. ${level.endBeat.line}`}</div></div>
         </div>
         <Feedback levelId={r.levelId} />
         <div className="grid gap-2">
-          <V2Btn disabled>Level 2 · coming soon</V2Btn>
-          <V2Btn tone="cream" onClick={() => { useGame.getState().saveProgress({ ...p, task: 0 }); openLevel(0) }}>Play Level 1 again</V2Btn>
+          <V2Btn disabled>Next level · coming soon</V2Btn>
+          <V2Btn tone="cream" onClick={() => { useGame.getState().saveProgress({ ...p, task: 0 }); openLevel(0) }}>Play this level again</V2Btn>
           <V2Btn tone="cream" onClick={() => go('home')}>Home</V2Btn>
         </div>
       </div>
@@ -205,17 +207,14 @@ function Feedback({ levelId }: { levelId: string }) {
 
 /** Chapter select: one tall card per chapter in a sideways row. The open chapter has its Start button, the rest are dimmed with a lock. */
 export function Chapters() {
-  const { meta, go } = useGame()
+  const { meta, go, startLevel } = useGame()
   const p = progressOf(meta)
   const unlockAll = typeof location !== 'undefined' && location.search.includes('debug=1') && location.search.includes('unlockall=1')
   const row = useRef<HTMLDivElement>(null)
   const [hint, setHint] = useState<string | null>(null)
   const [shake, setShake] = useState<number | null>(null)
-  const inProgress = p.task > 0
-  const doneLevels = Object.keys(p.stars).length
   const [at, setAt] = useState(0)
   useEffect(() => { const el = row.current; if (!el) return; const on = () => setAt(Math.round(el.scrollLeft / (el.clientWidth * 0.72))); el.addEventListener('scroll', on, { passive: true }); return () => el.removeEventListener('scroll', on) }, [])
-  const label = p.character === null ? 'Start' : inProgress ? 'Continue' : doneLevels > 0 ? 'Play again' : 'Start'
   const tapLocked = (i: number) => { audio.sfx('bad'); setShake(i); setHint(`Finish Chapter ${i} to unlock Chapter ${i + 1}.`); window.setTimeout(() => setShake(null), 400); window.setTimeout(() => setHint(null), 2400) }
   return (
     <Shell>
@@ -229,11 +228,13 @@ export function Chapters() {
           const st = chapterState(p, CHAPTERS, i, unlockAll)
           const locked = st === 'locked'
           const lvDone = c.levels.filter((l) => (p.stars[l] ?? 0) > 0).length
+          const resuming = c.levels.includes(p.level) && p.task > 0
+          const label = resuming ? 'Continue' : lvDone > 0 && lvDone >= c.levels.length ? 'Play again' : 'Start'
           return (
             <article key={c.id} onClick={() => locked && tapLocked(i)} className={`snap-start shrink-0 rounded-3xl overflow-hidden flex flex-col ${shake === i ? 'shake' : ''}`}
               style={{ width: '72%', maxWidth: 300, background: locked ? '#e4d7bb' : '#fffaf0', border: `3px solid ${INK}`, boxShadow: `0 6px 0 ${INK}`, opacity: locked ? 0.7 : 1, minHeight: 440 }}>
               <div className="relative h-44 grid place-items-center" style={{ background: locked ? '#bdb29a' : i === 0 ? FOREST : ORANGE, filter: locked ? 'grayscale(.6)' : 'none' }}>
-                {c.built ? <div className="flex -space-x-5"><Portrait spec={p.character === 'navi' ? NAVI : ZURI} expression="happy" size={104} /><Portrait spec={BABA_TUNDE} expression="proud" size={104} /></div>
+                {c.built ? <div className="flex -space-x-5" title={c.title}><Portrait spec={p.character === 'navi' ? NAVI : ZURI} expression="happy" size={104} /><Portrait spec={BABA_TUNDE} expression="proud" size={104} /></div>
                   : <div className="font-display text-7xl opacity-60" style={{ color: INK }}>{c.number}</div>}
                 {locked && <span className="absolute top-2 right-2 grid place-items-center w-10 h-10 rounded-full text-xl" style={{ background: CREAM, border: `3px solid ${INK}` }} aria-label="Locked">🔒</span>}
                 {st === 'done' && <span className="absolute top-2 right-2 px-2 py-0.5 rounded-full text-xs font-extrabold" style={{ background: YELLOW, border: `2px solid ${INK}` }}>DONE</span>}
@@ -246,7 +247,7 @@ export function Chapters() {
                   <div className="text-xs font-extrabold">{c.built ? `${lvDone} of ${c.totalLevels} levels` : `${c.totalLevels} levels`}</div>
                   <div className="mt-1 h-2 rounded-full overflow-hidden" style={{ background: '#0002' }}><div className="h-full" style={{ width: `${(lvDone / c.totalLevels) * 100}%`, background: FOREST }} /></div>
                   {locked ? <div className="mt-3 text-center text-sm font-extrabold opacity-80">🔒 Finish Chapter {c.number - 1} to unlock</div>
-                    : c.built ? <V2Btn className="mt-3 w-full" onClick={() => { audio.unlock(); go('levelIntro') }}>{label}</V2Btn>
+                    : c.built ? <V2Btn className="mt-3 w-full" onClick={() => { audio.unlock(); startLevel(c.levels.find((l) => !((p.stars[l] ?? 0) > 0)) ?? c.levels[0]) }}>{label}</V2Btn>
                     : <V2Btn className="mt-3 w-full" disabled>Coming soon</V2Btn>}
                 </div>
               </div>

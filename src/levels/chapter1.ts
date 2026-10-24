@@ -57,7 +57,13 @@ const tasks: TaskDef[] = [
 ]
 
 export const LEVEL1: LevelDef = {
-  id: 'ch1.l1', chapter: 'ch1', title: 'The Morning Disaster', subtitle: 'Level 1',
+  id: 'ch1.l1', sceneKind: 'home',
+  hazards: [
+    { x: 2.6, z0: -3.4, z1: 3.2, speed: 2.4, phase: 0, name: 'slippers', color: '#e07a1f' },
+    { x: 6.8, z0: -3.2, z1: 1.2, speed: 2.9, phase: 1.7, name: 'mop', color: '#8aa58a' },
+  ],
+  npcs: { folake: { x: 7.5, z: -3.2, rot: -0.5 }, tunde: { x: 10.2, z: 0.4, rot: -Math.PI / 2 } },
+  endBeat: { text: 'Look at the street... something has changed out here.', line: 'It will matter in Level 2.' }, choiceLabel: 'extra item', chapter: 'ch1', title: 'The Morning Disaster', subtitle: 'Level 1',
   intro: 'You overslept. Your phone is lost. Baba Tunde is waiting outside. Today is the day, and it is already going wrong.',
   tasks,
   bounds: R(-9, 9, -5, 5),

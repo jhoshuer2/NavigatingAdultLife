@@ -3,7 +3,7 @@ import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
 import { useGame } from '../../store'
 import { LevelRenderer, type Nearby } from '../../levels/LevelRenderer'
 import { TaskRunner, type LevelResult } from '../../levels/TaskRunner'
-import { LEVELS } from '../../levels/chapter1'
+import { LEVELS } from '../../levels/levels'
 import { progressOf, type ChapterProgress } from '../../levels/progress'
 import type { Line } from '../../levels/schema'
 import { Portrait } from '../Portrait'
@@ -11,14 +11,18 @@ import { BABA_TUNDE, MAMA_FOLAKE } from '../../world/castData'
 import { charSpec, V2Btn, INK, CREAM, ORANGE, YELLOW, FOREST } from './V2'
 import { audio, type SfxName } from '@platform/audio'
 import { track } from '@platform/analytics'
+import type { ToonSpec } from '../../world/toon'
 
+/** the player's own look with a football kit: green shirt, white shorts */
+const footballKit = (s: ToonSpec): ToonSpec => ({ ...s, top: 'tee', topColor: '#2f5a3a', innerColor: undefined, bottom: 'shorts', bottomColor: '#fbf8f0', shoes: 'sneaker', accessories: s.accessories.filter((a) => a === 'earrings' || a === 'watch') })
 const SFX: Record<string, SfxName> = { ring: 'prompt', nope: 'bad', pick: 'coin', bump: 'hit' }
 const opened = typeof performance !== 'undefined' ? performance.now() : 0
 
 export default function LevelPlay() {
-  const { meta, levelStart, saveProgress, showLevelResult, go } = useGame()
-  const level = LEVELS[progressOf(meta).level] ?? LEVELS['ch1.l1']
-  const spec = charSpec(progressOf(meta).character)
+  const { meta, levelStart, saveProgress, showLevelResult, go, activeLevel } = useGame()
+  const level = LEVELS[activeLevel] ?? LEVELS['ch1.l1']
+  const baseSpec = charSpec(progressOf(meta).character)
+  const spec = level.kit ? footballKit(baseSpec) : baseSpec
   const canvas = useRef<HTMLCanvasElement>(null)
   const runner = useRef<TaskRunner>()
   const scene = useRef<LevelRenderer>()
@@ -53,7 +57,7 @@ export default function LevelPlay() {
     const r = new LevelRenderer(cv, level, spec, levelStart)
     scene.current = r
     const prog = progressOf(meta)
-    const rn = new TaskRunner(level, { ...prog, task: levelStart }, {
+    const rn = new TaskRunner(level, { ...prog, level: level.id, task: levelStart }, {
       say: (l) => { queue.current.push(l); playQueue() },
       toast: (t) => { setToast(t); later(() => setToast(null), 1400) },
       taskStarted: (i) => {

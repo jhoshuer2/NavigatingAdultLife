@@ -5,7 +5,7 @@ import { buildToon, type Expression, type ToonParts, type ToonSpec } from '../wo
 import { animateHuman } from '../world/characters'
 import { MAMA_FOLAKE, BABA_TUNDE } from '../world/castData'
 import { moveWithCollision } from '../world/nav'
-import type { LevelDef, Item, Spot } from './schema'
+import type { LevelDef, Item, Spot, Hazard } from './schema'
 import type { TaskRunner } from './TaskRunner'
 
 const lam = (c: string | number) => new THREE.MeshLambertMaterial({ color: c })
@@ -20,11 +20,7 @@ export const actLabel = (kind: ActKind, id: string) => kind === 'dig' ? 'Digging
 export interface Nearby { kind: 'spot' | 'item'; id: string; label: string }
 
 /** sliding clutter in the last task: position along z over time */
-const HAZARDS = [
-  { x: 2.6, z0: -3.4, z1: 3.2, speed: 2.4, phase: 0, name: 'slippers', color: '#e07a1f' },
-  { x: 6.8, z0: -3.2, z1: 1.2, speed: 2.9, phase: 1.7, name: 'mop', color: '#8aa58a' },
-]
-export const hazardZ = (h: typeof HAZARDS[number], t: number) => { const span = h.z1 - h.z0; const u = ((t * h.speed / span + h.phase) % 2 + 2) % 2; return h.z0 + span * (u < 1 ? u : 2 - u) }
+export const hazardZ = (h: Hazard, t: number) => { const span = h.z1 - h.z0; const u = ((t * h.speed / span + h.phase) % 2 + 2) % 2; return h.z0 + span * (u < 1 ? u : 2 - u) }
 
 export class LevelRenderer {
   readonly input = { x: 0, z: 0 }
@@ -49,7 +45,8 @@ export class LevelRenderer {
   paused = false
   private act: Act | null = null
   private furn = new Map<string, THREE.Mesh>()
-  private pillow!: THREE.Mesh
+  private pillow?: THREE.Mesh
+  private ball?: THREE.Mesh
   private fx: { m: THREE.Mesh; v: THREE.Vector3; life: number }[] = []
   private phoneMesh!: THREE.Group
   private clothes = ['#c4562a', '#f5b91c', '#2f5a3a', '#fbf8f0', '#6a8ab8']
@@ -77,8 +74,8 @@ export class LevelRenderer {
     this.me = buildToon(spec); this.scene.add(this.me.group)
     const s = startTask > 0 ? level.spawnAfterFirst : level.spawn
     this.px = s.x; this.pz = s.z; this.facing = Math.PI * 0.5
-    this.folake = buildToon(MAMA_FOLAKE); this.folake.group.position.set(7.5, 0, -3.2); this.folake.group.rotation.y = -0.5; this.scene.add(this.folake.group)
-    this.tunde = buildToon(BABA_TUNDE); this.tunde.group.position.set(10.2, 0, 0.4); this.tunde.group.rotation.y = -Math.PI / 2; this.scene.add(this.tunde.group)
+    this.folake = buildToon(MAMA_FOLAKE); this.folake.group.position.set(level.npcs.folake.x, 0, level.npcs.folake.z); this.folake.group.rotation.y = level.npcs.folake.rot; this.scene.add(this.folake.group)
+    this.tunde = buildToon(BABA_TUNDE); this.tunde.group.position.set(level.npcs.tunde.x, 0, level.npcs.tunde.z); this.tunde.group.rotation.y = level.npcs.tunde.rot; this.scene.add(this.tunde.group)
 
     this.buzz = new THREE.Mesh(new THREE.RingGeometry(0.35, 0.5, 24), new THREE.MeshBasicMaterial({ color: '#f5b91c', transparent: true, opacity: 0.8, side: THREE.DoubleSide }))
     this.buzz.rotation.x = -Math.PI / 2; this.buzz.position.set(-4.2, 0.6, 3.6); this.buzz.visible = false; this.scene.add(this.buzz)
@@ -93,6 +90,36 @@ export class LevelRenderer {
   }
 
   private build() {
+    const L = this.level
+    if (L.sceneKind === 'home') this.buildHomeShell(); else this.buildPitchShell()
+    for (const f of L.furniture) {
+      const r = f.rect
+      this.furn.set(f.name, this.box(r.x1 - r.x0, f.h, r.z1 - r.z0, f.color, (r.x0 + r.x1) / 2, f.h / 2, (r.z0 + r.z1) / 2))
+    }
+    if (L.sceneKind === 'home') this.buildHomeDeco(); else this.buildPitchDeco()
+    // spots keep an invisible anchor so the scene can wobble them when the player gets close
+    for (const s of L.spots) { const g = new THREE.Group(); g.position.set(s.x, 0, s.z); this.scene.add(g); this.spotMeshes.set(s.id, g) }
+    for (const it of L.items) { const o = this.itemMesh(it); o.position.set(it.x, this.itemY(it), it.z); this.scene.add(o); this.itemMeshes.set(it.id, o) }
+    this.ring = new THREE.Mesh(new THREE.RingGeometry(0.9, 1, 40), new THREE.MeshBasicMaterial({ color: '#f5b91c', transparent: true, opacity: 0.7, side: THREE.DoubleSide }))
+    this.ring.rotation.x = -Math.PI / 2; this.ring.position.y = 0.05; this.ring.visible = false; this.scene.add(this.ring)
+    for (const h of this.level.hazards) { // faint path of each sliding hazard, so the last task is fair on the first try
+      const st = new THREE.Mesh(new THREE.PlaneGeometry(0.9, h.z1 - h.z0), new THREE.MeshBasicMaterial({ color: '#e07a1f', transparent: true, opacity: 0.22 }))
+      st.rotation.x = -Math.PI / 2; st.position.set(h.x, 0.03, (h.z0 + h.z1) / 2); st.visible = false; this.scene.add(st); this.strips.push(st)
+    }
+    this.phoneMesh = new THREE.Group()
+    const scr = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.32, 0.045), new THREE.MeshBasicMaterial({ color: '#9ecbe6' })); scr.position.z = 0.005
+    this.phoneMesh.add(new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.38, 0.04), lam('#1c1b22')), scr)
+    this.phoneMesh.visible = false; this.scene.add(this.phoneMesh)
+    for (const h of this.level.hazards) {
+      const g = new THREE.Group()
+      if (h.name === 'dummy') { const post = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.34, 1.5, 10), lam(h.color)); post.position.y = 0.8; g.add(post); const hd = new THREE.Mesh(new THREE.SphereGeometry(0.3, 10, 8), lam('#f3e7cf')); hd.position.y = 1.75; g.add(hd); const base = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.08, 12), lam('#1c1b22')); base.position.y = 0.05; g.add(base) }
+      else if (h.name === 'mop') { const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.8, 6), lam('#a87a50')); stick.rotation.z = 1.2; stick.position.y = 0.5; g.add(stick); const head = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.18, 0.35), lam(h.color)); head.position.set(-0.7, 0.1, 0); g.add(head) }
+      else { for (const dz of [-0.28, 0.28]) { const s = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.12, 0.28), lam(h.color)); s.position.set(0, 0.07, dz); g.add(s) } }
+      g.visible = false; this.scene.add(g); this.hazardMeshes.push(g)
+    }
+  }
+
+  private buildHomeShell() {
     const L = this.level, b = L.bounds
     // floors: warm wood in the bedroom, tiles in the living room, grass and a road outside
     this.box(9, 0.1, b.z1 - b.z0, '#c9a074', -4.5, -0.05, 0)
@@ -108,35 +135,51 @@ export class LevelRenderer {
     this.box(0.3, 0.9, 4, wc, 0, 0.45, -3); this.box(0.3, 0.9, 4, wc, 0, 0.45, 3)
     this.box(0.4, 2.2, 0.3, '#6b3a1e', b.x1 + 0.1, 1.1, -1.1); this.box(0.4, 2.2, 0.3, '#6b3a1e', b.x1 + 0.1, 1.1, 1.1); this.box(0.4, 0.3, 2.5, '#6b3a1e', b.x1 + 0.1, 2.25, 0)
     this.box(1.8, 0.04, 2.4, '#e07a1f', 8.2, 0.01, 0) // doormat
-    for (const f of L.furniture) {
-      const r = f.rect
-      this.furn.set(f.name, this.box(r.x1 - r.x0, f.h, r.z1 - r.z0, f.color, (r.x0 + r.x1) / 2, f.h / 2, (r.z0 + r.z1) / 2))
-    }
+  }
+
+  private buildHomeDeco() {
     // pillow, rug, window, plant, clock: a little life
     this.pillow = this.box(1.2, 0.18, 0.8, '#fbf8f0', -7.6, 0.8, -3)
     this.box(3, 0.03, 2.2, '#2f5a3a', -3.2, 0.01, 0.3)
     this.box(1.6, 0.9, 0.12, '#9ecbe6', -3, 1.6, -5.05)
     this.box(1.6, 0.9, 0.12, '#9ecbe6', 2, 1.6, -5.05)
     this.box(0.5, 0.9, 0.5, '#6b3a1e', 8.4, 0.45, 4.2); this.box(0.8, 0.7, 0.8, '#2f5a3a', 8.4, 1.2, 4.2)
-    // spots keep an invisible anchor so the scene can wobble them when the player gets close
-    for (const s of L.spots) { const g = new THREE.Group(); g.position.set(s.x, 0, s.z); this.scene.add(g); this.spotMeshes.set(s.id, g) }
-    for (const it of L.items) { const o = this.itemMesh(it); o.position.set(it.x, this.itemY(it), it.z); this.scene.add(o); this.itemMeshes.set(it.id, o) }
-    this.ring = new THREE.Mesh(new THREE.RingGeometry(0.9, 1, 40), new THREE.MeshBasicMaterial({ color: '#f5b91c', transparent: true, opacity: 0.7, side: THREE.DoubleSide }))
-    this.ring.rotation.x = -Math.PI / 2; this.ring.position.y = 0.05; this.ring.visible = false; this.scene.add(this.ring)
-    for (const h of HAZARDS) { // faint path of each sliding hazard, so the last task is fair on the first try
-      const st = new THREE.Mesh(new THREE.PlaneGeometry(0.9, h.z1 - h.z0), new THREE.MeshBasicMaterial({ color: '#e07a1f', transparent: true, opacity: 0.22 }))
-      st.rotation.x = -Math.PI / 2; st.position.set(h.x, 0.03, (h.z0 + h.z1) / 2); st.visible = false; this.scene.add(st); this.strips.push(st)
-    }
-    this.phoneMesh = new THREE.Group()
-    const scr = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.32, 0.045), new THREE.MeshBasicMaterial({ color: '#9ecbe6' })); scr.position.z = 0.005
-    this.phoneMesh.add(new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.38, 0.04), lam('#1c1b22')), scr)
-    this.phoneMesh.visible = false; this.scene.add(this.phoneMesh)
-    for (const h of HAZARDS) {
-      const g = new THREE.Group()
-      if (h.name === 'mop') { const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.8, 6), lam('#a87a50')); stick.rotation.z = 1.2; stick.position.y = 0.5; g.add(stick); const head = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.18, 0.35), lam(h.color)); head.position.set(-0.7, 0.1, 0); g.add(head) }
-      else { for (const dz of [-0.28, 0.28]) { const s = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.12, 0.28), lam(h.color)); s.position.set(0, 0.07, dz); g.add(s) } }
-      g.visible = false; this.scene.add(g); this.hazardMeshes.push(g)
-    }
+  }
+
+  private buildPitchShell() {
+    const b = this.level.bounds
+    this.box(60, 0.1, 40, '#9a8a6a', 0, -0.25, 0) // dusty ground around the pitch
+    this.box(b.x1 - b.x0 + 4, 0.1, b.z1 - b.z0 + 3, '#5fae4f', 0, -0.05, 0) // grass
+    for (let i = 0; i < 8; i++) this.box((b.x1 - b.x0 + 4) / 8, 0.02, b.z1 - b.z0 + 3, i % 2 ? '#6bb95a' : '#5fae4f', b.x0 - 2 + ((b.x1 - b.x0 + 4) / 8) * (i + 0.5), 0.0, 0) // mowing stripes
+    const line = (w: number, d: number, x: number, z: number) => this.box(w, 0.02, d, '#fbf8f0', x, 0.02, z)
+    line(b.x1 - b.x0, 0.12, 0, b.z0 + 0.3); line(b.x1 - b.x0, 0.12, 0, b.z1 - 0.3); line(0.12, b.z1 - b.z0 - 0.6, 0, 0)
+    line(0.12, b.z1 - b.z0 - 0.6, b.x0 + 0.3, 0); line(0.12, b.z1 - b.z0 - 0.6, b.x1 - 0.3, 0)
+    const circle = new THREE.Mesh(new THREE.RingGeometry(2.4, 2.52, 40), new THREE.MeshBasicMaterial({ color: '#fbf8f0', side: THREE.DoubleSide })); circle.rotation.x = -Math.PI / 2; circle.position.y = 0.03; this.scene.add(circle)
+    line(3, 0.12, b.x1 - 1.8, -3.5); line(3, 0.12, b.x1 - 1.8, 3.5); line(0.12, 7, b.x1 - 3.3, 0)
+    // low fence rails, and an arch at the gate on the left
+    const fc = '#f3e7cf'
+    this.box(b.x1 - b.x0 + 1, 0.8, 0.2, fc, 0, 0.4, b.z0 - 0.1); this.box(b.x1 - b.x0 + 1, 0.8, 0.2, fc, 0, 0.4, b.z1 + 0.1); this.box(0.2, 0.8, 5, fc, b.x1 + 0.1, 0.4, -3.6); this.box(0.2, 0.8, 5, fc, b.x1 + 0.1, 0.4, 3.6)
+    this.box(0.2, 0.8, 4.4, fc, b.x0 - 0.1, 0.4, -3.8); this.box(0.2, 0.8, 4.4, fc, b.x0 - 0.1, 0.4, 3.8)
+    this.box(0.3, 2.6, 0.3, '#2f5a3a', b.x0 - 0.1, 1.3, -1.6); this.box(0.3, 2.6, 0.3, '#2f5a3a', b.x0 - 0.1, 1.3, 1.6); this.box(0.3, 0.5, 3.5, '#e07a1f', b.x0 - 0.1, 2.65, 0)
+  }
+
+  private buildPitchDeco() {
+    // registration tent (orange canopy over the desk), kit benches with their kit laid out, boots rack, goal frames with nets, a few cones, a stand of spectators
+    const tent = this.box(3.4, 0.15, 2.4, '#e07a1f', -5.5, 2.6, -4.1)
+    for (const [x, z] of [[-7.1, -5.2], [-3.9, -5.2], [-7.1, -3.0], [-3.9, -3.0]]) this.box(0.12, 2.6, 0.12, '#1c1b22', x, 1.3, z)
+    void tent
+    this.box(1.8, 0.45, 0.06, '#fbf8f0', -5.5, 1.25, -3.3); this.box(1.5, 0.12, 0.5, '#2f5a3a', -5.5, 1.1, -4.1) // sign board and a clipboard on the desk
+    for (const [x, z] of [[-1.5, 4.1], [1.5, -4.4], [3.7, 4.1]]) this.box(1.6, 0.05, 0.7, '#e07a1f', x, 0.62, z)
+    for (const z of [-2.05, 2.05]) this.box(0.1, 1.6, 0.1, '#fbf8f0', 12.0, 0.8, z)
+    this.box(0.1, 0.1, 4.3, '#fbf8f0', 12.0, 1.6, 0); const net = this.box(0.8, 1.5, 4.1, '#ffffff', 12.5, 0.8, 0); (net.material as THREE.MeshLambertMaterial).transparent = true; (net.material as THREE.MeshLambertMaterial).opacity = 0.25
+    for (const [x, z] of [[-9, 3], [-8.2, -1.2], [-6.8, 4.6], [-3, -1.5], [5, -4.4], [9.4, 4.8]]) { const c = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.45, 8), lam('#e07a1f')); c.position.set(x, 0.22, z); this.scene.add(c) }
+    this.ball = new THREE.Mesh(new THREE.SphereGeometry(0.24, 12, 10), lam('#fbf8f0')); this.ball.visible = false; this.scene.add(this.ball)
+    // spectators and other hopefuls standing about outside the north fence
+    const cols = ['#2b3a8c', '#c4562a', '#2f5a3a', '#e0457b', '#f5b91c', '#6a8ab8']
+    for (let i = 0; i < 16; i++) { const g = new THREE.Group(); const col = cols[i % cols.length]
+      const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.28, 0.7, 3, 6), lam(col)); body.position.y = 0.95; g.add(body)
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.25, 8, 6), lam(['#5c3317', '#7a4a2a', '#3d2210'][i % 3])); head.position.y = 1.72; g.add(head)
+      g.position.set(-11 + i * 1.5, 0, -6.9 - (i % 2) * 0.8); this.scene.add(g) }
   }
 
   private itemY(it: Item) { return it.shape === 'bag' ? 1.05 : it.id === 'wallet' ? 1.0 : it.id === 'keys' ? 1.5 : it.task === 2 ? 0.95 : 1 }
@@ -151,6 +194,10 @@ export class LevelRenderer {
       case 'umbrella': add(new THREE.CylinderGeometry(0.04, 0.04, 0.8, 6), it.color, 0, 0, 0).rotation.z = 1.4; add(new THREE.ConeGeometry(0.2, 0.3, 8), it.color, -0.45, 0, 0).rotation.z = 1.57; break
       case 'snack': add(new THREE.BoxGeometry(0.3, 0.35, 0.1), it.color); add(new THREE.BoxGeometry(0.22, 0.12, 0.12), '#f5b91c', 0, 0.05, 0); break
       case 'bank': add(new THREE.BoxGeometry(0.4, 0.12, 0.24), it.color); add(new THREE.BoxGeometry(0.08, 0.05, 0.26), '#55f09b', 0.12, 0.08, 0); break
+      case 'boots': for (const dz of [-0.14, 0.14]) { add(new THREE.BoxGeometry(0.2, 0.14, 0.5), it.color, 0, 0, dz); add(new THREE.BoxGeometry(0.2, 0.06, 0.1), '#fbf8f0', 0, -0.08, dz + 0.18) } break
+      case 'shinpad': add(new THREE.BoxGeometry(0.22, 0.46, 0.06), it.color); add(new THREE.BoxGeometry(0.16, 0.34, 0.07), '#e07a1f', 0, 0, 0); break
+      case 'bib': add(new THREE.BoxGeometry(0.5, 0.55, 0.05), it.color); add(new THREE.BoxGeometry(0.2, 0.2, 0.06), '#1c1b22', 0, 0, 0); break
+      case 'bottle': add(new THREE.CylinderGeometry(0.1, 0.1, 0.4, 10), it.color); add(new THREE.CylinderGeometry(0.06, 0.08, 0.1, 10), '#fbf8f0', 0, 0.25, 0); break
       default: add(new THREE.BoxGeometry(0.3, 0.3, 0.3), it.color)
     }
     return g
@@ -176,7 +223,7 @@ export class LevelRenderer {
   }
 
   setExpression(who: 'folake' | 'tunde' | 'player', e: Expression) { (who === 'folake' ? this.folake : who === 'tunde' ? this.tunde : this.me).setExpression(e) }
-  hazardPos(i: number, t = this.t) { return { x: HAZARDS[i].x, z: hazardZ(HAZARDS[i], t) } }
+  hazardPos(i: number, t = this.t) { return { x: this.level.hazards[i].x, z: hazardZ(this.level.hazards[i], t) } }
 
   private frame = (now: number) => {
     const dt = Math.min(0.05, (now - this.last) / 1000); this.last = now; this.t += dt
@@ -226,20 +273,22 @@ export class LevelRenderer {
         if (here && !(this.act && this.act.id === it.id)) { o.position.y = this.itemY(it) + Math.sin(this.t * 3 + it.x) * 0.06; o.rotation.y = this.t * 1.5 }
       }
       const reach = run.task.kind === 'reach' && !run.finished
-      for (let i = 0; i < HAZARDS.length; i++) {
+      for (let i = 0; i < this.level.hazards.length; i++) {
         const g = this.hazardMeshes[i]; g.visible = reach
         if (reach) {
-          const z = hazardZ(HAZARDS[i], this.t); g.position.set(HAZARDS[i].x, 0, z)
-          if (!stumbling && Math.hypot(this.px - HAZARDS[i].x, this.pz - z) < 0.85) {
+          const z = hazardZ(this.level.hazards[i], this.t); g.position.set(this.level.hazards[i].x, 0, z)
+          if (!stumbling && Math.hypot(this.px - this.level.hazards[i].x, this.pz - z) < 0.85) {
             this.stumbleT = 1.1; run.stumble()
             const n = moveWithCollision(L.blockers, this.px, this.pz, -0.7, 0, L.bounds); this.px = n.x; this.pz = n.z
           }
         }
       }
       for (const st of this.strips) st.visible = reach
+      if (this.ball) { this.ball.visible = reach; if (reach) { this.ball.position.set(this.px + Math.sin(this.facing) * 0.85, 0.24 + Math.abs(Math.sin(this.t * 9)) * 0.06, this.pz + Math.cos(this.facing) * 0.85); this.ball.rotation.x += dt * 10 } }
       // soft guide ring on the area of the next step after 15 s without progress
-      this.ring.visible = run.guideOn
-      if (run.guideOn) {
+      const gotoOn = run.task.kind === 'goto' && !run.finished
+      this.ring.visible = run.guideOn || gotoOn
+      if (run.guideOn || gotoOn) {
         const ga = L.guideAreas[idx]; let gx = ga.x, gz = ga.z, gr = ga.r
         if (run.task.kind === 'collect') { const nx = L.items.find((i) => i.task === idx && !run.collected.includes(i.id)); if (nx) { gx = nx.x; gz = nx.z; gr = 1.1 } }
         const k = (this.t * 1.2) % 1; this.ring.position.set(gx, 0.05, gz); this.ring.scale.setScalar(gr * (0.9 + k * 0.15)); (this.ring.material as THREE.MeshBasicMaterial).opacity = 0.75 - k * 0.5
@@ -293,7 +342,7 @@ export class LevelRenderer {
       if (k > 0.72 && !a.phone) { a.phone = true; this.onFx?.('pop') }
       if (a.phone) { this.phoneMesh.visible = true; this.phoneMesh.position.set(this.px + Math.sin(this.facing) * 0.3, 1.65 + Math.sin(a.t * 30) * 0.03, this.pz + Math.cos(this.facing) * 0.3); this.phoneMesh.rotation.z = Math.sin(a.t * 40) * 0.12 }
     } else if (a.kind === 'search') {
-      if (a.id === 'pillow') { this.pillow.position.y = 0.8 + Math.sin(k * Math.PI) * 0.7; this.pillow.rotation.z = Math.sin(k * Math.PI) * 0.7 }
+      if (a.id === 'pillow' && this.pillow) { this.pillow.position.y = 0.8 + Math.sin(k * Math.PI) * 0.7; this.pillow.rotation.z = Math.sin(k * Math.PI) * 0.7 }
       else { const f = this.furn.get(a.id === 'drawer' ? 'drawers' : 'bedside'); if (f) f.position.x += Math.sin(a.t * 30) * 0.004 }
     } else {
       const o = this.itemMeshes.get(a.id)
@@ -306,8 +355,8 @@ export class LevelRenderer {
   private finishAct() {
     const a = this.act!; this.act = null
     this.phoneMesh.visible = false
-    const lm = this.furn.get('laundry'); if (lm) { lm.scale.y = 1; lm.position.x = (this.level.furniture.find((f) => f.name === 'laundry')!.rect.x0 + this.level.furniture.find((f) => f.name === 'laundry')!.rect.x1) / 2 }
-    this.pillow.position.y = 0.8; this.pillow.rotation.z = 0
+    const lf = this.level.furniture.find((f) => f.name === 'laundry'); const lm = this.furn.get('laundry'); if (lm && lf) { lm.scale.y = 1; lm.position.x = (lf.rect.x0 + lf.rect.x1) / 2 }
+    if (this.pillow) { this.pillow.position.y = 0.8; this.pillow.rotation.z = 0 }
     for (const [name, f] of this.furn) { const fd = this.level.furniture.find((x) => x.name === name); if (fd) f.position.x = (fd.rect.x0 + fd.rect.x1) / 2 }
     const o = this.itemMeshes.get(a.id); if (o) o.scale.setScalar(1)
     this.onAction?.(null, 0)

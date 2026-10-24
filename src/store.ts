@@ -27,6 +27,8 @@ interface Store {
   screen: Screen
   lastLevel: LevelResult | null
   levelStart: number
+  activeLevel: string
+  startLevel: (id: string) => void
   levelNonce: number
   saveProgress: (p: ChapterProgress) => void
   chooseCharacter: (c: CharacterId) => void
@@ -151,7 +153,7 @@ export const useGame = create<Store>((set, get) => {
   }
   const setMeta = (meta: MetaProfile) => { saveMeta(meta); set({ meta }); audio.configure(meta.settings); configureVoice({ on: meta.settings.sound && meta.settings.voice !== false, volume: meta.settings.volume }) }
   return {
-    screen: 'home', lastLevel: null, levelStart: 0, levelNonce: 0, life: null, meta: defaultMeta(), sheet: null, toasts: [], quizFeedback: null, dashMode: 'foot', lastDash: null, endingRecorded: false, placeId: null, npcId: null, walkReq: null, hour: 8, day: 0, enterReq: null, taskActive: false, deliveredNow: null, talkReq: null, penaltyReq: null, marketReq: null, startChoresReq: null, startShopReq: null, jogReq: null, tripReq: null, rideReq: null, birthday: null, matchReq: null,
+    screen: 'home', lastLevel: null, levelStart: 0, activeLevel: 'ch1.l1', levelNonce: 0, life: null, meta: defaultMeta(), sheet: null, toasts: [], quizFeedback: null, dashMode: 'foot', lastDash: null, endingRecorded: false, placeId: null, npcId: null, walkReq: null, hour: 8, day: 0, enterReq: null, taskActive: false, deliveredNow: null, talkReq: null, penaltyReq: null, marketReq: null, startChoresReq: null, startShopReq: null, jogReq: null, tripReq: null, rideReq: null, birthday: null, matchReq: null,
     startMatch: () => set((st) => ({ matchReq: { n: (st.matchReq?.n ?? 0) + 1 }, sheet: null })),
     startRide: (dest, fare) => { const st = get(); let life = st.life; if (!life) return; if (fare) life = payCash(life, fare, 'Bus fare'); commit(life); set((s) => ({ rideReq: { dest, n: (s.rideReq?.n ?? 0) + 1 }, sheet: null })) },
     startTrip: () => set((st) => ({ tripReq: { n: (st.tripReq?.n ?? 0) + 1 }, sheet: null })),
@@ -190,6 +192,11 @@ export const useGame = create<Store>((set, get) => {
     openPlace: (id) => set({ placeId: id, sheet: 'place' }),
     openNpc: (id) => set({ npcId: id, sheet: 'npc' }),
     goToPlace: (id) => set((st) => ({ walkReq: { place: id, n: (st.walkReq?.n ?? 0) + 1 }, sheet: null })),
+    startLevel: (id) => {
+      const p = progressOf(get().meta)
+      if (p.level !== id) setMeta(withProgress(get().meta, { ...p, level: id, task: 0 }))
+      set({ activeLevel: id, screen: 'levelIntro', sheet: null }); setAnalyticsContext({ screen: 'levelIntro' })
+    },
     saveProgress: (p) => setMeta(withProgress(get().meta, p)),
     chooseCharacter: (c) => setMeta(withProgress(get().meta, { ...progressOf(get().meta), character: c })),
     openLevel: (startTask) => { set((st) => ({ levelNonce: st.levelNonce + 1 })); set({ levelStart: startTask, screen: 'levelPlay', sheet: null }); setAnalyticsContext({ screen: 'levelPlay' }) },

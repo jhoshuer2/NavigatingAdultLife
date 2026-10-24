@@ -2,7 +2,7 @@
 // failure and recovery rules written down.
 import type { Expression } from '../world/toon'
 
-export type TaskKind = 'find' | 'collect' | 'choose' | 'reach'
+export type TaskKind = 'find' | 'collect' | 'choose' | 'reach' | 'goto'
 export type Speaker = 'folake' | 'tunde' | 'player'
 
 export interface Line { who: Speaker; text: string; expr?: Expression }
@@ -31,12 +31,26 @@ export interface TaskDef {
 }
 
 export interface Spot { id: string; task: number; x: number; z: number; label: string; wrong?: Line; right?: boolean; icon?: string }
-export interface Item { id: string; task: number; x: number; z: number; label: string; color: string; shape: 'box' | 'bag' | 'phone' | 'keys' | 'wallet' | 'umbrella' | 'snack' | 'bank' }
+export interface Item { id: string; task: number; x: number; z: number; label: string; color: string; shape: 'box' | 'bag' | 'phone' | 'keys' | 'wallet' | 'umbrella' | 'snack' | 'bank' | 'boots' | 'shinpad' | 'bib' | 'bottle' }
 export interface Rect { x0: number; x1: number; z0: number; z1: number }
 export interface Furn { name: string; rect: Rect; h: number; color: string }
 
+export interface Hazard { x: number; z0: number; z1: number; speed: number; phase: number; name: 'slippers' | 'mop' | 'dummy'; color: string }
 export interface LevelDef {
   id: string
+  /** which scene the renderer builds */
+  sceneKind: 'home' | 'pitch'
+  /** the player wears a football kit */
+  kit?: boolean
+  hazards: Hazard[]
+  /** where the two guides stand: Mama Folake and Baba Tunde */
+  npcs: { folake: { x: number; z: number; rot: number }; tunde: { x: number; z: number; rot: number } }
+  /** for 'goto' tasks: the area to walk into, per task index */
+  gotoAreas?: ({ x: number; z: number; r: number } | null)[]
+  /** the closing beat shown on the result screen */
+  endBeat: { text: string; line: string }
+  /** what the optional choice is called, for the result screen */
+  choiceLabel: string
   chapter: string
   title: string
   subtitle: string
