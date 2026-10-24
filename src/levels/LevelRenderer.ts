@@ -227,7 +227,7 @@ export class LevelRenderer {
     for (const d of this.level.theme!.deco) {
       const w = d.w ?? 2, dd = d.d ?? 2, h = d.h ?? 1, col = d.color ?? '#a87a50'
       switch (d.kind) {
-        case 'awning': { this.box(w, 0.15, dd, col, d.x, 2.6, d.z); for (const sx of [-1, 1]) for (const sz of [-1, 1]) this.box(0.1, 2.6, 0.1, '#1c1b22', d.x + sx * (w / 2 - 0.1), 1.3, d.z + sz * (dd / 2 - 0.1)); break }
+        case 'awning': { const roof = this.box(w, 0.1, dd, col, d.x, 2.6, d.z); const rm = roof.material as THREE.MeshStandardMaterial; rm.transparent = true; rm.opacity = 0.28; rm.depthWrite = false; for (const sx of [-1, 1]) for (const sz of [-1, 1]) this.box(0.1, 2.6, 0.1, '#1c1b22', d.x + sx * (w / 2 - 0.1), 1.3, d.z + sz * (dd / 2 - 0.1)); break }
         case 'stall': { this.box(w, 0.9, dd, '#a87a50', d.x, 0.45, d.z); this.box(w + 0.3, 0.15, dd + 0.5, col, d.x, 2.6, d.z); for (const sx of [-1, 1]) this.box(0.1, 2.6, 0.1, '#1c1b22', d.x + sx * (w / 2), 1.3, d.z - dd / 2); if (d.label) { const l = this.label(d.label, 2.0); l.position.set(d.x, 3.2, d.z); this.scene.add(l) } break }
         case 'tree': { const tr = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.28, 2, 8), lam('#6b3a1e')); tr.position.set(d.x, 1, d.z); this.scene.add(tr); const cr = new THREE.Mesh(new THREE.SphereGeometry(1.3, 10, 8), lam(col === '#a87a50' ? '#2f5a3a' : col)); cr.position.set(d.x, 2.8, d.z); this.scene.add(cr); break }
         case 'lamp': { this.box(0.14, 4, 0.14, '#44444e', d.x, 2, d.z); this.box(0.7, 0.14, 0.3, '#ffe9a6', d.x, 4, d.z); break }

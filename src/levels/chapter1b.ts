@@ -186,7 +186,7 @@ export const LEVEL_C1L5 = L({
       intro: [say('tunde', 'Food, food, food. Which line is the food line? Read the signs.', 'calm')], done: [say('helper', 'Welcome to the longest line in the world.', 'cheeky')], hint: 'The sign in the middle says FOOD.' }),
     T(5, 2, 'hold', 'Wait for your turn', { purpose: 'Patience: stand in the ring until the line reaches you.', objective: 'Wait in the line', success: 'You wait for the whole count.',
       intro: [say('helper', 'I was here first. I was here for a hundred years.', 'tired')], done: [say('tunde', 'Good. Patience is also a skill.', 'proud')], hint: 'Just stand inside the glowing ring.' }),
-    T(5, 3, 'sequence', 'Complete the order', { purpose: 'A short memory and sequence game.', objective: 'Serve the order in the right order', success: 'The order is served correctly.',
+    T(5, 3, 'sequence', 'Complete the order', { purpose: 'A short memory and sequence game.', objective: 'Serve: jollof, chicken, drink', success: 'The order is served correctly.',
       intro: [say('helper', 'One jollof, then chicken, then a cold drink. In that order!', 'confident')], done: [say('helper', 'Perfect! You should work here.', 'happy')], hint: 'Order: jollof, then chicken, then drink. Plantain is not on the list.' }),
     T(5, 4, 'choose', 'Recover from a mix-up', { purpose: 'The stall mixed up the plantain: pick how to fix it.', objective: 'Fix the mix-up', success: 'You settle the mix-up.',
       intro: [say('neighbour', 'Oh no. I gave the other table your plantain. Fix this how?', 'worried')], done: [say('player', 'Honestly, jollof is still jollof.', 'happy')], hint: 'Swap, pay a little extra or share. All end well.' }),

@@ -244,3 +244,9 @@ All nine levels of "The Unexpected Day" exist (`src/levels/chapter1.ts` and `cha
 
 ### Chapter 3: Market Day (all nine levels)
 `src/levels/chapter3.ts`: you run a market stall for a day. 1 Opening the Stall (set up in order, choose prices, open the shutter in time), 2 The Wholesaler (find the supplier, ₦2000 stock budget, wait for the receipt, rush back), 3 First Customers (serve in order, discount choice, chase the lost change), 4 The Haggler (offer, stay firm, settle), 5 Counting the Takings (find the money box, count notes in order, ₦1500 supplier budget, save or restock), 6 Rain! (run, cover goods in order, choose fresh or dry goods which changes the run), 7 The Competitor (visit his stall, find the sign, answer, outlast), 8 The Inspector (greet, tidy in order, find the licence, honesty), 9 Closing Time (count, share the profit, tell Mama, close the shutter; badge "Market Day"). Finishing it opens Chapter 4 (placeholder). Covered by the bot-playthrough tests.
+
+## Chapter 4: Kitchen Rush (nine levels)
+- `src/levels/chapter4.ts`: Opening the Kitchen, Prep Time, First Orders, Rush Hour, The Picky Customer, Kitchen Fire, Stock Shortage, The Critic, Last Order. Finishing it earns the "Kitchen Rush" badge and opens chapter 5 (still a placeholder).
+- Tasks, dialogue and endings are my own design (the spec has no task lists past chapter 1 level 1). Bot-tested; headless screenshots of all nine levels complete.
+- Fix: the `awning` deco is now a see-through canopy; it used to hide the stall items in Chapter 1 Level 5. Level 5's serve task now names the order in its objective.
+- Feedback to act on: levels feel linear. Wanted: travel between places (bus, walking across the city), acted-out everyday tasks (seat guests, bring food, let them eat), activities such as football.
