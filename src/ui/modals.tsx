@@ -44,8 +44,8 @@ export function EventModal() {
         <button className="chip" aria-label="Flag this event for the playtest feedback log" onClick={flag}><Icon name="flag" size={13} /></button>
       </div>
       <div className="flex items-center gap-3 mt-2">
-        {npc && <div className="w-14 h-14 rounded-full grid place-items-center text-2xl font-display shrink-0" style={{ background: 'radial-gradient(circle at 30% 20%, #ff8ec2, #7a2a9a)', boxShadow: 'inset 0 0 0 3px rgba(255,255,255,.35)' }} title={npc.name}>{npc.name[0]}</div>}
-        <h2 className="font-display text-[28px] leading-[1.05]" style={{ textShadow: '0 2px 0 rgba(0,0,0,.4)' }}>{cur.event.title}</h2>
+        {npc && <div className="w-14 h-14 rounded-full grid place-items-center text-2xl font-display shrink-0" style={{ background: 'radial-gradient(circle at 30% 20%, #f0b080, #c4562a)', boxShadow: 'inset 0 0 0 3px rgba(28,27,34,.35)' }} title={npc.name}>{npc.name[0]}</div>}
+        <h2 className="font-display text-[28px] leading-[1.05]" >{cur.event.title}</h2>
       </div>
       <p className="mt-3 text-[15px] leading-relaxed opacity-90">{cur.text}</p>
       {!result ? (
@@ -58,7 +58,7 @@ export function EventModal() {
                 <span className="flex flex-wrap gap-1.5 mt-1 empty:hidden">
                   {choice.risk && <span className="chip !py-0.5">{RISK[choice.risk][0]} {RISK[choice.risk][1]}</span>}
                   {choice.cost?.cash ? <span className={`chip !py-0.5 ${affordable ? 'chip-gold' : 'chip-red'}`}>{naira(-choice.cost.cash)}{!affordable ? ' (debt)' : ''}</span> : null}
-                  {choice.cost?.energy ? <span className="chip !py-0.5"><Icon name="bolt" size={12} color="#ffd23f" />−{choice.cost.energy}</span> : null}
+                  {choice.cost?.energy ? <span className="chip !py-0.5"><Icon name="bolt" size={12} color="#d99a0a" />−{choice.cost.energy}</span> : null}
                 </span>
                 {choice.hint && <span className="block text-xs opacity-65 mt-0.5">{choice.hint}</span>}
               </span>
@@ -107,7 +107,7 @@ export function QuizModal() {
           return (
             <button key={i} className="card-btn flex items-center gap-3" disabled={!!fb} onClick={() => answer(i)}
               style={fb ? { borderColor: right ? '#2fd27b' : picked ? '#ff6b5e' : undefined, background: right ? '#1d5a3a' : picked ? '#5a1f24' : undefined, opacity: 1 } : undefined}>
-              <span className="grid place-items-center w-8 h-8 rounded-full shrink-0 font-display bg-white/15">{right ? <Icon name="check" size={16} color="#8dffbb" /> : picked ? <Icon name="close" size={14} color="#ffb0b3" /> : 'ABCD'[i]}</span>
+              <span className="grid place-items-center w-8 h-8 rounded-full shrink-0 font-display bg-white/15">{right ? <Icon name="check" size={16} color="#2f5a3a" /> : picked ? <Icon name="close" size={14} color="#c4562a" /> : 'ABCD'[i]}</span>
               <span className="font-bold">{o}</span>
             </button>
           )
@@ -136,10 +136,10 @@ export function SummaryModal() {
   return (
     <Modal wide title={`Age ${s.age}`}>
       {net > 0 && <Confetti n={24} />}
-      <h2 className="font-display text-[26px] leading-tight text-center" style={{ textShadow: '0 2px 0 rgba(0,0,0,.4)' }}>{s.headline}</h2>
+      <h2 className="font-display text-[26px] leading-tight text-center" >{s.headline}</h2>
       <div className="grid grid-cols-2 gap-2.5 mt-3">
-        <div className="hud-glass rounded-2xl p-3 text-center"><div className="chip chip-green !py-0.5"><Icon name="up" size={12} /> In</div><div className="font-display text-2xl text-green-300 mt-1"><CountUp to={s.income} format={naira} /></div></div>
-        <div className="hud-glass rounded-2xl p-3 text-center"><div className="chip chip-red !py-0.5"><Icon name="down" size={12} /> Out</div><div className="font-display text-2xl text-red-300 mt-1"><CountUp to={-s.expenses} format={naira} /></div></div>
+        <div className="hud-glass rounded-2xl p-3 text-center"><div className="chip chip-green !py-0.5"><Icon name="up" size={12} /> In</div><div className="font-display text-2xl text-green-800 mt-1"><CountUp to={s.income} format={naira} /></div></div>
+        <div className="hud-glass rounded-2xl p-3 text-center"><div className="chip chip-red !py-0.5"><Icon name="down" size={12} /> Out</div><div className="font-display text-2xl text-red-800 mt-1"><CountUp to={-s.expenses} format={naira} /></div></div>
       </div>
       <DeltaChips deltas={s.deltas.filter((d) => d.stat !== 'cash')} limit={10} />
       <div className="hud-glass rounded-2xl p-3 mt-3 flex items-center gap-3">
@@ -187,11 +187,11 @@ export function JobsModal() {
           <button key={o.track.id} className="tile" disabled={!o.ok} onClick={() => act('applyJob', { track: o.track.id })}>
             <span className="text-[34px] leading-none">{o.ok ? o.track.icon : '🔒'}</span>
             <span className="font-display text-[14px] uppercase leading-tight text-center">{o.track.name}</span>
-            {!o.ok && <span className="text-[11px] font-bold text-yellow-300 text-center leading-tight">{o.why}</span>}
+            {!o.ok && <span className="text-[11px] font-bold text-orange-700 text-center leading-tight">{o.why}</span>}
           </button>
         ))}
       </div>
-      <div className="text-center mt-3"><span className="chip"><Icon name="bolt" size={12} color="#ffd23f" />15</span></div>
+      <div className="text-center mt-3"><span className="chip"><Icon name="bolt" size={12} color="#d99a0a" />15</span></div>
     </Modal>
   )
 }
@@ -208,9 +208,9 @@ export function PickModal({ kind }: { kind: 'social' | 'family' }) {
       <div className="grid grid-cols-3 gap-2.5">
         {people.map((p) => (
           <button key={p.id} className="tile" onClick={() => startTalk(kind === 'social' ? 'hang' : 'family', p.role)}>
-            <span className="w-12 h-12 rounded-full grid place-items-center text-xl font-display" style={{ background: 'radial-gradient(circle at 30% 20%, #ff8ec2, #7a2a9a)', boxShadow: 'inset 0 0 0 2px rgba(255,255,255,.35)' }}>{p.name[0]}</span>
+            <span className="w-12 h-12 rounded-full grid place-items-center text-xl font-display" style={{ background: 'radial-gradient(circle at 30% 20%, #f0b080, #c4562a)', boxShadow: 'inset 0 0 0 2px rgba(28,27,34,.35)' }}>{p.name[0]}</span>
             <span className="font-display text-[14px] uppercase leading-tight">{p.name}</span>
-            <span className="flex items-center gap-1 text-[12px] font-extrabold"><Icon name="heart" size={12} color="#ff7ab8" />{p.closeness}</span>
+            <span className="flex items-center gap-1 text-[12px] font-extrabold"><Icon name="heart" size={12} color="#c4562a" />{p.closeness}</span>
           </button>
         ))}
       </div>
@@ -231,7 +231,7 @@ export function QuestsModal() {
         <div className="flex items-center gap-3">
           <span className="text-4xl">{dream.icon}</span>
           <div className="flex-1 min-w-0">
-            <div className="text-[10px] font-extrabold uppercase tracking-wider text-yellow-300">Your big dream</div>
+            <div className="text-[10px] font-extrabold uppercase tracking-wider text-orange-700">Your big dream</div>
             <div className="font-display text-lg uppercase leading-none">{dream.name}</div>
             <div className="bar mt-1.5"><i style={{ width: `${Math.round(dp.pct * 100)}%`, background: 'linear-gradient(90deg,#ffe27a,#ffc72c)' }} /></div>
           </div>
@@ -279,7 +279,7 @@ export function QuestsModal() {
           )
         })}
       </div>
-      <div className="text-center mt-3"><span className="chip"><Icon name="trophy" size={13} color="#ffd23f" /> {life.achievements.length}/{ACHIEVEMENTS.length}</span></div>
+      <div className="text-center mt-3"><span className="chip"><Icon name="trophy" size={13} color="#d99a0a" /> {life.achievements.length}/{ACHIEVEMENTS.length}</span></div>
     </Modal>
   )
 }
@@ -303,7 +303,7 @@ export function ProfileModal() {
           <div className="text-xs opacity-80">📍 {DISTRICTS[c.housing.districtId]?.name ?? 'Home'}, {CITIES[cityOfHome(c.housing.districtId)].name}</div>
         </div>
       </div>
-      {dream.item && ITEM_BY_ID[dream.item] && <div className="mt-3 rounded-2xl p-2.5 flex items-center gap-3" style={{ background: 'rgba(255,210,63,.14)', boxShadow: 'inset 0 0 0 1.5px rgba(255,210,63,.5)' }}><span className="text-[30px] leading-none">{ITEM_BY_ID[dream.item!].icon}</span><div className="min-w-0"><div className="text-[10px] font-extrabold uppercase tracking-wider text-yellow-300">Your dream symbol</div><div className="font-display text-[16px] leading-tight">{ITEM_BY_ID[dream.item!].name}</div><div className="text-[12px] opacity-80 leading-snug">{ITEM_BY_ID[dream.item!].desc}</div></div></div>}
+      {dream.item && ITEM_BY_ID[dream.item] && <div className="mt-3 rounded-2xl p-2.5 flex items-center gap-3" style={{ background: 'rgba(255,210,63,.14)', boxShadow: 'inset 0 0 0 1.5px rgba(255,210,63,.5)' }}><span className="text-[30px] leading-none">{ITEM_BY_ID[dream.item!].icon}</span><div className="min-w-0"><div className="text-[10px] font-extrabold uppercase tracking-wider text-orange-700">Your dream symbol</div><div className="font-display text-[16px] leading-tight">{ITEM_BY_ID[dream.item!].name}</div><div className="text-[12px] opacity-80 leading-snug">{ITEM_BY_ID[dream.item!].desc}</div></div></div>}
       <div className="mt-3 flex flex-wrap gap-1.5">{c.traits.map((t) => <span key={t} className="chip">{TRAIT_BY_ID[t].icon} {TRAIT_BY_ID[t].name}</span>)}</div>
       <div className="grid grid-cols-2 gap-2 mt-3 text-sm">
         <div className="card p-2"><div className="text-xs opacity-60">Education</div><b>{{ none: c.edu.credential === 'degree' ? 'Degree' : c.edu.credential === 'ond' ? 'Diploma (OND)' : c.edu.credential === 'trade' ? 'Trade certified' : c.edu.credential === 'ssce' ? 'WAEC/SSCE' : 'Primary', primary: 'Primary school', jss: 'Junior secondary', sss: 'Senior secondary', university: 'University', polytechnic: 'Polytechnic', apprentice: 'Apprentice' }[c.edu.level]}</b></div>
@@ -317,7 +317,7 @@ export function ProfileModal() {
           <div key={n.id} className="flex items-center gap-2 text-sm">
             <span className="w-24 truncate" style={{ opacity: n.alive ? 1 : 0.5 }}>{n.name}{!n.alive ? ' ✝' : ''}</span>
             <span className="text-xs opacity-60 w-14">{n.role === 'friend2' ? 'friend' : n.role}</span>
-            <div className="bar flex-1"><i style={{ width: `${n.closeness}%`, background: '#ff7ab8' }} /></div>
+            <div className="bar flex-1"><i style={{ width: `${n.closeness}%`, background: '#e0875a' }} /></div>
           </div>
         ))}
       </div>
@@ -354,7 +354,7 @@ export function PaywallModal() {
   return (
     <Modal title={out ? 'Out of play time' : 'Play time'} onClose={out ? undefined : () => openSheet(null)} wide>
       <div className="hud-glass rounded-3xl p-4 text-center">
-        <Icon name="hourglass" size={30} color="#ffd23f" />
+        <Icon name="hourglass" size={30} color="#d99a0a" />
         <div className="font-display text-5xl text-gold leading-none mt-1">{fmtTime(left)}</div>
         <div className="flex justify-center gap-2 mt-2"><span className="chip">Free {fmtTime(meta.tokens.freeSec)}</span><span className="chip chip-gold">Paid {fmtTime(meta.tokens.paidSec)}</span></div>
         <div className="text-xs opacity-70 mt-2">{out ? 'Your life is saved. ' : ''}Free refill in {refill}</div>
@@ -402,8 +402,8 @@ export function DreamDoneModal() {
       <Confetti n={36} />
       <div className="text-center">
         <div className="text-[64px] leading-none">{dream.icon}</div>
-        <div className="text-[11px] font-extrabold uppercase tracking-wider text-yellow-300 mt-2">Dream achieved</div>
-        <h2 className="font-display text-[30px] leading-tight uppercase" style={{ textShadow: '0 3px 0 rgba(0,0,0,.45)' }}>{dream.name}</h2>
+        <div className="text-[11px] font-extrabold uppercase tracking-wider text-orange-700 mt-2">Dream achieved</div>
+        <h2 className="font-display text-[30px] leading-tight uppercase" >{dream.name}</h2>
         <p className="text-sm opacity-90 mt-2 leading-snug">{c.nickname || c.name} did it at {c.age}. From a small child to the dream. Well done!</p>
       </div>
       <div className="grid gap-2 mt-4">
@@ -439,7 +439,7 @@ export function BirthdayModal() {
         <div className="flex justify-center gap-2 text-4xl" aria-hidden="true">{['🎈', '🎉', '🎈'].map((e, i) => <span key={i} className="rise" style={{ animationDelay: `${i * 0.15}s` }}>{e}</span>)}</div>
         <Ribbon className="mt-1">Happy Birthday!</Ribbon>
         <div className="text-[84px] leading-none mt-2 pop" aria-hidden="true">🎂</div>
-        <h2 className="font-display text-[28px] leading-tight mt-1" style={{ textShadow: '0 2px 0 rgba(0,0,0,.4)' }}>{c.nickname || c.name} is now {age}</h2>
+        <h2 className="font-display text-[28px] leading-tight mt-1" >{c.nickname || c.name} is now {age}</h2>
         {MILESTONE[age] && <div className="chip chip-gold !text-sm mt-2">{MILESTONE[age]}</div>}
       </div>
       <div className="hud-glass rounded-2xl p-3 mt-3 space-y-1.5 text-sm">{wishes.slice(0, 3).map((w, i) => <div key={i}>💌 {w}</div>)}</div>

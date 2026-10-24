@@ -222,3 +222,4 @@ Popups moved to edge strips (Rush and Level 1); tasks are acted out (walk up, di
 
 ### One look everywhere
 All screens use the cream, orange and green palette (tokens in `src/ui/index.css`, constants in `src/ui/theme.ts`): buttons, cards, tiles, chips, ribbons, sheets, toasts, Settings, Trophies, Shop, Lives and every Rush overlay. The old purple gradient is retired. The unreachable open-world HUD (`World.tsx`, `Play.tsx`) inherits the new tokens but was not restyled or tested.
+The old open-world screens (Create, World HUD and dock, place/NPC/profile/menu sheets, events, Ending, Trophies, Shop, task panels, city art, icons) were also moved to the palette (purple and magenta hexes replaced, white text and overlays flipped to ink on cream). To look at them: `?debug=1&screen=create|play|ending|history|unlocks|achievements` (starts a random life if none exists).

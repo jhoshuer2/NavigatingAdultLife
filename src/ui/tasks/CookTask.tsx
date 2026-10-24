@@ -92,7 +92,7 @@ export function CookTask({ r, free, onDone }: { r: WorldRenderer; free: boolean;
         {phase === 'stir' && (
           <>
             <div className="text-xs font-bold opacity-80 mb-1.5">Stir {stirs}/{STIRS}</div>
-            <div className="relative h-8 rounded-full overflow-hidden mb-2" style={{ background: '#2a2540' }}><div className="absolute top-0 bottom-0" style={{ left: '34%', width: '32%', background: '#2fd27b66' }} /><div className="absolute top-0 bottom-0 w-2 rounded" style={{ left: `${mark * 100}%`, background: '#ffd23f' }} /></div>
+            <div className="relative h-8 rounded-full overflow-hidden mb-2" style={{ background: '#3a2a20' }}><div className="absolute top-0 bottom-0" style={{ left: '34%', width: '32%', background: '#2fd27b66' }} /><div className="absolute top-0 bottom-0 w-2 rounded" style={{ left: `${mark * 100}%`, background: '#ffd23f' }} /></div>
             <button className="btn btn-primary w-full !text-xl !min-h-14" onPointerDown={stir}>🥄 Stir</button>
           </>
         )}

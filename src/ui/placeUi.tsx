@@ -27,9 +27,9 @@ function ActTile({ icon, label, energy, cash, reward, reason, left, disabled, ho
       {guide && <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 chip chip-gold !py-0 !text-[10px] guide-nudge">👉</span>}
       <span className="text-[34px] leading-none">{disabled && reason ? '🔒' : icon}</span>
       <span className="font-display text-[15px] leading-tight text-center uppercase tracking-wide">{label}</span>
-      {disabled && reason ? <span className="text-[11px] font-bold text-yellow-300 leading-tight text-center">{reason}</span> : (
+      {disabled && reason ? <span className="text-[11px] font-bold text-orange-700 leading-tight text-center">{reason}</span> : (
         <span className="flex flex-wrap justify-center gap-1 mt-0.5">
-          <span className="chip !py-0.5">{energy ? <><Icon name="bolt" size={12} color="#ffd23f" />{energy}</> : 'free'}</span>
+          <span className="chip !py-0.5">{energy ? <><Icon name="bolt" size={12} color="#d99a0a" />{energy}</> : 'free'}</span>
           {cash ? <span className="chip chip-gold !py-0.5">{nairaShort(cash)}</span> : null}
           {reward ? <span className="chip chip-green !py-0.5">{reward}</span> : null}
         </span>
@@ -74,9 +74,9 @@ export function PlaceModal() {
   return (
     <Modal onClose={() => openSheet(null)}>
       <div className="flex items-center gap-3">
-        <div className="w-16 h-16 rounded-[20px] grid place-items-center text-4xl shrink-0" style={{ background: 'radial-gradient(circle at 30% 20%, #8a5cff, #3b22a8)', boxShadow: 'inset 0 0 0 2px rgba(255,255,255,.25), 0 6px 0 rgba(0,0,0,.35)' }}>{place.icon}</div>
+        <div className="w-16 h-16 rounded-[20px] grid place-items-center text-4xl shrink-0" style={{ background: 'radial-gradient(circle at 30% 20%, #e07a1f, #e07a1f)', boxShadow: 'inset 0 0 0 2px rgba(28,27,34,.25), 0 6px 0 rgba(0,0,0,.35)' }}>{place.icon}</div>
         <div className="min-w-0">
-          <div className="font-display text-[26px] text-white leading-none" style={{ textShadow: '0 2px 0 rgba(0,0,0,.4)' }}>{place.name}</div>
+          <div className="font-display text-[26px]  leading-none" >{place.name}</div>
           <div className="text-xs opacity-70 mt-1 leading-snug">{place.blurb}</div>
         </div>
       </div>
@@ -116,15 +116,15 @@ export function NpcModal() {
   return (
     <Modal onClose={close}>
       <div className="flex items-center gap-3">
-        <div className="w-16 h-16 rounded-full grid place-items-center text-3xl font-display shrink-0" style={{ background: 'radial-gradient(circle at 30% 20%, #ff8ec2, #7a2a9a)', boxShadow: 'inset 0 0 0 3px rgba(255,255,255,.35), 0 6px 0 rgba(0,0,0,.35)' }}>{npc.name[0]}</div>
+        <div className="w-16 h-16 rounded-full grid place-items-center text-3xl font-display shrink-0" style={{ background: 'radial-gradient(circle at 30% 20%, #f0b080, #c4562a)', boxShadow: 'inset 0 0 0 3px rgba(28,27,34,.35), 0 6px 0 rgba(0,0,0,.35)' }}>{npc.name[0]}</div>
         <div className="min-w-0 flex-1">
-          <div className="font-display text-[26px] text-white leading-none" style={{ textShadow: '0 2px 0 rgba(0,0,0,.4)' }}>{npc.name}</div>
+          <div className="font-display text-[26px]  leading-none" >{npc.name}</div>
           <div className="chip chip-pink !py-0.5 mt-1.5 capitalize">{roleLabel}</div>
         </div>
       </div>
       <div className="flex items-center gap-2 mt-3">
-        <Icon name="heart" size={20} color="#ff7ab8" />
-        <div className="bar flex-1"><i style={{ width: `${npc.closeness}%`, background: 'linear-gradient(90deg,#ff7ab8,#ff3d8b)' }} /></div>
+        <Icon name="heart" size={20} color="#c4562a" />
+        <div className="bar flex-1"><i style={{ width: `${npc.closeness}%`, background: 'linear-gradient(90deg,#e0875a,#e07a1f)' }} /></div>
         <span className="font-display text-sm">{npc.closeness}</span>
       </div>
       <div className="grid grid-cols-3 gap-2.5 mt-3">

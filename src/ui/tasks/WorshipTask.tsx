@@ -84,8 +84,8 @@ export function WorshipTask({ r, cash, onDone }: { r: WorldRenderer; cash: numbe
         {phase === 'intro' && (<div><div className="font-display text-2xl text-danfo">Take a seat</div><div className="text-sm opacity-80 mt-1">The service has three parts: a song (clap in time), a short message, and an offering. Everyone is welcome.</div><button className="btn btn-primary w-full mt-3" onClick={() => setPhase('song')}>Begin ▶</button></div>)}
         {phase === 'song' && (
           <div>
-            <div className="text-xs font-bold opacity-80 mb-1.5">Tap Clap when the marker is inside the green zone {flash && <span className="ml-2 text-yellow-300">{flash}</span>}</div>
-            <div className="relative h-8 rounded-full overflow-hidden mb-2" style={{ background: '#2a2540' }}>
+            <div className="text-xs font-bold opacity-80 mb-1.5">Tap Clap when the marker is inside the green zone {flash && <span className="ml-2 text-orange-700">{flash}</span>}</div>
+            <div className="relative h-8 rounded-full overflow-hidden mb-2" style={{ background: '#3a2a20' }}>
               <div className="absolute top-0 bottom-0" style={{ left: '38%', width: '24%', background: '#2fd27b66' }} />
               <div className="absolute top-0 bottom-0 w-2 rounded" style={{ left: `${mark * 100}%`, background: '#ffd23f' }} />
             </div>

@@ -11,6 +11,8 @@ import { audio } from '@platform/audio'
 import { configureVoice } from '@platform/voice'
 import { HOWTO } from '@content/taskGuide'
 import { track, setLifeId, restoreLifeId, newLifeId, setAnalyticsConsent, setAnalyticsContext } from '@platform/analytics'
+import { randomConfig } from '@engine/bot'
+import { makeRng } from '@engine/core/rng'
 import { ACTIVITY_HOURS } from './world/time'
 
 export type Screen = 'home' | 'levelIntro' | 'levelPlay' | 'levelResult' | 'rushLobby' | 'rushPlay' | 'leaderboard' | 'title' | 'create' | 'play' | 'ending' | 'achievements' | 'unlocks' | 'settings' | 'dash' | 'history'
@@ -214,7 +216,13 @@ export const useGame = create<Store>((set, get) => {
       configureVoice({ on: meta.settings.sound && meta.settings.voice !== false, volume: meta.settings.volume })
       document.documentElement.classList.toggle('big-text', meta.settings.bigText)
       setAnalyticsConsent(meta.consentAnalytics); restoreLifeId()
-      const life = loadLife(); set({ meta, life, hour: life?.clock?.hour ?? 8, day: life?.clock?.day ?? 0 })
+      let life = loadLife(); set({ meta, life, hour: life?.clock?.hour ?? 8, day: life?.clock?.day ?? 0 })
+      // debug only: open an old open-world screen directly (`?debug=1&screen=play`), starting a random life if there is none
+      const dbg = qs.get('debug') === '1' ? qs.get('screen') : null
+      if (dbg) {
+        if (!life && dbg !== 'create') { get().newLife(randomConfig(makeRng((Math.random() * 2 ** 32) >>> 0))); life = get().life }
+        set({ screen: dbg as Screen })
+      }
     },
     newLife: (cfg) => {
       const seed = (Math.random() * 2 ** 32) >>> 0

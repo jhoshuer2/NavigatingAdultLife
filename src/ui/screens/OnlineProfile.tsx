@@ -69,14 +69,14 @@ export function OnlineProfile() {
   return (
     <div className="card p-3">
       <div className="flex items-center gap-3">
-        <div className="w-12 h-12 rounded-full grid place-items-center font-display text-xl" style={{ background: 'radial-gradient(circle at 30% 20%, #5cc8ff, #2a4fd0)', boxShadow: 'inset 0 0 0 2px rgba(255,255,255,.35)' }}>{acc.name[0]}</div>
+        <div className="w-12 h-12 rounded-full grid place-items-center font-display text-xl" style={{ background: 'radial-gradient(circle at 30% 20%, #5cc8ff, #2a4fd0)', boxShadow: 'inset 0 0 0 2px rgba(28,27,34,.35)' }}>{acc.name[0]}</div>
         <div className="min-w-0 flex-1"><div className="font-display text-xl leading-none">{acc.label}</div><div className="text-xs opacity-70 mt-1">Friend code <b className="select-all">{acc.friend_code}</b></div></div>
         <button className="chip" onClick={() => copy(acc.friend_code)} aria-label="Copy friend code"><Icon name="share" size={13} /></button>
       </div>
       {recoveryCard}
       <button className="card-btn flex items-center justify-between w-full mt-3" role="switch" aria-checked={acc.mp_enabled} disabled={busy} onClick={() => { audio.sfx('toggle'); return run(() => updateAccount({ mp_enabled: !acc.mp_enabled, ...(pin ? { pin } : {}) })) }}>
         <span className="font-bold text-sm">Play with other people (coming soon)</span>
-        <span className="relative w-12 h-7 rounded-full shrink-0" style={{ background: acc.mp_enabled ? 'var(--green)' : 'rgba(255,255,255,.18)' }}><span className="absolute top-0.5 w-6 h-6 rounded-full bg-white transition-all" style={{ left: acc.mp_enabled ? 22 : 2 }} /></span>
+        <span className="relative w-12 h-7 rounded-full shrink-0" style={{ background: acc.mp_enabled ? 'var(--green)' : 'rgba(28,27,34,.18)' }}><span className="absolute top-0.5 w-6 h-6 rounded-full bg-white transition-all" style={{ left: acc.mp_enabled ? 22 : 2 }} /></span>
       </button>
       <div className="flex gap-2 mt-2">
         <input className="flex-1 min-w-0 rounded-xl bg-black/30 px-3 py-2 font-bold outline-none focus:ring-2 ring-white/60" inputMode="numeric" maxLength={4} placeholder={acc.has_guardian_pin ? 'Guardian PIN' : 'New PIN'} value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))} aria-label="Guardian PIN" />

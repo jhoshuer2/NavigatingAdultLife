@@ -3,7 +3,7 @@ interface Props { scene: string; night?: boolean; className?: string }
 
 const SKY: Record<string, [string, string]> = {
   home: ['#ffd9a0', '#ffb36b'], compound: ['#9ed8ff', '#ffe9b5'], school: ['#a6dcff', '#e9f7ff'], market: ['#ffd27a', '#ff9d5c'],
-  mamaput: ['#ffcf8a', '#e8793b'], office: ['#b8c9ff', '#e8efff'], event: ['#3a2a6b', '#c4562a'], danfo: ['#ffb26b', '#ff7a4d'],
+  mamaput: ['#ffcf8a', '#e8793b'], office: ['#b8c9ff', '#e8efff'], event: ['#8a5a36', '#c4562a'], danfo: ['#ffb26b', '#ff7a4d'],
 }
 
 export function SceneArt({ scene, night, className }: Props) {
@@ -12,7 +12,7 @@ export function SceneArt({ scene, night, className }: Props) {
   return (
     <svg viewBox="0 0 400 220" className={className} preserveAspectRatio="xMidYMid slice" role="img" aria-label={`${scene} scene`}>
       <defs>
-        <linearGradient id={id} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={night ? '#1b1740' : a} /><stop offset="1" stopColor={night ? '#3d2f7a' : b} /></linearGradient>
+        <linearGradient id={id} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={night ? '#6b3a1e' : a} /><stop offset="1" stopColor={night ? '#a87a50' : b} /></linearGradient>
       </defs>
       <rect width="400" height="220" fill={`url(#${id})`} />
       <circle cx="320" cy="48" r="22" fill={night ? '#fff3c8' : '#fff7d6'} opacity=".9" />
@@ -95,7 +95,7 @@ function Office() {
 }
 function EventHall() {
   return (<g>
-    <rect y="140" width="400" height="80" fill="#2a1a3a" />
+    <rect y="140" width="400" height="80" fill="#3a2a20" />
     <path d="M0 60 L400 60 L400 40 L0 40 Z" fill="#c4562a" />
     {[40, 100, 160, 220, 280, 340].map((x, i) => <g key={x}><circle cx={x} cy={80 + (i % 2) * 14} r="10" fill={['#f5b91c', '#e0457b', '#2bb3a6'][i % 3]} /><line x1={x} y1={60} x2={x} y2={70 + (i % 2) * 14} stroke="#fff" strokeWidth="1" /></g>)}
     <rect x="140" y="100" width="120" height="50" fill="#f5b91c" stroke="#7a3b00" strokeWidth="3" /><text x="200" y="132" fontSize="22" fontWeight="800" textAnchor="middle" fill="#7a2a22">OWAMBE</text>

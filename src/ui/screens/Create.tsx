@@ -111,7 +111,7 @@ export function Create() {
         <div className="flex-1 flex items-center justify-center gap-1.5" aria-label={`Step ${step + 1} of ${STEPS.length}: ${STEPS[step]}`}>
           {STEPS.map((n, i) => (
             <div key={n} className="flex flex-col items-center gap-0.5 flex-1 max-w-[52px]">
-              <i className="h-2 w-full rounded-full transition-all duration-500" style={{ background: i < step ? 'linear-gradient(180deg,#ffe27a,#f59e0b)' : i === step ? 'linear-gradient(90deg,#ff3d8b,#8f6bff)' : 'rgba(255,255,255,.16)', boxShadow: i === step ? '0 0 12px #ff3d8b' : undefined }} />
+              <i className="h-2 w-full rounded-full transition-all duration-500" style={{ background: i < step ? 'linear-gradient(180deg,#ffe27a,#f59e0b)' : i === step ? 'linear-gradient(90deg,#e07a1f,#f5b91c)' : 'rgba(28,27,34,.16)', boxShadow: i === step ? '0 0 12px #e07a1f' : undefined }} />
               <span className={`text-[10px] uppercase tracking-wider font-extrabold ${i === step ? 'opacity-100' : 'opacity-40'}`}>{n}</span>
             </div>
           ))}
@@ -143,7 +143,7 @@ export function Create() {
             {avatarStage(188)}
             <div className="flex justify-center gap-1.5 mb-1" role="tablist">
               {tabs.map((t) => (
-                <button key={t.id} role="tab" aria-selected={tab === t.id} onClick={() => { audio.sfx('click'); setTab(t.id) }} className="flex-1 flex flex-col items-center gap-0.5 py-1.5 rounded-xl transition-all" style={{ background: tab === t.id ? 'linear-gradient(180deg,#ffe27a,#f59e0b)' : 'rgba(255,255,255,.08)', color: tab === t.id ? '#3b2300' : '#fff', boxShadow: tab === t.id ? '0 3px 0 #9a5a00' : undefined }}>
+                <button key={t.id} role="tab" aria-selected={tab === t.id} onClick={() => { audio.sfx('click'); setTab(t.id) }} className="flex-1 flex flex-col items-center gap-0.5 py-1.5 rounded-xl transition-all" style={{ background: tab === t.id ? 'linear-gradient(180deg,#ffe27a,#f59e0b)' : 'rgba(28,27,34,.08)', color: tab === t.id ? '#3b2300' : '#fff', boxShadow: tab === t.id ? '0 3px 0 #9a5a00' : undefined }}>
                   <Icon name={t.icon} size={20} color={tab === t.id ? '#7a4700' : undefined} /><span className="text-[11px] font-extrabold uppercase tracking-wide">{t.label}</span>
                 </button>
               ))}
@@ -196,7 +196,7 @@ export function Create() {
               })}
             </div>
             {(() => { const t = TRAITS.find((x) => x.id === (peek ?? traits[traits.length - 1])); return t ? <div className="card mt-3 p-3 pop" key={t.id}><div className="font-display text-xl uppercase">{t.icon} {t.name}</div><div className="text-[13px] mt-1 flex gap-1.5 items-start"><Icon name="up" size={14} className="mt-0.5" /><span className="text-green-200">{t.perk}</span></div><div className="text-[13px] mt-1 flex gap-1.5 items-start"><Icon name="down" size={14} className="mt-0.5" /><span className="text-red-200">{t.downside}</span></div></div> : <div className="text-center text-[13px] opacity-70 mt-3">Tap a trait to see its upside <Icon name="up" size={12} className="inline" /> and catch <Icon name="down" size={12} className="inline" /></div> })()}
-            <div className="flex justify-center gap-1.5 mt-3">{[0, 1].map((i) => <span key={i} className="w-8 h-2 rounded-full" style={{ background: i < traits.length ? 'var(--gold)' : 'rgba(255,255,255,.18)' }} />)}</div>
+            <div className="flex justify-center gap-1.5 mt-3">{[0, 1].map((i) => <span key={i} className="w-8 h-2 rounded-full" style={{ background: i < traits.length ? 'var(--gold)' : 'rgba(28,27,34,.18)' }} />)}</div>
           </>
         )}
 
@@ -204,7 +204,7 @@ export function Create() {
           <div className="flex-1 flex flex-col items-center justify-center text-center">
             {!arch && !spinning && (
               <div className="w-full max-w-xs">
-                <div className="card py-10 float" style={{ borderRadius: 28, background: 'linear-gradient(160deg,#6a3df5,#2a1a8a)' }}><span className="font-display text-[84px] leading-none" style={{ textShadow: '0 6px 0 #1a0f55' }}>?</span></div>
+                <div className="card py-10 float" style={{ borderRadius: 28, background: 'linear-gradient(160deg,#e07a1f,#c4630f)' }}><span className="font-display text-[84px] leading-none" style={{ textShadow: '0 6px 0 #1c1b22' }}>?</span></div>
                 <Btn className="w-full mt-5 !min-h-16 !text-xl" shine onClick={() => spin(true)}><Icon name="dice" size={24} color="#fff" /> Spin</Btn>
               </div>
             )}
@@ -212,17 +212,17 @@ export function Create() {
             {dreamDef && arch && !spinning && avatarStage(96)}
             {dreamDef && arch && !spinning && (
               <div className="card w-full max-w-sm p-4 text-left flip" style={{ borderRadius: 26, background: 'linear-gradient(170deg, rgba(120,90,255,.6), rgba(24,16,80,.9))' }} key={dreamDef.id}>
-                <div className="text-[10px] font-extrabold uppercase tracking-wider text-yellow-300">Your big dream</div>
+                <div className="text-[10px] font-extrabold uppercase tracking-wider text-orange-700">Your big dream</div>
                 <div className="flex items-center gap-3 mt-1">
-                  <span className="grid place-items-center w-20 h-20 rounded-3xl text-[44px] shrink-0" style={{ background: 'radial-gradient(circle at 30% 25%, rgba(255,226,122,.7), rgba(106,61,245,.3))', boxShadow: 'inset 0 0 0 2px rgba(255,255,255,.3)' }}>{dreamDef.icon}</span>
+                  <span className="grid place-items-center w-20 h-20 rounded-3xl text-[44px] shrink-0" style={{ background: 'radial-gradient(circle at 30% 25%, rgba(255,226,122,.7), rgba(224,122,31,.35))', boxShadow: 'inset 0 0 0 3px #1c1b22' }}>{dreamDef.icon}</span>
                   <div className="min-w-0"><div className="font-display text-[28px] uppercase leading-none">{dreamDef.name}</div><div className="text-[13px] opacity-85 mt-1 leading-snug">{dreamDef.blurb}</div></div>
                 </div>
                 <div className="text-[10px] font-extrabold uppercase tracking-wider opacity-70 mt-3">Your road, from child to done</div>
-                <ol className="mt-1 grid gap-1">{dreamDef.stages.map((st, i) => <li key={i} className="flex items-center gap-2 text-[12.5px] font-bold leading-tight"><span className="grid place-items-center w-5 h-5 rounded-full text-[11px] shrink-0" style={{ background: i === dreamDef.stages.length - 1 ? 'var(--gold)' : 'rgba(255,255,255,.18)', color: i === dreamDef.stages.length - 1 ? '#3b2300' : '#fff' }}>{i === dreamDef.stages.length - 1 ? '★' : i + 1}</span>{st.title}</li>)}</ol>
+                <ol className="mt-1 grid gap-1">{dreamDef.stages.map((st, i) => <li key={i} className="flex items-center gap-2 text-[12.5px] font-bold leading-tight"><span className="grid place-items-center w-5 h-5 rounded-full text-[11px] shrink-0" style={{ background: i === dreamDef.stages.length - 1 ? 'var(--gold)' : 'rgba(28,27,34,.18)', color: i === dreamDef.stages.length - 1 ? '#3b2300' : '#fff' }}>{i === dreamDef.stages.length - 1 ? '★' : i + 1}</span>{st.title}</li>)}</ol>
                 {heirloom && (
                   <div className="mt-3 rounded-2xl p-2.5 flex items-center gap-3" style={{ background: 'rgba(255,210,63,.14)', boxShadow: 'inset 0 0 0 1.5px rgba(255,210,63,.55)' }}>
                     <span className="text-[30px] leading-none">{heirloom.icon}</span>
-                    <div className="min-w-0"><div className="text-[10px] font-extrabold uppercase tracking-wider text-yellow-300">Your dream symbol</div><div className="font-display text-[16px] leading-tight">{heirloom.name}</div><div className="text-[12px] opacity-80 leading-snug">{heirloom.desc}</div></div>
+                    <div className="min-w-0"><div className="text-[10px] font-extrabold uppercase tracking-wider text-orange-700">Your dream symbol</div><div className="font-display text-[16px] leading-tight">{heirloom.name}</div><div className="text-[12px] opacity-80 leading-snug">{heirloom.desc}</div></div>
                   </div>
                 )}
                 <div className="mt-3 rounded-2xl p-2.5 bg-white/10">
@@ -270,9 +270,9 @@ export function Create() {
             {avatarStage(118)}
             <div className="grid grid-cols-4 gap-2 mb-2">{(['yoruba', 'igbo', 'hausa', 'mix'] as Heritage[]).map((h) => <button key={h} className={`tile !min-h-[52px] !py-1 ${heritage === h ? 'is-on' : ''}`} onClick={() => { audio.sfx('tap'); setHeritage(h); setName('') }}><span className="text-[12px] font-extrabold">{HERITAGE_LABEL[h]}</span></button>)}</div>
             {HERITAGE_HINT[heritage] && <div className="text-center text-[11px] font-bold opacity-70 -mt-1 mb-2">{HERITAGE_HINT[heritage]}</div>}
-            <input className="w-full rounded-2xl px-4 py-3.5 text-xl font-display uppercase tracking-wide outline-none text-center" style={{ background: 'rgba(255,255,255,.95)', color: '#1a0f55', boxShadow: 'inset 0 3px 0 rgba(0,0,0,.12), 0 0 0 3px rgba(255,199,44,.0)' }} placeholder="Your name" maxLength={14} value={name} onChange={(e) => setName(e.target.value)} aria-label="First name" />
+            <input className="w-full rounded-2xl px-4 py-3.5 text-xl font-display uppercase tracking-wide outline-none text-center" style={{ background: 'rgba(255,255,255,.95)', color: '#1c1b22', boxShadow: 'inset 0 3px 0 rgba(0,0,0,.12), 0 0 0 3px rgba(255,199,44,.0)' }} placeholder="Your name" maxLength={14} value={name} onChange={(e) => setName(e.target.value)} aria-label="First name" />
             <div className="hscroll mt-1">{suggestions.map((n) => <button key={n} className={`chip !text-sm !py-2 !px-3.5 ${name === n ? 'chip-gold' : ''}`} onClick={() => { audio.sfx('tap'); setName(n) }}>{n}</button>)}</div>
-            <input className="w-full rounded-2xl px-4 py-2.5 text-center font-bold outline-none mt-1" style={{ background: 'rgba(255,255,255,.1)', border: '1px solid rgba(255,255,255,.18)' }} placeholder="Nickname (optional)" maxLength={14} value={nick} onChange={(e) => setNick(e.target.value)} aria-label="Nickname" />
+            <input className="w-full rounded-2xl px-4 py-2.5 text-center font-bold outline-none mt-1" style={{ background: 'rgba(28,27,34,.1)', border: '1px solid rgba(28,27,34,.18)' }} placeholder="Nickname (optional)" maxLength={14} value={nick} onChange={(e) => setNick(e.target.value)} aria-label="Nickname" />
             {UNLOCKABLES.some((u) => u.kind === 'perk' && meta.unlocks.includes(u.id)) && (
               <div className="hscroll mt-1">
                 <button className={`chip !text-sm !py-2 ${!perk ? 'chip-gold' : ''}`} onClick={() => { audio.sfx('tap'); setPerk(undefined) }}>No perk</button>
@@ -295,5 +295,5 @@ export function Create() {
 
 function Swatch({ c, on, onClick, label, big }: { c: string; on: boolean; onClick: () => void; label: string; big?: boolean }) {
   const d = big ? 50 : 42
-  return <button aria-label={label} aria-pressed={on} onClick={() => { audio.sfx('click'); onClick() }} className="rounded-full transition-transform" style={{ width: d, height: d, background: c, border: on ? '4px solid #ffc72c' : '3px solid rgba(255,255,255,.25)', boxShadow: on ? '0 0 0 3px #1a0f55, 0 0 18px rgba(255,199,44,.55)' : 'inset 0 -4px 0 rgba(0,0,0,.25)', transform: on ? 'scale(1.1)' : undefined }} />
+  return <button aria-label={label} aria-pressed={on} onClick={() => { audio.sfx('click'); onClick() }} className="rounded-full transition-transform" style={{ width: d, height: d, background: c, border: on ? '4px solid #ffc72c' : '3px solid rgba(28,27,34,.25)', boxShadow: on ? '0 0 0 3px #1c1b22, 0 0 18px rgba(255,199,44,.55)' : 'inset 0 -4px 0 rgba(0,0,0,.25)', transform: on ? 'scale(1.1)' : undefined }} />
 }

@@ -67,7 +67,7 @@ export function TalkTask({ r, partner, role, setting, rounds, title, greet, scri
       {phase === 'end' && (
         <div className="pop">
           <div className="font-display text-2xl text-danfo">{perf >= 0.8 ? 'What a lovely time together!' : perf >= 0.5 ? 'A nice, easy conversation.' : 'A little awkward, but you showed up.'}</div>
-          <div className="bar mt-2"><i style={{ width: `${Math.round(perf * 100)}%`, background: '#ff7ab8' }} /></div>
+          <div className="bar mt-2"><i style={{ width: `${Math.round(perf * 100)}%`, background: '#e0875a' }} /></div>
           <button className="btn btn-primary w-full mt-3" onClick={() => onDone(perf)}>Done ▶</button>
         </div>
       )}

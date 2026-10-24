@@ -51,11 +51,11 @@ export function Modal({ children, onClose, title, wide, hero }: { children: Reac
 export const STAT_META = {
   cash: { icon: '₦', ic: 'coin', name: 'Cash', color: '#ffc72c', glow: '#ffd23f' },
   energy: { icon: '⚡', ic: 'bolt', name: 'Energy', color: '#ffd23f', glow: '#ffe27a' },
-  happiness: { icon: '😊', ic: 'smile', name: 'Mood', color: '#ff7ab8', glow: '#ff9ccf' },
+  happiness: { icon: '😊', ic: 'smile', name: 'Mood', color: '#e0875a', glow: '#f6c9a0' },
   knowledge: { icon: '📚', ic: 'book', name: 'Brain', color: '#5cc8ff', glow: '#8fe0ff' },
   reputation: { icon: '⭐', ic: 'star', name: 'Rep', color: '#ffa94d', glow: '#ffc880' },
   health: { icon: '❤️', ic: 'heart', name: 'Health', color: '#ff5a7a', glow: '#ff8aa0' },
-  stress: { icon: '😮‍💨', ic: 'wind', name: 'Stress', color: '#b69cff', glow: '#cdbaff' },
+  stress: { icon: '😮‍💨', ic: 'wind', name: 'Stress', color: '#a87a50', glow: '#c9a074' },
 } as const satisfies Record<string, { icon: string; ic: IconName; name: string; color: string; glow: string }>
 
 /** A round stat badge: icon disc with the value beneath/aside. */
@@ -110,7 +110,7 @@ export function CountUp({ to, ms = 900, format = (n: number) => String(Math.roun
 
 /** A burst of paper confetti for big moments (achievements, a good ending). */
 export function Confetti({ n = 36 }: { n?: number }) {
-  const bits = useRef(Array.from({ length: n }, (_, i) => ({ l: Math.random() * 100, d: Math.random() * 0.8, t: 1.6 + Math.random() * 1.6, c: ['#ffc72c', '#ff3d8b', '#35e0f0', '#2bd978', '#8f6bff'][i % 5], w: 6 + Math.random() * 6 }))).current
+  const bits = useRef(Array.from({ length: n }, (_, i) => ({ l: Math.random() * 100, d: Math.random() * 0.8, t: 1.6 + Math.random() * 1.6, c: ['#ffc72c', '#e07a1f', '#35e0f0', '#2bd978', '#f5b91c'][i % 5], w: 6 + Math.random() * 6 }))).current
   useEffect(() => { audio.sfx('reward') }, [])
   return (
     <div className="pointer-events-none fixed inset-0 z-[70] overflow-hidden" aria-hidden="true">
@@ -168,18 +168,18 @@ export function Conductor({ size = 72, mood = 'hype' }: { size?: number; mood?: 
         <radialGradient id="cbg" cx=".35" cy=".25" r=".9"><stop offset="0" stopColor="#ffe27a" /><stop offset="1" stopColor="#ff7a4d" /></radialGradient>
         <linearGradient id="ccap" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#ffd84a" /><stop offset="1" stopColor="#f59e0b" /></linearGradient>
       </defs>
-      <circle cx="60" cy="60" r="56" fill="url(#cbg)" stroke="#1a0f55" strokeWidth="4" />
-      <path d="M14 104c4-18 20-26 46-26s42 8 46 26a56 56 0 0 1-92 0z" fill="#25c26a" stroke="#1a0f55" strokeWidth="3" />
+      <circle cx="60" cy="60" r="56" fill="url(#cbg)" stroke="#1c1b22" strokeWidth="4" />
+      <path d="M14 104c4-18 20-26 46-26s42 8 46 26a56 56 0 0 1-92 0z" fill="#25c26a" stroke="#1c1b22" strokeWidth="3" />
       <path d="M60 80v26" stroke="#fff" strokeWidth="5" />
-      <ellipse cx="60" cy="58" rx="27" ry="30" fill="#9a6339" stroke="#1a0f55" strokeWidth="3" />
-      <path d="M31 40c1-18 14-27 29-27s28 9 29 27c-7-5-18-8-29-8s-22 3-29 8z" fill="url(#ccap)" stroke="#1a0f55" strokeWidth="3" />
-      <path d="M31 40c-8 1-12 4-14 8 10-2 20-1 28 1z" fill="#1a0f55" />
-      <rect x="31" y="35" width="58" height="6" rx="3" fill="#1a0f55" />
-      <ellipse cx="49" cy="56" rx="4.2" ry={mood === 'wow' ? 6.4 : 5} fill="#fff" stroke="#1a0f55" strokeWidth="2" /><ellipse cx="71" cy="56" rx="4.2" ry={mood === 'wow' ? 6.4 : 5} fill="#fff" stroke="#1a0f55" strokeWidth="2" />
-      <circle cx="50" cy="57" r="2.2" fill="#1a0f55" /><circle cx="72" cy="57" r="2.2" fill="#1a0f55" />
-      <path d={mood === 'hmm' ? 'M41 47l14 3M79 47l-14 3' : 'M41 49l13-4M79 49l-13-4'} stroke="#1a0f55" strokeWidth="3" strokeLinecap="round" />
-      <path d="M44 66c4-4 28-4 32 0 0 3-4 4-8 3-3-1-13-1-16 0-4 1-8 0-8-3z" fill="#1a0f55" />
-      <path d={mood === 'hmm' ? 'M50 76h20' : 'M48 72c3 12 21 12 24 0z'} fill={mood === 'hmm' ? 'none' : '#7a1020'} stroke="#1a0f55" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+      <ellipse cx="60" cy="58" rx="27" ry="30" fill="#9a6339" stroke="#1c1b22" strokeWidth="3" />
+      <path d="M31 40c1-18 14-27 29-27s28 9 29 27c-7-5-18-8-29-8s-22 3-29 8z" fill="url(#ccap)" stroke="#1c1b22" strokeWidth="3" />
+      <path d="M31 40c-8 1-12 4-14 8 10-2 20-1 28 1z" fill="#1c1b22" />
+      <rect x="31" y="35" width="58" height="6" rx="3" fill="#1c1b22" />
+      <ellipse cx="49" cy="56" rx="4.2" ry={mood === 'wow' ? 6.4 : 5} fill="#fff" stroke="#1c1b22" strokeWidth="2" /><ellipse cx="71" cy="56" rx="4.2" ry={mood === 'wow' ? 6.4 : 5} fill="#fff" stroke="#1c1b22" strokeWidth="2" />
+      <circle cx="50" cy="57" r="2.2" fill="#1c1b22" /><circle cx="72" cy="57" r="2.2" fill="#1c1b22" />
+      <path d={mood === 'hmm' ? 'M41 47l14 3M79 47l-14 3' : 'M41 49l13-4M79 49l-13-4'} stroke="#1c1b22" strokeWidth="3" strokeLinecap="round" />
+      <path d="M44 66c4-4 28-4 32 0 0 3-4 4-8 3-3-1-13-1-16 0-4 1-8 0-8-3z" fill="#1c1b22" />
+      <path d={mood === 'hmm' ? 'M50 76h20' : 'M48 72c3 12 21 12 24 0z'} fill={mood === 'hmm' ? 'none' : '#7a1020'} stroke="#1c1b22" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
       {mood !== 'hmm' && <path d="M52 72h16v4a8 6 0 0 1-16 0z" fill="#fff" />}
     </svg>
   )

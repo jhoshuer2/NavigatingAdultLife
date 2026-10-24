@@ -644,7 +644,7 @@ export default function World() {
       <div className={`absolute top-0 inset-x-0 pointer-events-none ${task ? 'hidden' : ''}`} style={{ paddingTop: 'calc(.5rem + var(--safe-t))' }}>
         <div className="flex items-start gap-2 px-2">
           <button className="hud-glass pointer-events-auto flex items-center gap-2.5 rounded-[22px] pl-1.5 pr-3 py-1.5 text-left flex-1 min-w-0" onClick={() => { audio.sfx('click'); g.openSheet('profile') }} aria-label={`${c.nickname || c.name}, age ${c.age}. Open profile`}>
-            <span className="relative shrink-0 rounded-full overflow-hidden" style={{ width: 52, height: 52, background: 'radial-gradient(circle at 35% 25%, #ffe27a, #ff7a4d)', boxShadow: '0 0 0 2px #1a0f55, 0 0 0 4px var(--gold)' }}>
+            <span className="relative shrink-0 rounded-full overflow-hidden" style={{ width: 52, height: 52, background: 'radial-gradient(circle at 35% 25%, #ffe27a, #ff7a4d)', boxShadow: '0 0 0 2px #1c1b22, 0 0 0 4px var(--gold)' }}>
               <span className="block" style={{ marginTop: 1, marginLeft: -2 }}><Avatar look={c.appearance} gender={c.gender} age={c.age} wear={wearOf(c.items)} size={56} /></span>
             </span>
             <span className="min-w-0 flex-1">
@@ -749,7 +749,7 @@ export default function World() {
       )}
       {coopPick && (
         <Modal onClose={() => setCoopPick(null)}>
-          <div className="font-display text-[26px] text-white leading-none">Team up?</div>
+          <div className="font-display text-[26px]  leading-none">Team up?</div>
           <div className="grid grid-cols-2 gap-2.5 mt-3">
             {coopPick.map((h) => <button key={h.role} className="tile" onClick={() => { audio.sfx('click'); const f = pendingChores.current; setCoopPick(null); f?.(h) }}><span className="text-[32px] leading-none">🤝</span><span className="font-display text-[15px] uppercase">{h.name}</span><span className="chip chip-green !py-0.5">Faster</span></button>)}
             <button className="tile" onClick={() => { audio.sfx('click'); const f = pendingChores.current; setCoopPick(null); f?.() }}><span className="text-[32px] leading-none">🧍</span><span className="font-display text-[15px] uppercase">Solo</span></button>
@@ -758,7 +758,7 @@ export default function World() {
       )}
       {destPick && (
         <Modal onClose={() => setDestPick(null)}>
-          <div className="font-display text-[26px] text-white leading-none">Where to, with {life.npcs[destPick.npcId]?.name}?</div>
+          <div className="font-display text-[26px]  leading-none">Where to, with {life.npcs[destPick.npcId]?.name}?</div>
           <div className="grid grid-cols-2 gap-2.5 mt-3">
             <button className="tile" onClick={() => { audio.sfx('click'); startHang('pitch') }}><span className="text-[32px] leading-none">⚽</span><span className="font-display text-[15px] uppercase text-center">{district.places.find((p) => p.id === 'pitch')?.name}</span></button>
             <button className="tile" onClick={() => { audio.sfx('click'); startHang('mamaput') }} disabled={!isOpen('mamaput', hour)}><span className="text-[32px] leading-none">{isOpen('mamaput', hour) ? '🍲' : '🔒'}</span><span className="font-display text-[15px] uppercase text-center">{district.places.find((p) => p.id === 'mamaput')?.name}</span>{!isOpen('mamaput', hour) && <span className="chip chip-gold !py-0.5">{fmtClock(opensAt('mamaput'))}</span>}</button>
@@ -780,7 +780,7 @@ export default function World() {
         const acts = getActivities(life)
         return (
           <Modal onClose={() => setHotId(null)}>
-            <div className="flex items-center gap-3"><div className="w-14 h-14 rounded-[18px] grid place-items-center text-3xl" style={{ background: 'radial-gradient(circle at 30% 20%, #8a5cff, #3b22a8)', boxShadow: 'inset 0 0 0 2px rgba(255,255,255,.25)' }}>{h.icon}</div><div className="font-display text-[26px] text-white leading-none">{h.name}</div></div>
+            <div className="flex items-center gap-3"><div className="w-14 h-14 rounded-[18px] grid place-items-center text-3xl" style={{ background: 'radial-gradient(circle at 30% 20%, #e07a1f, #e07a1f)', boxShadow: 'inset 0 0 0 2px rgba(255,255,255,.25)' }}>{h.icon}</div><div className="font-display text-[26px]  leading-none">{h.name}</div></div>
             <div className="grid grid-cols-3 gap-2.5 mt-3">
               {h.actions.filter((a) => !a.needs || installed.has(a.needs)).map((a) => {
                 const isAct = a.cmd.startsWith('act:'); const ar = isAct ? acts.find((x) => x.def.id === a.cmd.slice(4)) : null
@@ -791,7 +791,7 @@ export default function World() {
                   <button key={a.label} className={`tile ${tg ? 'is-on' : ''}`} disabled={dis} onClick={() => runCmd(a)}>
                     <span className="text-[32px] leading-none">{dis && isAct && !ar?.enabled ? '🔒' : a.icon}</span>
                     <span className="font-display text-[14px] leading-tight text-center uppercase">{a.label}</span>
-                    {tg !== null ? <span className={`chip !py-0.5 ${tg ? 'chip-green' : ''}`}>{tg ? 'ON' : 'OFF'}</span> : ar ? (ar.enabled ? <span className="chip !py-0.5">{ar.def.cost.energy ? <><Icon name="bolt" size={12} color="#ffd23f" />{ar.def.cost.energy}</> : 'free'}</span> : <span className="text-[11px] font-bold text-yellow-300 text-center leading-tight">{ar.reason}</span>) : null}
+                    {tg !== null ? <span className={`chip !py-0.5 ${tg ? 'chip-green' : ''}`}>{tg ? 'ON' : 'OFF'}</span> : ar ? (ar.enabled ? <span className="chip !py-0.5">{ar.def.cost.energy ? <><Icon name="bolt" size={12} color="#d99a0a" />{ar.def.cost.energy}</> : 'free'}</span> : <span className="text-[11px] font-bold text-orange-700 text-center leading-tight">{ar.reason}</span>) : null}
                   </button>
                 )
               })}
@@ -845,10 +845,10 @@ function Prompt({ icon, emoji, label, tone, hint, small, onClick }: { icon?: Ico
   useEffect(() => { if (!small) audio.sfx('prompt') }, [label, small])
   return (
     <div className="flex flex-col items-center gap-1.5 pointer-events-auto pop max-w-[132px]">
-      <span className="chip !text-[11px] !py-0.5 text-center leading-tight" style={{ background: 'rgba(10,7,34,.78)', backdropFilter: 'blur(4px)' }}>{label}</span>
+      <span className="chip !text-[11px] !py-0.5 text-center leading-tight" style={{ background: 'rgba(255,250,240,.92)', backdropFilter: 'blur(4px)' }}>{label}</span>
       <button className={`btn btn-${tone} btn-round ${small ? '' : 'glow-pulse'}`} style={{ width: d, height: d, minHeight: d }} onClick={() => { audio.sfx('click'); onClick() }} aria-label={label}>
         {emoji ? <span style={{ fontSize: d * 0.5, lineHeight: 1 }}>{emoji}</span> : <Icon name={icon!} size={d * 0.48} color={tone === 'gold' ? '#7a4700' : '#fff'} />}
-        {hint && <kbd className="kbd-hint absolute -bottom-1 -right-1 place-items-center w-5 h-5 rounded-md text-[11px] font-black" style={{ background: '#fff', color: '#1a0f55' }}>{hint}</kbd>}
+        {hint && <kbd className="kbd-hint absolute -bottom-1 -right-1 place-items-center w-5 h-5 rounded-md text-[11px] font-black" style={{ background: '#fff', color: '#1c1b22' }}>{hint}</kbd>}
       </button>
     </div>
   )
@@ -898,7 +898,7 @@ function Minimap({ district, x, z, h, onOpen, pulse, lang, hour }: { lang: Lang;
   const base = useMemo(() => {
     const c = drawBase(district, R); const g = c.getContext('2d')!; const k = R / (WORLD.half * 2)
     g.font = `${S * 0.24}px system-ui`; g.textAlign = 'center'; g.textBaseline = 'middle'
-    for (const p of district.places) { const X = (p.door.x + WORLD.half) * k, Y = (p.door.z + WORLD.half) * k; g.fillStyle = '#2a1a7acc'; g.beginPath(); g.arc(X, Y, S * 0.12, 0, Math.PI * 2); g.fill(); g.fillText(p.icon, X, Y + 1) }
+    for (const p of district.places) { const X = (p.door.x + WORLD.half) * k, Y = (p.door.z + WORLD.half) * k; g.fillStyle = '#c4630fcc'; g.beginPath(); g.arc(X, Y, S * 0.12, 0, Math.PI * 2); g.fill(); g.fillText(p.icon, X, Y + 1) }
     return c
   }, [district])
   useEffect(() => {
@@ -910,7 +910,7 @@ function Minimap({ district, x, z, h, onOpen, pulse, lang, hour }: { lang: Lang;
   return (
     <button className={`relative rounded-full pointer-events-auto shrink-0 p-0 ${pulse ? 'guide-glow' : ''}`} style={{ width: S, height: S }} onClick={onOpen} aria-label="Open the full map" onPointerMove={(e) => setTip(placeAtPointer(district, e.currentTarget, e.clientX, e.clientY, 9))} onPointerLeave={() => setTip(null)}>
       {tip && <PlaceTip small place={tip.place} from={{ x, z }} lang={lang} open={isOpen(tip.place.id, hour)} px={tip.px} py={tip.py} />}
-      <canvas ref={ref} width={R} height={R} className="rounded-full" style={{ width: S, height: S, border: '3px solid rgba(255,255,255,.85)', boxShadow: '0 0 0 3px #3b22a8, 0 6px 16px rgba(0,0,0,.5)' }} />
+      <canvas ref={ref} width={R} height={R} className="rounded-full" style={{ width: S, height: S, border: '3px solid rgba(255,255,255,.85)', boxShadow: '0 0 0 3px #e07a1f, 0 6px 16px rgba(0,0,0,.5)' }} />
       <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 chip chip-gold !py-0 !px-1.5 !text-[10px]"><Icon name="map" size={11} color="#3b2300" />MAP</span>
     </button>
   )
@@ -933,14 +933,14 @@ function MapModal({ district, x, z, h, hour, life, sugPlace, onClose, onGo, trai
     g.font = '28px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'
     for (const p of district.places) {
       const X = (p.door.x + WORLD.half) * k, Y = (p.door.z + WORLD.half) * k, st = stateOf(p.id)
-      g.beginPath(); g.arc(X, Y, 24, 0, Math.PI * 2); g.fillStyle = st === 'open' ? '#2a1a7a' : '#55555f'; g.fill()
+      g.beginPath(); g.arc(X, Y, 24, 0, Math.PI * 2); g.fillStyle = st === 'open' ? '#c4630f' : '#55555f'; g.fill()
       g.lineWidth = p.id === sel ? 6 : p.id === sugPlace ? 5 : 2; g.strokeStyle = p.id === sel ? '#2bd978' : p.id === sugPlace ? '#ffc72c' : '#ffffffaa'; g.stroke()
       g.fillText(st === 'closed' ? '🔒' : p.icon, X, Y + 2)
     }
     const PX = (x + WORLD.half) * k, PY = (z + WORLD.half) * k
     g.beginPath(); g.arc(PX, PY, 30, 0, Math.PI * 2); g.fillStyle = 'rgba(255,255,255,.28)'; g.fill(); g.lineWidth = 3; g.strokeStyle = '#fff'; g.stroke()
     drawPlayer(g, S, x, z, h, 16)
-    g.font = '800 20px system-ui'; g.textAlign = 'center'; g.lineWidth = 5; g.strokeStyle = '#2a1a7a'; g.strokeText('YOU', PX, PY + 52); g.fillStyle = '#fff'; g.fillText('YOU', PX, PY + 52)
+    g.font = '800 20px system-ui'; g.textAlign = 'center'; g.lineWidth = 5; g.strokeStyle = '#c4630f'; g.strokeText('YOU', PX, PY + 52); g.fillStyle = '#fff'; g.fillText('YOU', PX, PY + 52)
   }, [base, x, z, h, sel, sugPlace, hour, trail, aim])
   const [hover, setHover] = useState<{ place: District['places'][number]; px: number; py: number } | null>(null)
   const tap = (e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -965,8 +965,8 @@ function MapModal({ district, x, z, h, hour, life, sugPlace, onClose, onGo, trai
         return (
           <div className="hud-glass rounded-2xl p-3 mt-3 pop" key={place.id}>
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl grid place-items-center text-3xl shrink-0" style={{ background: 'radial-gradient(circle at 30% 20%, #8a5cff, #3b22a8)' }}>{st === 'closed' ? '🔒' : place.icon}</div>
-              <div className="flex-1 min-w-0"><div className="font-display uppercase leading-tight">{place.name}</div><div className="text-[12px] font-bold opacity-80 leading-snug"><Icon name="pin" size={11} /> <Lines lang={lang} s={way} /></div>{st !== 'open' && <div className="text-xs text-yellow-300 font-bold">{st === 'closed' ? `Opens ${fmtClock(opensAt(place.id))}` : 'Nothing here now'}</div>}</div>
+              <div className="w-12 h-12 rounded-2xl grid place-items-center text-3xl shrink-0" style={{ background: 'radial-gradient(circle at 30% 20%, #e07a1f, #e07a1f)' }}>{st === 'closed' ? '🔒' : place.icon}</div>
+              <div className="flex-1 min-w-0"><div className="font-display uppercase leading-tight">{place.name}</div><div className="text-[12px] font-bold opacity-80 leading-snug"><Icon name="pin" size={11} /> <Lines lang={lang} s={way} /></div>{st !== 'open' && <div className="text-xs text-orange-700 font-bold">{st === 'closed' ? `Opens ${fmtClock(opensAt(place.id))}` : 'Nothing here now'}</div>}</div>
               {st !== 'inactive' && <Btn variant="green" size="sm" onClick={() => onGo(place.id)}><Icon name="pin" size={16} /> Go</Btn>}
             </div>
             {things.length > 0 && <div className="flex flex-wrap gap-1.5 mt-2">{things.map((d) => <span key={d.id} className="chip !py-0.5">{d.icon} {d.label}</span>)}</div>}

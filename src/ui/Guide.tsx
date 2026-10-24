@@ -75,7 +75,7 @@ export function TaskCoach({ kind, lang, onStart }: { kind: string; lang?: Lang; 
   useEffect(() => { if (h) void speakLine({ id: `how_${kind}`, lang: vlang(lang), text: voiceLines, key: `howto:${kind}`, gapMs: 20000 }) }, [kind]) // eslint-disable-line react-hooks/exhaustive-deps
   if (!h) return null
   return (
-    <div className="absolute inset-0 z-40 grid place-items-end sm:place-items-center p-3 pb-6" style={{ background: 'rgba(5,3,20,.72)', backdropFilter: 'blur(3px)' }} role="dialog" aria-label="How to play">
+    <div className="absolute inset-0 z-40 grid place-items-end sm:place-items-center p-3 pb-6" style={{ background: 'rgba(28,27,34,.55)', backdropFilter: 'blur(3px)' }} role="dialog" aria-label="How to play">
       <div className="hud-glass rounded-[26px] p-4 w-full max-w-sm pop">
         <div className="flex items-center gap-3">
           <Conductor size={54} mood="hype" />
@@ -102,7 +102,7 @@ export function HowToBody({ h, lang }: { h: (typeof HOWTO)[string]; lang?: Lang 
             </li>
           ))}
         </ol>
-        <div className="mt-3 flex items-center gap-2 text-[13px] font-extrabold text-gold"><Icon name="star" size={16} color="#ffd23f" /><span><Lines lang={lang} s={h.goal} /></span></div>
+        <div className="mt-3 flex items-center gap-2 text-[13px] font-extrabold text-gold"><Icon name="star" size={16} color="#d99a0a" /><span><Lines lang={lang} s={h.goal} /></span></div>
     </>
   )
 }

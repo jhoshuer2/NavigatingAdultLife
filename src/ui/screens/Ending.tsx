@@ -25,14 +25,14 @@ export function Ending() {
       <Confetti n={34} />
       <header className="px-4 pt-6 text-center">
         <Ribbon>Final whistle</Ribbon>
-        <div className="flex justify-center mt-4"><div className="rounded-3xl p-1 pattern-ankara" style={{ boxShadow: '0 0 0 3px rgba(255,255,255,.3), 0 0 40px rgba(255,199,44,.4)' }}><Avatar look={c.appearance} gender={c.gender} age={c.age} wear={wearOf(c.items)} size={110} /></div></div>
-        <h1 className="font-display text-[34px] text-white leading-tight mt-3" style={{ textShadow: '0 3px 0 rgba(0,0,0,.45)' }}>{e.title}</h1>
+        <div className="flex justify-center mt-4"><div className="rounded-3xl p-1 pattern-ankara" style={{ boxShadow: '0 0 0 3px rgba(28,27,34,.3), 0 0 40px rgba(255,199,44,.4)' }}><Avatar look={c.appearance} gender={c.gender} age={c.age} wear={wearOf(c.items)} size={110} /></div></div>
+        <h1 className="font-display text-[34px]  leading-tight mt-3" >{e.title}</h1>
       </header>
       <main className="px-4 py-3 flex-1 scroll-y">
         <div className="grid grid-cols-3 gap-2.5 text-center stagger">
-          <div className="hud-glass rounded-2xl py-3"><Icon name="trophy" size={22} color="#ffd23f" /><div className="font-display text-3xl text-gold leading-none mt-1"><CountUp to={e.legacy} /></div><div className="text-[10px] font-bold uppercase opacity-65 mt-0.5">Legacy</div></div>
-          <div className="hud-glass rounded-2xl py-3"><Icon name="coin" size={22} color="#8dffbb" /><div className="font-display text-2xl text-green-300 leading-none mt-1.5">{nairaShort(e.netWorth)}</div><div className="text-[10px] font-bold uppercase opacity-65 mt-1">Net worth</div></div>
-          <div className="hud-glass rounded-2xl py-3"><Icon name="shell" size={22} color="#ffd23f" /><div className="font-display text-3xl leading-none mt-1"><CountUp to={e.cowries} /></div><div className="text-[10px] font-bold uppercase opacity-65 mt-0.5">Cowries</div></div>
+          <div className="hud-glass rounded-2xl py-3"><Icon name="trophy" size={22} color="#d99a0a" /><div className="font-display text-3xl text-gold leading-none mt-1"><CountUp to={e.legacy} /></div><div className="text-[10px] font-bold uppercase opacity-65 mt-0.5">Legacy</div></div>
+          <div className="hud-glass rounded-2xl py-3"><Icon name="coin" size={22} color="#2f5a3a" /><div className="font-display text-2xl text-green-800 leading-none mt-1.5">{nairaShort(e.netWorth)}</div><div className="text-[10px] font-bold uppercase opacity-65 mt-1">Net worth</div></div>
+          <div className="hud-glass rounded-2xl py-3"><Icon name="shell" size={22} color="#d99a0a" /><div className="font-display text-3xl leading-none mt-1"><CountUp to={e.cowries} /></div><div className="text-[10px] font-bold uppercase opacity-65 mt-0.5">Cowries</div></div>
         </div>
         <div className="hud-glass rounded-2xl p-3 mt-3 flex items-center gap-3"><span className="text-3xl">{dream.icon}</span><div className="flex-1 font-display uppercase text-sm">{dream.name}</div><span className={`chip ${e.dreamDone ? 'chip-green' : ''}`}>{e.dreamDone ? 'Achieved' : 'Not this time'}</span></div>
         <details className="mt-3"><summary className="chip cursor-pointer list-none">Their story <Icon name="chevron" size={12} /></summary><div className="card p-3 mt-2 leading-relaxed text-sm">{e.obituary}</div></details>
@@ -41,7 +41,7 @@ export function Ending() {
       </main>
       <footer className="px-4 pb-4 pt-2 grid gap-2 safe-pad">
         <Btn variant="green" shine className="!text-xl" onClick={() => go('create')}><Icon name="play" size={20} /> Live another life</Btn>
-        <div className="grid grid-cols-3 gap-2"><Btn variant="ghost" onClick={doShare}><Icon name="share" size={18} /></Btn><Btn variant="ghost" onClick={() => go('unlocks')}><Icon name="shell" size={18} color="#ffd23f" />{meta.cowries}</Btn><Btn variant="ghost" onClick={() => go('title')}><Icon name="home" size={18} /></Btn></div>
+        <div className="grid grid-cols-3 gap-2"><Btn variant="ghost" onClick={doShare}><Icon name="share" size={18} /></Btn><Btn variant="ghost" onClick={() => go('unlocks')}><Icon name="shell" size={18} color="#d99a0a" />{meta.cowries}</Btn><Btn variant="ghost" onClick={() => go('title')}><Icon name="home" size={18} /></Btn></div>
       </footer>
     </div>
   )

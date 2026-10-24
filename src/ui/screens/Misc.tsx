@@ -37,7 +37,7 @@ export function Achievements() {
   return (
     <Page title="Trophies">
       <div className="hud-glass rounded-2xl p-3 flex items-center gap-3">
-        <Icon name="trophy" size={34} color="#ffd23f" />
+        <Icon name="trophy" size={34} color="#d99a0a" />
         <div className="flex-1"><div className="bar"><i style={{ width: `${(got.length / ACHIEVEMENTS.length) * 100}%`, background: 'linear-gradient(90deg,#ffe27a,#ffc72c)' }} /></div></div>
         <span className="font-display text-lg">{got.length}/{ACHIEVEMENTS.length}</span>
       </div>
@@ -69,7 +69,7 @@ export function Unlocks() {
   return (
     <Page title="Unlocks">
       <div className="hud-glass rounded-2xl p-3 flex items-center gap-3">
-        <Icon name="shell" size={34} color="#ffd23f" />
+        <Icon name="shell" size={34} color="#d99a0a" />
         <div className="font-display text-4xl text-gold leading-none"><CountUp to={meta.cowries} /></div>
       </div>
       <div className="grid grid-cols-2 gap-2.5 mt-3 stagger">
@@ -95,7 +95,7 @@ export function History() {
   return (
     <Page title="Past lives">
       <div className="grid grid-cols-4 gap-2">
-        {stat.map(([ic, l, v]) => <div key={l} className="hud-glass rounded-2xl py-2 text-center"><Icon name={ic} size={20} color="#ffd23f" /><div className="font-display text-xl leading-none mt-1">{v}</div><div className="text-[10px] font-bold opacity-65 uppercase mt-0.5">{l}</div></div>)}
+        {stat.map(([ic, l, v]) => <div key={l} className="hud-glass rounded-2xl py-2 text-center"><Icon name={ic} size={20} color="#d99a0a" /><div className="font-display text-xl leading-none mt-1">{v}</div><div className="text-[10px] font-bold opacity-65 uppercase mt-0.5">{l}</div></div>)}
       </div>
       {meta.history.length === 0 && <p className="opacity-70 text-center mt-8">No finished lives yet.</p>}
       <div className="grid gap-2.5 mt-3 stagger">

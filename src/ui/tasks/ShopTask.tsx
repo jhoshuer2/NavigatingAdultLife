@@ -114,7 +114,7 @@ export function ShopTask({ r, items, cash, energy, onBuy, onDeliver, onDone }: {
                   <span className="text-[28px] leading-none">{ok ? x.item.icon : '🔒'}</span>
                   <span className="font-display text-[11px] leading-tight text-center uppercase">{x.item.name}</span>
                   <span className="chip chip-gold !py-0 !text-[11px]">{nairaShort(x.item.price)}</span>
-                  {!x.canBuy && x.mum.ok && <span className="text-[10px] font-bold text-green-300">ask {x.mum.who}</span>}
+                  {!x.canBuy && x.mum.ok && <span className="text-[10px] font-bold text-green-800">ask {x.mum.who}</span>}
                 </button>
               )
             })}
@@ -133,12 +133,12 @@ export function ShopTask({ r, items, cash, energy, onBuy, onDeliver, onDone }: {
       {cur && !deliver && (
         <div className="absolute bottom-0 left-0 right-0 z-30 px-3 pt-3 pb-4 safe-pad rounded-t-3xl pop" style={{ background: '#14121ff2', borderTop: '2px solid #ffffff22' }}>
           <div className="flex items-center gap-3"><div className="text-4xl">{cur.icon}</div><div className="flex-1 min-w-0"><div className="font-black leading-tight">{cur.name}</div><div className="text-xs opacity-75">{cur.desc}</div></div><span className="chip">{nairaShort(cur.price)}</span></div>
-          {note && <div className="text-xs text-yellow-300 mt-1.5">{note}</div>}
+          {note && <div className="text-xs text-orange-700 mt-1.5">{note}</div>}
           {mode === 'view' ? (
             <div className="grid grid-cols-2 gap-2 mt-2.5">
               {mine && <button className="btn btn-primary" disabled={!affordable(1) || energy < 5} onClick={() => buy(1)}>{affordable(1) ? `Buy ${nairaShort(cur.price)}` : 'Too expensive'}</button>}
               {mine && <button className="btn" disabled={locked.includes(cur.id) || !affordable(0.75) || energy < 5 || !near} onClick={startHaggle}>🤝 Haggle</button>}
-              {!mine && <div className="col-span-2 text-xs text-yellow-300">🔒 You are too young to buy this yourself.</div>}
+              {!mine && <div className="col-span-2 text-xs text-orange-700">🔒 You are too young to buy this yourself.</div>}
               {curRow?.mum.ok && <button className="btn btn-primary col-span-2" disabled={!affordable(1) || energy < 5} onClick={() => buy(1, true)}>{affordable(1) ? `👩🏾 Ask ${curRow.mum.who} to buy it · ${nairaShort(cur.price)} of your money` : `Not enough money (${nairaShort(cash)})`}</button>}
               {!mine && curRow && !curRow.mum.ok && <div className="col-span-2 text-xs opacity-80">{curRow.mum.why}</div>}
               {pick && <button className="btn col-span-2" onClick={() => setPick(null)}>Back to the aisles</button>}

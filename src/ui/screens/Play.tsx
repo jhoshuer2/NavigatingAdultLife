@@ -66,7 +66,7 @@ function PlayMenu({ onWorld }: { onWorld?: () => void }) {
       <section className="px-3 mt-3">
         <div className="card p-3">
           <div className="flex items-baseline justify-between">
-            <div className="font-display text-4xl text-green-300 tabular-nums" aria-label={`Cash ${naira(c.stats.cash)}`}>{nairaShort(c.stats.cash)}</div>
+            <div className="font-display text-4xl text-green-800 tabular-nums" aria-label={`Cash ${naira(c.stats.cash)}`}>{nairaShort(c.stats.cash)}</div>
             <div className="text-xs opacity-70 text-right">{reserved > 0 ? `${inSchool ? 'School' : 'Work'} uses ⚡${reserved}` : ''}</div>
           </div>
           <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 mt-2">
@@ -101,7 +101,7 @@ function PlayMenu({ onWorld }: { onWorld?: () => void }) {
                 <span className="font-extrabold">{def.icon} {def.label}</span>
                 <span className="chip">{def.cost.energy ? `⚡${def.cost.energy}` : 'free'}{def.cost.cash ? ` · ${nairaShort(def.cost.cash)}` : ''}</span>
               </div>
-              <div className="text-xs opacity-75 mt-0.5 leading-snug">{enabled ? def.blurb : <span className="text-yellow-300">{reason}</span>}</div>
+              <div className="text-xs opacity-75 mt-0.5 leading-snug">{enabled ? def.blurb : <span className="text-orange-700">{reason}</span>}</div>
               {remaining !== undefined && enabled && <div className="text-[10px] opacity-50 mt-0.5">{remaining} left this year</div>}
             </button>
           ))}
