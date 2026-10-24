@@ -9,7 +9,8 @@ import { progressOf, type CharacterId } from '../../levels/progress'
 import { CHAPTER1, LEVELS } from '../../levels/chapter1'
 import { track } from '@platform/analytics'
 
-export const INK = '#1c1b22', CREAM = '#f3e7cf', ORANGE = '#e07a1f', FOREST = '#2f5a3a', YELLOW = '#f5b91c'
+import { INK, CREAM, ORANGE, FOREST, YELLOW } from '../theme'
+export { INK, CREAM, ORANGE, FOREST, YELLOW }
 
 export function V2Btn({ children, onClick, tone = 'orange', className = '', disabled }: { children: React.ReactNode; onClick?: () => void; tone?: 'orange' | 'green' | 'cream'; className?: string; disabled?: boolean }) {
   const bg = tone === 'orange' ? ORANGE : tone === 'green' ? FOREST : CREAM

@@ -26,7 +26,7 @@ export function GuideCard({ step, lang, voice, onTap }: { step: GuideStep; lang?
         <span className="flex-1 min-w-0 text-[14px] font-bold leading-snug"><Lines lang={lang} s={step.say} />{step.detail && <span className="chip chip-gold !py-0 !text-[11px] mt-1 capitalize"><Icon name="pin" size={11} color="#3b2300" />{step.detail}</span>}</span>
         <span className="grid place-items-center w-9 h-9 rounded-full text-[19px] shrink-0 guide-nudge" style={{ background: 'linear-gradient(180deg,#ffe27a,#f59e0b)' }}>{step.icon}</span>
       </button>
-      <button className="grid place-items-center w-9 h-9 rounded-full bg-white/10 shrink-0 text-[16px]" aria-label="Hear it again" onClick={() => void speakLine({ id: step.voice, lang: vlang(lang), text: plain(lang, step.say) })}>🔊</button>
+      <button className="grid place-items-center w-9 h-9 rounded-full bg-black/10 shrink-0 text-[16px]" aria-label="Hear it again" onClick={() => void speakLine({ id: step.voice, lang: vlang(lang), text: plain(lang, step.say) })}>🔊</button>
     </div>
   )
 }
@@ -46,7 +46,7 @@ export function GuideCompass({ r, pos, aim }: { r: WorldRenderer | null; pos: { 
   const deg = (Math.atan2(dx, -dy) * 180) / Math.PI
   return (
     <div className="absolute z-[15] pointer-events-none flex flex-col items-center gap-1" style={{ left: x, top: y, transform: 'translate(-50%,-50%)' }} aria-hidden="true">
-      <span className="grid place-items-center w-11 h-11 rounded-full glow-pulse" style={{ background: 'linear-gradient(180deg,#ffe27a,#f59e0b)', boxShadow: '0 4px 0 rgba(0,0,0,.4)', transform: `rotate(${deg}deg)` }}><Icon name="up" size={24} color="#3b2300" /></span>
+      <span className="grid place-items-center w-11 h-11 rounded-full glow-pulse" style={{ background: '#f5b91c', border: '3px solid #1c1b22', boxShadow: '0 4px 0 #1c1b22', transform: `rotate(${deg}deg)` }}><Icon name="up" size={24} color="#3b2300" /></span>
       <span className="chip chip-gold !py-0 !text-[11px] whitespace-nowrap">{Math.round(dist)} m</span>
     </div>
   )
@@ -57,7 +57,7 @@ export function LangPicker() {
   return (
     <Modal title="Language">
       <div className="text-center">
-        <div className="font-display text-[22px] text-white leading-tight">How you wan make we guide you?</div>
+        <div className="font-display text-[22px] leading-tight">How you wan make we guide you?</div>
         <div className="text-sm opacity-70 mt-1">How should we guide you?</div>
       </div>
       <div className="grid grid-cols-3 gap-2.5 mt-4">
@@ -79,7 +79,7 @@ export function TaskCoach({ kind, lang, onStart }: { kind: string; lang?: Lang; 
       <div className="hud-glass rounded-[26px] p-4 w-full max-w-sm pop">
         <div className="flex items-center gap-3">
           <Conductor size={54} mood="hype" />
-          <div className="min-w-0 flex-1"><div className="font-display text-[24px] leading-none text-white uppercase" style={{ textShadow: '0 2px 0 rgba(0,0,0,.4)' }}>{h.icon} <Lines lang={lang} s={h.title} /></div></div>
+          <div className="min-w-0 flex-1"><div className="font-display text-[24px] leading-none uppercase">{h.icon} <Lines lang={lang} s={h.title} /></div></div>
         </div>
         <HowToBody h={h} lang={lang} />
         <div className="flex gap-2 mt-4">
@@ -96,7 +96,7 @@ export function HowToBody({ h, lang }: { h: (typeof HOWTO)[string]; lang?: Lang 
     <>
         <ol className="mt-3 grid gap-2">
           {h.steps.map((s, i) => (
-            <li key={i} className="flex items-center gap-3 rounded-2xl bg-white/10 px-3 py-2">
+            <li key={i} className="flex items-center gap-3 rounded-2xl bg-black/5 px-3 py-2">
               <span className="grid place-items-center w-9 h-9 rounded-full text-[20px] shrink-0" style={{ background: 'linear-gradient(180deg,#ffe27a,#f59e0b)' }}>{s.icon}</span>
               <span className="text-[14px] font-bold leading-snug"><Lines lang={lang} s={s.say} /></span>
             </li>

@@ -126,7 +126,7 @@ export function Settings() {
   const [showPrivacy, setShowPrivacy] = useState(false)
   const s = meta.settings
   const Toggle = ({ label, on, onChange }: { label: string; on: boolean; onChange: (v: boolean) => void }) => (
-    <button className="card-btn flex items-center justify-between w-full" onClick={() => { audio.sfx('toggle'); onChange(!on) }} role="switch" aria-checked={on}><span className="font-bold text-sm">{label}</span><span className="relative w-12 h-7 rounded-full shrink-0 transition-colors" style={{ background: on ? 'var(--green)' : 'rgba(255,255,255,.18)', boxShadow: 'inset 0 2px 4px rgba(0,0,0,.4)' }}><span className="absolute top-0.5 w-6 h-6 rounded-full bg-white transition-all" style={{ left: on ? 22 : 2, boxShadow: '0 2px 4px rgba(0,0,0,.4)' }} /></span></button>
+    <button className="card-btn flex items-center justify-between w-full" onClick={() => { audio.sfx('toggle'); onChange(!on) }} role="switch" aria-checked={on}><span className="font-bold text-sm">{label}</span><span className="relative w-12 h-7 rounded-full shrink-0 transition-colors" style={{ background: on ? 'var(--green)' : 'rgba(28,27,34,.25)', border: '2px solid var(--ink)' }}><span className="absolute top-0.5 w-6 h-6 rounded-full bg-white transition-all" style={{ left: on ? 22 : 2, boxShadow: '0 2px 4px rgba(0,0,0,.4)' }} /></span></button>
   )
   const download = () => {
     const blob = new Blob([exportJson()], { type: 'application/json' })
@@ -134,12 +134,12 @@ export function Settings() {
   }
   return (
     <Page title="Settings" back={life ? 'play' : 'title'}>
-      <h2 className="font-display text-xl text-white/90 uppercase tracking-wide mb-1">Guide</h2>
+      <h2 className="font-display text-xl uppercase tracking-wide mb-1">Guide</h2>
       <div className="grid grid-cols-3 gap-2.5">
         {LANGS.map((l) => <Tile key={l.id} emoji={l.emoji} label={l.label} sub={l.sub} on={(s.lang ?? 'en') === l.id} onClick={() => updateSettings({ lang: l.id })} />)}
       </div>
       <div className="grid gap-2 mt-2.5"><Toggle label="Show me what to do next" on={s.guide !== false} onChange={(v) => updateSettings({ guide: v })} />{voiceAvailable() && <Toggle label="Guide voice (speaks the tips)" on={s.voice !== false} onChange={(v) => { updateSettings({ voice: v }); if (v) speak(plain(s.lang, say('Hello! I go guide you.', 'How far! I go guide you.'))) }} />}<Btn variant="ghost" onClick={() => { resetTips(); toast('Tips will show again') }}>Show the how-to tips again</Btn></div>
-      <h2 className="font-display text-xl text-white/90 uppercase tracking-wide mt-6 mb-1">Sound and display</h2>
+      <h2 className="font-display text-xl uppercase tracking-wide mt-6 mb-1">Sound and display</h2>
       <div className="grid gap-2">
         <Toggle label="Sound effects" on={s.sound} onChange={(v) => { updateSettings({ sound: v }); audio.configure({ ...s, sound: v }) }} />
         <SoundCheck />
@@ -154,19 +154,19 @@ export function Settings() {
         {showPrivacy && <div className="card p-3"><PrivacyDetails />{analyticsAvailable() && <div className="text-xs mt-2 opacity-70">Your device code: <b>{shortDeviceCode()}</b></div>}</div>}
         {analyticsAvailable() && <Btn variant="danger" onClick={async () => { if (!confirm('Delete the play statistics stored about this device?')) return; const ok = await forgetMe(); toast(ok ? 'Your statistics were deleted' : 'Could not reach the server. Try again later.') }}>🗑 Delete my statistics</Btn>}
       </div>
-      {accountAvailable() && <><h2 className="font-display text-xl text-white/90 uppercase tracking-wide mt-6 mb-1">Online profile</h2><OnlineProfile /></>}
-      <h2 className="font-display text-xl text-white/90 uppercase tracking-wide mt-6 mb-1">Play time</h2>
+      {accountAvailable() && <><h2 className="font-display text-xl uppercase tracking-wide mt-6 mb-1">Online profile</h2><OnlineProfile /></>}
+      <h2 className="font-display text-xl uppercase tracking-wide mt-6 mb-1">Play time</h2>
       <div className="card p-3 mt-1 text-sm">Time left: <b>{fmtTime(remainingSec(meta))}</b>. Free time refills daily (up to 2 hours banked).
         <div className="mt-2"><Toggle label="Unlimited time (playtest mode)" on={meta.tokens.unlimited} onChange={setUnlimited} /></div></div>
-      <h2 className="font-display text-xl text-white/90 uppercase tracking-wide mt-6 mb-1">Install</h2>
+      <h2 className="font-display text-xl uppercase tracking-wide mt-6 mb-1">Install</h2>
       <InstallRow />
-      <h2 className="font-display text-xl text-white/90 uppercase tracking-wide mt-6 mb-1">Your data</h2>
+      <h2 className="font-display text-xl uppercase tracking-wide mt-6 mb-1">Your data</h2>
       <div className="grid gap-2 mt-1">
         <Btn variant="ghost" onClick={download}>⬇️ Export save file</Btn>
         <Btn variant="ghost" onClick={() => file.current?.click()}>⬆️ Import save file</Btn>
         <input ref={file} type="file" accept="application/json" hidden onChange={async (e) => { const f = e.target.files?.[0]; if (!f) return; const ok = importJson(await f.text()); toast(ok ? 'Save imported' : 'That file could not be read') }} />
       </div>
-      <h2 className="font-display text-xl text-white/90 uppercase tracking-wide mt-6 mb-1">Playtest feedback</h2>
+      <h2 className="font-display text-xl uppercase tracking-wide mt-6 mb-1">Playtest feedback</h2>
       <p className="text-xs opacity-70">Tap 🚩 on any event to flag it. Flags are saved on this device ({loadFlags().length} so far).</p>
       <div className="grid grid-cols-2 gap-2 mt-1">
         <Btn variant="ghost" onClick={() => { const blob = new Blob([exportFlags()], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'nal-feedback.json'; a.click(); URL.revokeObjectURL(a.href) }}>⬇️ Export flags</Btn>

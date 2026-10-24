@@ -219,3 +219,6 @@ Popups moved to edge strips (Rush and Level 1); tasks are acted out (walk up, di
 - **HUD**: one slim row at the top (time left with a thin bar, Alfred "N m ahead / behind", scores). Nothing in the lanes; the Alfred name tag over his head is gone; the road-progress bar is hidden in The Rush.
 - **Pickups** (`sim.ts`, same seed = same road for both runners): ⚡ boost (5 s, about 35% faster), 🪽 wings (7 s of flight, a sky stretch of coins with birds, drones and kites follows; a sky hit drops you to the road with a speed loss, no heart), rides 🛹 skateboard / 🚲 bike (every ~620 m) and 🛶 canoe (start of every bridge stretch): 10 s, faster, and the ride absorbs one hit. Alfred picks them up and avoids sky obstacles while flying.
 - Tests: `tests/rush-extras.test.ts`.
+
+### One look everywhere
+All screens use the cream, orange and green palette (tokens in `src/ui/index.css`, constants in `src/ui/theme.ts`): buttons, cards, tiles, chips, ribbons, sheets, toasts, Settings, Trophies, Shop, Lives and every Rush overlay. The old purple gradient is retired. The unreachable open-world HUD (`World.tsx`, `Play.tsx`) inherits the new tokens but was not restyled or tested.

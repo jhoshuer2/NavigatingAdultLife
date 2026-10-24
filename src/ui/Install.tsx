@@ -43,7 +43,7 @@ export function InstallChip() {
   if (mode === 'installed' || hide) return null
   return (
     <>
-      <div className="chip !py-1.5 !pl-3 !pr-1 gap-2 rise" style={{ animationDelay: '.7s', background: 'rgba(10,7,34,.55)', backdropFilter: 'blur(6px)' }}>
+      <div className="chip !py-1.5 !pl-3 !pr-1 gap-2 rise" style={{ animationDelay: '.7s', background: 'rgba(255,250,240,.9)' }}>
         <button className="font-extrabold text-[13px]" onClick={run}>📲 Install the app</button>
         <button className="opacity-60 text-lg leading-none px-2" aria-label="Hide" onClick={() => { dismissInstall(); setHide(true) }}>×</button>
       </div>

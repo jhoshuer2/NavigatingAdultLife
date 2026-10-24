@@ -269,44 +269,44 @@ export default function Dash({ rush, again }: { rush?: boolean; again?: () => vo
             <div className="flex justify-between items-start gap-2">
               <div>
                 <div className="font-display text-4xl text-white drop-shadow-[0_3px_0_#1c1b22] leading-none tabular-nums">{hud.score.toLocaleString()}</div>
-                <div className="chip mt-1" style={{ background: '#1c1b22cc' }}>🪙 {hud.coins}{hud.combo > 1 ? ` · x${hud.combo}` : ''}</div>
-                <div className="chip mt-1 ml-1" style={{ background: '#ffd23fe6', color: '#3b2300' }}>LV {hud.level} · {LEVELS[hud.level - 1].name}</div>
+                <div className="chip mt-1" style={{ background: '#fffaf0e6' }}>🪙 {hud.coins}{hud.combo > 1 ? ` · x${hud.combo}` : ''}</div>
+                <div className="chip mt-1 ml-1" style={{ background: '#f5b91c', color: '#1c1b22' }}>LV {hud.level} · {LEVELS[hud.level - 1].name}</div>
               </div>
               <div className="text-2xl drop-shadow" aria-label={`${hud.hearts} hearts left`}>{Array.from({ length: Math.max(config.hearts, hud.hearts) }, (_, i) => <span key={i} style={{ opacity: i < hud.hearts ? 1 : 0.25 }}>{dashMode === 'foot' ? '❤️' : '🔧'}</span>)}</div>
               <button className="btn btn-ghost !min-h-10 !px-3 pointer-events-auto" onClick={() => setPhase(phase === 'paused' ? 'run' : 'paused')} aria-label="Pause">⏸</button>
             </div>
             {(rush || hud.rival !== null) && (
               // one slim row at the very top: time left with a thin bar, and where Alfred is compared with you. Nothing in the lanes.
-              <div className="mt-1.5 flex items-center gap-2 rounded-full px-2.5 py-0.5 text-[11px] font-extrabold" style={{ background: '#1c1b22a8' }}>
-                <span className="tabular-nums" style={{ color: hud.left < 10 ? '#ff7a7a' : '#fff' }}>⏱ {fmtT(hud.left)}</span>
-                <span className="flex-1 h-[3px] rounded bg-white/25"><i className="block h-full rounded" style={{ width: `${Math.min(100, (1 - hud.left / limitRef.current) * 100)}%`, background: hud.left < 10 ? '#ff7a7a' : '#ffd23f' }} /></span>
-                {hud.gap !== null && <span style={{ color: hud.gap > 0 ? '#ff9a9a' : '#7affc8' }}>{hud.rivalOver ? '🤖 out' : hud.gap > 1 ? `🤖 ${Math.round(hud.gap)} m ahead` : hud.gap < -1 ? `🤖 ${Math.round(-hud.gap)} m behind` : '🤖 beside you'}</span>}
+              <div className="mt-1.5 flex items-center gap-2 rounded-full px-2.5 py-0.5 text-[11px] font-extrabold" style={{ background: '#fffaf0e6', color: '#1c1b22', border: '2px solid #1c1b22' }}>
+                <span className="tabular-nums" style={{ color: hud.left < 10 ? '#c4562a' : '#1c1b22' }}>⏱ {fmtT(hud.left)}</span>
+                <span className="flex-1 h-[3px] rounded bg-black/20"><i className="block h-full rounded" style={{ width: `${Math.min(100, (1 - hud.left / limitRef.current) * 100)}%`, background: hud.left < 10 ? '#c4562a' : '#e07a1f' }} /></span>
+                {hud.gap !== null && <span style={{ color: hud.gap > 0 ? '#c4562a' : '#2f5a3a' }}>{hud.rivalOver ? '🤖 out' : hud.gap > 1 ? `🤖 ${Math.round(hud.gap)} m ahead` : hud.gap < -1 ? `🤖 ${Math.round(-hud.gap)} m behind` : '🤖 beside you'}</span>}
                 {hud.rival !== null && <span className="tabular-nums opacity-90">{hud.score.toLocaleString()}–{hud.rival.toLocaleString()}</span>}
               </div>
             )}
             {!rush && hud.dist > 80 && !banner && !pops.length && (
-              <div className="mt-1.5 rounded-lg px-2 py-0.5 text-[11px] font-bold opacity-80" style={{ background: '#1c1b22a0' }}>
+              <div className="mt-1.5 rounded-lg px-2 py-0.5 text-[11px] font-bold" style={{ background: '#fffaf0e6', color: '#1c1b22', border: '2px solid #1c1b22' }}>
                 <div className="flex justify-between"><span>📍 {hud.seg}</span><span>Next: {hud.next} · {hud.toNext} m</span></div>
                 <div className="mt-0.5 h-[3px] rounded bg-white/20"><i className="block h-full rounded" style={{ width: `${Math.round(hud.segPct * 100)}%`, background: '#ffd23f' }} /></div>
               </div>
             )}
           </div>
           <div className="absolute left-2 bottom-24 pointer-events-none flex flex-col gap-1">
-            <div className="chip" style={{ background: '#1c1b22cc' }}>{hud.speed} km/h · {hud.dist} m</div>
-            {dashMode === 'danfo' && <div className="chip" style={{ background: '#1c1b22cc' }}>{city === 'abuja' ? '🚕' : '🚌'} {hud.aboard} on board · fares {naira(hud.fares)}</div>}
-            {(['magnet', 'hop', 'suya', 'boost', 'wings'] as const).map((k) => hud.powers[k] > 0 && <div key={k} className="chip" style={{ background: '#2fd27bcc', color: '#06241a' }}>{k === 'magnet' ? '🧲' : k === 'hop' ? '🦘' : k === 'suya' ? '🍢' : k === 'boost' ? '⚡' : '🪽'} {hud.powers[k].toFixed(0)}s</div>)}
-            {hud.ride && <div className="chip" style={{ background: '#7affc8cc', color: '#06241a' }}>{hud.ride.kind === 'skate' ? '🛹' : hud.ride.kind === 'bike' ? '🚲' : '🛶'} {hud.ride.t.toFixed(0)}s</div>}
+            <div className="chip" style={{ background: '#fffaf0e6' }}>{hud.speed} km/h · {hud.dist} m</div>
+            {dashMode === 'danfo' && <div className="chip" style={{ background: '#fffaf0e6' }}>{city === 'abuja' ? '🚕' : '🚌'} {hud.aboard} on board · fares {naira(hud.fares)}</div>}
+            {(['magnet', 'hop', 'suya', 'boost', 'wings'] as const).map((k) => hud.powers[k] > 0 && <div key={k} className="chip" style={{ background: '#cfe3cf', color: '#1c1b22' }}>{k === 'magnet' ? '🧲' : k === 'hop' ? '🦘' : k === 'suya' ? '🍢' : k === 'boost' ? '⚡' : '🪽'} {hud.powers[k].toFixed(0)}s</div>)}
+            {hud.ride && <div className="chip" style={{ background: '#cfe3cf', color: '#1c1b22' }}>{hud.ride.kind === 'skate' ? '🛹' : hud.ride.kind === 'bike' ? '🚲' : '🛶'} {hud.ride.t.toFixed(0)}s</div>}
           </div>
           {ticker && (
-            <div className="absolute right-2 pointer-events-none max-w-[11rem] text-[11px] font-bold rounded-lg px-2 py-1 opacity-90" style={{ top: (rush || hud.rival !== null) ? '11rem' : '8.6rem', background: ticker.done ? '#1d5a3acc' : '#1c1b22b0' }}>
+            <div className="absolute right-2 pointer-events-none max-w-[11rem] text-[11px] font-bold rounded-lg px-2 py-1 opacity-90" style={{ top: (rush || hud.rival !== null) ? '11rem' : '8.6rem', background: ticker.done ? '#cfe3cf' : '#fffaf0e6', color: '#1c1b22', border: '2px solid #1c1b22' }}>
               {ticker.done ? '✅ ' : '🎯 '}{ticker.text}<div className="mt-0.5 h-[3px] rounded bg-white/20"><i className="block h-full rounded" style={{ width: `${ticker.pct * 100}%`, background: '#ffd23f' }} /></div>
             </div>
           )}
         </>
       )}
       <div className="absolute inset-x-0 flex flex-col items-center gap-1 pointer-events-none" style={{ top: (rush || hud?.rival != null) ? '8.2rem' : '7rem' }}>
-        {banner && phase === 'run' && <div className="rounded-full px-3 py-0.5 text-sm font-display text-danfo fade-in" style={{ background: '#1c1b22b8', border: '1px solid #ffd23f99' }}>LEVEL {banner.n} · {banner.name}</div>}
-        {pops.map((p) => <div key={p.id} className="chip !text-sm !px-3 !py-0.5 opacity-80" style={{ background: '#1c1b22b0' }}>{p.text}</div>)}
+        {banner && phase === 'run' && <div className="rounded-full px-3 py-0.5 text-sm font-display text-danfo fade-in" style={{ background: '#fffaf0e6', border: '2px solid #1c1b22' }}>LEVEL {banner.n} · {banner.name}</div>}
+        {pops.map((p) => <div key={p.id} className="chip !text-sm !px-3 !py-0.5" style={{ background: '#fffaf0f0' }}>{p.text}</div>)}
       </div>
       {count && <div className="absolute inset-0 grid place-items-center pointer-events-none"><div key={count} className="pop font-display text-white drop-shadow-[0_6px_0_#1c1b22]" style={{ fontSize: 120 }}>{count}</div></div>}
       {phase === 'run' && (
@@ -320,8 +320,8 @@ export default function Dash({ rush, again }: { rush?: boolean; again?: () => vo
       )}
 
       {phase === 'ready' && (
-        <div className="absolute inset-0 grid place-items-center p-5" style={{ background: '#0008' }}>
-          <div className="card p-5 text-center max-w-sm pop" style={{ background: '#1e1a30' }}>
+        <div className="absolute inset-0 grid place-items-center p-5" style={{ background: 'rgba(28,27,34,.6)' }}>
+          <div className="card p-5 text-center max-w-sm pop" style={{ background: '#f3e7cf' }}>
             <h2 className="font-display text-4xl text-danfo">Go-Slow Dash</h2>
             <div className="text-left"><HowToBody h={how} lang={meta.settings.lang} /></div>
             <div className="flex gap-2 mt-4"><button className="btn btn-ghost !min-h-[52px] !px-4" aria-label="Hear it again" onClick={() => void speakLine({ id: howVoice, lang: vlang(meta.settings.lang), text: dashLine })}>🔊</button><Btn variant="green" className="flex-1 !text-xl" onClick={() => { stopSpeaking(); setPhase('choose') }}>▶ Play</Btn></div>
@@ -331,11 +331,11 @@ export default function Dash({ rush, again }: { rush?: boolean; again?: () => vo
         </div>
       )}
       {phase === 'choose' && (
-        <div className="absolute inset-0 grid place-items-center p-5" style={{ background: '#000a' }}>
-          <div className="card p-5 w-full max-w-sm pop" style={{ background: '#1e1a30' }}>
+        <div className="absolute inset-0 grid place-items-center p-5" style={{ background: 'rgba(28,27,34,.6)' }}>
+          <div className="card p-5 w-full max-w-sm pop" style={{ background: '#f3e7cf' }}>
             <h2 className="font-display text-3xl text-danfo text-center">{rush ? 'The Rush' : 'How do you want to run?'}</h2>
             <button className="tile w-full text-left mt-4 !p-3" onClick={startSolo}><div className="font-display text-2xl">🏃 {rush ? 'Play alone' : 'Run alone'}</div><div className="text-xs opacity-80 mt-0.5">{rush ? 'Go as far as you can. Beat your best.' : 'Your normal run. Go as far as you can. This is the run that counts for your trophies.'}</div></button>
-            <button className="tile w-full text-left mt-2 !p-3" style={{ borderColor: '#1ec8b4' }} onClick={startRace}><div className="font-display text-2xl">🏁 {rush ? 'Find a player' : 'Play against someone'}</div><div className="text-xs opacity-80 mt-0.5">{rush ? `Same road, ${fmtT(secs)}. If nobody is online you can race Alfred ai, a computer runner.` : `Same road, ${RACE_SECS} seconds. Most points wins a 10 coin bonus.`}</div></button>
+            <button className="tile w-full text-left mt-2 !p-3" onClick={startRace}><div className="font-display text-2xl">🏁 {rush ? 'Find a player' : 'Play against someone'}</div><div className="text-xs opacity-80 mt-0.5">{rush ? `Same road, ${fmtT(secs)}. If nobody is online you can race Alfred ai, a computer runner.` : `Same road, ${RACE_SECS} seconds. Most points wins a 10 coin bonus.`}</div></button>
             {rush && <button className="tile w-full text-left mt-2 !p-3 opacity-60" disabled><div className="font-display text-2xl">🤝 Challenge a friend</div><div className="text-xs opacity-80 mt-0.5">Coming soon. It needs the online service.</div></button>}
             {rush && <DurationPicker secs={secs} onPick={setSecs} />}
             {rush && <p className="text-[11px] opacity-70 mt-3 text-center">Swipe to change lane · up jumps · down slides. Grab ⚡ boosts, 🪽 wings (dodge the sky!) and 🛹🚲🛶 rides. Alfred grabs them too.</p>}
@@ -344,9 +344,9 @@ export default function Dash({ rush, again }: { rush?: boolean; again?: () => vo
         </div>
       )}
       {(phase === 'search' || phase === 'count') && (
-        <div className="absolute inset-0 grid place-items-center p-5 pointer-events-none" style={{ background: count ? 'transparent' : '#000a' }}>
+        <div className="absolute inset-0 grid place-items-center p-5 pointer-events-none" style={{ background: count ? 'transparent' : 'rgba(28,27,34,.6)' }}>
           {!count && (
-            <div className="card p-5 w-full max-w-sm text-center pop pointer-events-auto" style={{ background: '#1e1a30' }}>
+            <div className="card p-5 w-full max-w-sm text-center pop pointer-events-auto" style={{ background: '#f3e7cf' }}>
               <div className={`text-5xl inline-block ${rivalRef.current ? '' : 'animate-spin'}`}>{rivalRef.current ? '🤖' : '🔎'}</div>
               <h2 className="font-display text-2xl mt-2">{searchMsg}</h2>
               {offer && <Btn variant="green" className="w-full mt-3" onClick={raceAlfred}>Race Alfred ai (computer)</Btn>}
@@ -356,8 +356,8 @@ export default function Dash({ rush, again }: { rush?: boolean; again?: () => vo
         </div>
       )}
       {phase === 'paused' && (
-        <div className="absolute inset-0 grid place-items-center p-5" style={{ background: '#000a' }}>
-          <div className="card p-5 w-full max-w-sm pop" style={{ background: '#1e1a30' }}>
+        <div className="absolute inset-0 grid place-items-center p-5" style={{ background: 'rgba(28,27,34,.6)' }}>
+          <div className="card p-5 w-full max-w-sm pop" style={{ background: '#f3e7cf' }}>
             <h2 className="font-display text-4xl text-danfo text-center">Paused</h2>
             <div className="mt-2 space-y-1.5 text-sm">{hud?.missions.map((m, i) => <div key={i}><div className="flex justify-between"><span>{m.done ? '✅' : '🎯'} {m.text}</span></div><div className="bar mt-0.5"><i style={{ width: `${m.pct * 100}%`, background: '#2fd27b' }} /></div></div>)}</div>
             {rush && <div className="mt-3"><DurationPicker secs={secs} onPick={setSecs} /></div>}
@@ -367,11 +367,11 @@ export default function Dash({ rush, again }: { rush?: boolean; again?: () => vo
         </div>
       )}
       {phase === 'over' && result && (
-        <div className="absolute inset-0 grid place-items-center p-4 overflow-y-auto" style={{ background: '#000b' }}>
-          <div className="card p-5 w-full max-w-sm text-center pop" style={{ background: '#1e1a30' }}>
+        <div className="absolute inset-0 grid place-items-center p-4 overflow-y-auto" style={{ background: 'rgba(28,27,34,.6)' }}>
+          <div className="card p-5 w-full max-w-sm text-center pop" style={{ background: '#f3e7cf' }}>
             {race
-              ? <div className={`font-display text-4xl -rotate-2 ${race.youWon ? 'text-green-400' : race.draw ? 'text-danfo' : 'text-red-400'}`}>{race.youWon ? 'YOU WIN! 🏆' : race.draw ? 'DRAW! 🤝' : `${RIVAL_NAME} wins 🤖`}</div>
-              : <div className={`font-display text-5xl -rotate-2 ${timeUp ? 'text-green-400' : 'text-red-400'}`}>{timeUp ? 'TIME UP!' : 'WAHALA!'}</div>}
+              ? <div className={`font-display text-4xl -rotate-2 ${race.youWon ? 'text-green-700' : race.draw ? 'text-danfo' : 'text-red-700'}`}>{race.youWon ? 'YOU WIN! 🏆' : race.draw ? 'DRAW! 🤝' : `${RIVAL_NAME} wins 🤖`}</div>
+              : <div className={`font-display text-5xl -rotate-2 ${timeUp ? 'text-green-700' : 'text-red-700'}`}>{timeUp ? 'TIME UP!' : 'WAHALA!'}</div>}
             {race && <div className="text-xs font-bold opacity-80 mt-1">{race.timeUp ? 'Time up. ' : carried ? `${RIVAL_NAME} kept running after you crashed. ` : ''}You {race.you.toLocaleString()} · {RIVAL_NAME} {race.rival.toLocaleString()}{race.youWon ? ' · +10 coin bonus' : ''}</div>}
             <div className="font-display text-6xl text-danfo leading-none mt-1">{result.score.toLocaleString()}</div>
             {result.score > (life?.dashBest ?? 0) && !rush && <div className="chip mt-1" style={{ background: '#2fd27b', color: '#06241a' }}>New best!</div>}
@@ -405,7 +405,7 @@ function DurationPicker({ secs, onPick }: { secs: number; onPick: (n: number) =>
       <div className="text-[11px] font-extrabold uppercase tracking-wide opacity-70 text-center">Run time</div>
       <div className="flex gap-1.5 justify-center mt-1">
         {RUSH_DURATIONS.map((d) => (
-          <button key={d} className="rounded-full px-2.5 py-1 text-xs font-extrabold" style={{ background: d === secs ? '#ffd23f' : '#ffffff22', color: d === secs ? '#3b2300' : '#fff', border: '1px solid #ffffff44' }} onClick={() => { audio.sfx('tap'); onPick(d) }}>{fmtT(d)}</button>
+          <button key={d} className="rounded-full px-2.5 py-1 text-xs font-extrabold" style={{ background: d === secs ? '#f5b91c' : '#fffaf0', color: '#1c1b22', border: '2px solid #1c1b22' }} onClick={() => { audio.sfx('tap'); onPick(d) }}>{fmtT(d)}</button>
         ))}
       </div>
     </div>

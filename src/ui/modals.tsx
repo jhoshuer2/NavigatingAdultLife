@@ -45,7 +45,7 @@ export function EventModal() {
       </div>
       <div className="flex items-center gap-3 mt-2">
         {npc && <div className="w-14 h-14 rounded-full grid place-items-center text-2xl font-display shrink-0" style={{ background: 'radial-gradient(circle at 30% 20%, #ff8ec2, #7a2a9a)', boxShadow: 'inset 0 0 0 3px rgba(255,255,255,.35)' }} title={npc.name}>{npc.name[0]}</div>}
-        <h2 className="font-display text-[28px] text-white leading-[1.05]" style={{ textShadow: '0 2px 0 rgba(0,0,0,.4)' }}>{cur.event.title}</h2>
+        <h2 className="font-display text-[28px] leading-[1.05]" style={{ textShadow: '0 2px 0 rgba(0,0,0,.4)' }}>{cur.event.title}</h2>
       </div>
       <p className="mt-3 text-[15px] leading-relaxed opacity-90">{cur.text}</p>
       {!result ? (
@@ -97,7 +97,7 @@ export function QuizModal() {
       <div className="flex items-center gap-2">
         <span className="chip chip-pink uppercase">{q.subject}</span>
         <span className="chip !py-0.5">Round {round} of {cap}</span>
-        <div className="flex gap-1.5 flex-1 justify-end">{Array.from({ length: total }, (_, i) => <span key={i} className="w-7 h-2 rounded-full" style={{ background: i < n ? 'var(--gold)' : 'rgba(255,255,255,.18)' }} />)}</div>
+        <div className="flex gap-1.5 flex-1 justify-end">{Array.from({ length: total }, (_, i) => <span key={i} className="w-7 h-2 rounded-full" style={{ background: i < n ? 'var(--gold)' : 'rgba(28,27,34,.12)' }} />)}</div>
       </div>
       <p className="text-xl font-bold leading-snug mt-3">{q.q}</p>
       <div className="mt-3 grid gap-2.5">
@@ -136,7 +136,7 @@ export function SummaryModal() {
   return (
     <Modal wide title={`Age ${s.age}`}>
       {net > 0 && <Confetti n={24} />}
-      <h2 className="font-display text-[26px] text-white leading-tight text-center" style={{ textShadow: '0 2px 0 rgba(0,0,0,.4)' }}>{s.headline}</h2>
+      <h2 className="font-display text-[26px] leading-tight text-center" style={{ textShadow: '0 2px 0 rgba(0,0,0,.4)' }}>{s.headline}</h2>
       <div className="grid grid-cols-2 gap-2.5 mt-3">
         <div className="hud-glass rounded-2xl p-3 text-center"><div className="chip chip-green !py-0.5"><Icon name="up" size={12} /> In</div><div className="font-display text-2xl text-green-300 mt-1"><CountUp to={s.income} format={naira} /></div></div>
         <div className="hud-glass rounded-2xl p-3 text-center"><div className="chip chip-red !py-0.5"><Icon name="down" size={12} /> Out</div><div className="font-display text-2xl text-red-300 mt-1"><CountUp to={-s.expenses} format={naira} /></div></div>
@@ -244,7 +244,7 @@ export function QuestsModal() {
               const done = i < at, now = i === at
               return (
                 <li key={i} className="flex items-center gap-2 text-[13px] font-bold leading-tight" style={{ opacity: done ? 0.6 : now ? 1 : 0.5 }}>
-                  <span className="grid place-items-center w-6 h-6 rounded-full text-[12px] shrink-0" style={{ background: done ? 'var(--green)' : now ? 'var(--gold)' : 'rgba(255,255,255,.16)', color: done ? '#04361c' : now ? '#3b2300' : '#fff' }}>{done ? '✓' : i === dream.stages.length - 1 ? '★' : i + 1}</span>
+                  <span className="grid place-items-center w-6 h-6 rounded-full text-[12px] shrink-0" style={{ background: done ? 'var(--green)' : now ? 'var(--gold)' : 'rgba(28,27,34,.12)', color: done ? '#04361c' : now ? '#3b2300' : '#fff' }}>{done ? '✓' : i === dream.stages.length - 1 ? '★' : i + 1}</span>
                   <span className={now ? 'text-gold' : ''}>{st.title}</span>
                 </li>
               )
@@ -266,13 +266,13 @@ export function QuestsModal() {
           const hint = QUEST_HINTS[q.id]?.[stage]
           return (
             <div key={q.id} className="card p-3 flex gap-3 items-center" style={st.done ? { opacity: 0.65 } : undefined}>
-              <span className="grid place-items-center w-11 h-11 rounded-full shrink-0" style={{ background: st.done ? 'var(--green)' : 'rgba(255,255,255,.14)' }}><Icon name={st.done ? 'check' : 'flag'} size={20} color={st.done ? '#04361c' : '#fff'} /></span>
+              <span className="grid place-items-center w-11 h-11 rounded-full shrink-0" style={{ background: st.done ? 'var(--green)' : 'rgba(28,27,34,.12)' }}><Icon name={st.done ? 'check' : 'flag'} size={20} color={st.done ? '#04361c' : '#fff'} /></span>
               <div className="flex-1 min-w-0">
                 <div className="font-display uppercase text-[15px] leading-tight">{q.title}</div>
                 <div className="text-xs opacity-75 mt-0.5 leading-snug">{st.done ? q.rewardText : q.stages[stage].text}</div>
                 {!st.done && hint && <div className="text-[12px] font-bold mt-1 leading-snug text-gold">📍 <Lines lang={lang} s={hint.say} /></div>}
                 {!st.done && hint?.place && <button className="chip chip-green mt-1.5" onClick={() => { audio.sfx('click'); setGuideTrack({ place: hint.place!, say: hint.say, act: hint.act, voice: `quest_${q.id}_${stage}` }) }}><Icon name="pin" size={12} />Show me</button>}
-                {!st.done && <div className="flex gap-1 mt-1.5">{q.stages.map((_, i) => <span key={i} className="h-1.5 flex-1 rounded-full" style={{ background: i < st.stage ? 'var(--green)' : 'rgba(255,255,255,.18)' }} />)}</div>}
+                {!st.done && <div className="flex gap-1 mt-1.5">{q.stages.map((_, i) => <span key={i} className="h-1.5 flex-1 rounded-full" style={{ background: i < st.stage ? 'var(--green)' : 'rgba(28,27,34,.12)' }} />)}</div>}
               </div>
               <span className="chip chip-gold shrink-0"><Icon name="shell" size={13} color="#3b2300" />{q.cowries}</span>
             </div>
@@ -403,7 +403,7 @@ export function DreamDoneModal() {
       <div className="text-center">
         <div className="text-[64px] leading-none">{dream.icon}</div>
         <div className="text-[11px] font-extrabold uppercase tracking-wider text-yellow-300 mt-2">Dream achieved</div>
-        <h2 className="font-display text-[30px] text-white leading-tight uppercase" style={{ textShadow: '0 3px 0 rgba(0,0,0,.45)' }}>{dream.name}</h2>
+        <h2 className="font-display text-[30px] leading-tight uppercase" style={{ textShadow: '0 3px 0 rgba(0,0,0,.45)' }}>{dream.name}</h2>
         <p className="text-sm opacity-90 mt-2 leading-snug">{c.nickname || c.name} did it at {c.age}. From a small child to the dream. Well done!</p>
       </div>
       <div className="grid gap-2 mt-4">
@@ -439,7 +439,7 @@ export function BirthdayModal() {
         <div className="flex justify-center gap-2 text-4xl" aria-hidden="true">{['🎈', '🎉', '🎈'].map((e, i) => <span key={i} className="rise" style={{ animationDelay: `${i * 0.15}s` }}>{e}</span>)}</div>
         <Ribbon className="mt-1">Happy Birthday!</Ribbon>
         <div className="text-[84px] leading-none mt-2 pop" aria-hidden="true">🎂</div>
-        <h2 className="font-display text-[28px] text-white leading-tight mt-1" style={{ textShadow: '0 2px 0 rgba(0,0,0,.4)' }}>{c.nickname || c.name} is now {age}</h2>
+        <h2 className="font-display text-[28px] leading-tight mt-1" style={{ textShadow: '0 2px 0 rgba(0,0,0,.4)' }}>{c.nickname || c.name} is now {age}</h2>
         {MILESTONE[age] && <div className="chip chip-gold !text-sm mt-2">{MILESTONE[age]}</div>}
       </div>
       <div className="hud-glass rounded-2xl p-3 mt-3 space-y-1.5 text-sm">{wishes.slice(0, 3).map((w, i) => <div key={i}>💌 {w}</div>)}</div>

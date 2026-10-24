@@ -12,11 +12,11 @@ export function Btn({ variant = 'primary', size, shine, className = '', onClick,
 
 /** Round icon button (back, close, settings). */
 export function RoundBtn({ icon, label, onClick, size = 44, tone = 'ghost' }: { icon: IconName; label: string; onClick?: () => void; size?: number; tone?: 'ghost' | 'gold' | 'green' }) {
-  const bg = tone === 'gold' ? 'linear-gradient(180deg,#ffe27a,#f59e0b)' : tone === 'green' ? 'linear-gradient(180deg,#55f09b,#12a152)' : 'linear-gradient(180deg, rgba(130,100,255,.5), rgba(60,40,170,.7))'
+  const bg = tone === 'gold' ? '#f5b91c' : tone === 'green' ? '#2f5a3a' : '#fffaf0'
   return (
     <button aria-label={label} onClick={() => { audio.sfx(icon === 'close' || icon === 'back' ? 'close' : 'click'); onClick?.() }} className="grid place-items-center rounded-full active:translate-y-0.5 transition-transform pointer-events-auto"
-      style={{ width: size, height: size, background: bg, boxShadow: 'inset 0 2px 0 rgba(255,255,255,.4), 0 3px 0 rgba(0,0,0,.45), 0 8px 14px rgba(0,0,0,.35)', border: '1px solid rgba(255,255,255,.18)' }}>
-      <Icon name={icon} size={Math.round(size * 0.5)} color={icon === 'dice' ? '#fff' : tone === 'gold' ? '#3b2300' : '#fff'} />
+      style={{ width: size, height: size, background: bg, boxShadow: '0 3px 0 #1c1b22', border: '3px solid #1c1b22' }}>
+      <Icon name={icon} size={Math.round(size * 0.5)} color={tone === 'green' ? '#fff' : '#1c1b22'} />
     </button>
   )
 }
@@ -34,11 +34,11 @@ export function Modal({ children, onClose, title, wide, hero }: { children: Reac
   }, [onClose])
   return (
     <div className="fixed inset-0 z-40 flex items-end justify-center sm:items-center" role="dialog" aria-modal="true" aria-label={title}>
-      <div className="absolute inset-0" style={{ background: 'radial-gradient(80% 60% at 50% 100%, rgba(106,61,245,.35), rgba(5,3,20,.82))', backdropFilter: 'blur(3px)' }} onClick={onClose} />
-      <div className={`sheet relative w-full ${wide ? 'max-w-xl' : 'max-w-md'} max-h-[92vh] flex flex-col rounded-t-[28px] sm:rounded-b-[28px]`} style={{ background: 'linear-gradient(180deg,#2b1f86 0%, #170f4a 38%, #0f0a30 100%)', border: '1px solid rgba(255,255,255,.16)', borderBottom: 0, boxShadow: '0 -20px 60px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.25)' }}>
+      <div className="absolute inset-0" style={{ background: 'rgba(28,27,34,.55)' }} onClick={onClose} />
+      <div className={`sheet relative w-full ${wide ? 'max-w-xl' : 'max-w-md'} max-h-[92vh] flex flex-col rounded-t-[28px] sm:rounded-b-[28px]`} style={{ background: '#f3e7cf', color: '#1c1b22', border: '3px solid #1c1b22', borderBottom: 0, boxShadow: '0 -10px 40px rgba(0,0,0,.35)' }}>
         {hero}
         <div className="flex items-center justify-between px-4 pt-3 pb-1 relative">
-          <div className="absolute left-1/2 -translate-x-1/2 top-1.5 w-10 h-1 rounded-full bg-white/25" />
+          <div className="absolute left-1/2 -translate-x-1/2 top-1.5 w-10 h-1 rounded-full bg-black/25" />
           {title ? <Ribbon className="mt-1">{title}</Ribbon> : <span />}
           {onClose && <div className="mt-1"><RoundBtn icon="close" label="Close" onClick={onClose} size={38} /></div>}
         </div>
@@ -68,7 +68,7 @@ export function StatBadge({ stat, value, delta, size = 'md', ring }: { stat: key
         {ring !== undefined && <svg className="absolute inset-0" viewBox="0 0 36 36"><circle cx="18" cy="18" r="16" fill="none" stroke="rgba(0,0,0,.35)" strokeWidth="3" /><circle cx="18" cy="18" r="16" fill="none" stroke={m.color} strokeWidth="3" strokeLinecap="round" strokeDasharray={`${Math.max(0, Math.min(1, ring)) * 100.5} 100.5`} transform="rotate(-90 18 18)" /></svg>}
         <Icon name={m.ic} size={d * 0.52} />
       </div>
-      <div className="leading-none"><div className="num text-[15px] text-white">{value}{delta ? <span className={`text-[11px] ml-0.5 ${(stat === 'stress' ? delta < 0 : delta > 0) ? 'text-green-300' : 'text-red-300'}`}>{delta > 0 ? '+' : ''}{delta}</span> : null}</div></div>
+      <div className="leading-none"><div className="num text-[15px]">{value}{delta ? <span className={`text-[11px] ml-0.5 ${(stat === 'stress' ? delta < 0 : delta > 0) ? 'text-green-700' : 'text-red-700'}`}>{delta > 0 ? '+' : ''}{delta}</span> : null}</div></div>
     </div>
   )
 }
@@ -80,7 +80,7 @@ export function StatBar({ stat, value, max = 100, delta }: { stat: keyof typeof 
     <div className="min-w-0" aria-label={`${m.name} ${value}`}>
       <div className="flex items-center justify-between leading-none mb-1">
         <span className="flex items-center gap-1 text-[12px] font-extrabold"><Icon name={m.ic} size={15} />{m.name}</span>
-        <span className="num text-[13px]">{value}{delta ? <span className={(stat === 'stress' ? delta < 0 : delta > 0) ? 'text-green-300' : 'text-red-300'}> {delta > 0 ? '+' : ''}{delta}</span> : null}</span>
+        <span className="num text-[13px]">{value}{delta ? <span className={(stat === 'stress' ? delta < 0 : delta > 0) ? 'text-green-700' : 'text-red-700'}> {delta > 0 ? '+' : ''}{delta}</span> : null}</span>
       </div>
       <div className="bar"><i style={{ width: `${Math.max(0, Math.min(100, (value / max) * 100))}%`, background: `linear-gradient(180deg, ${m.glow}, ${m.color})` }} /></div>
     </div>
@@ -144,13 +144,13 @@ export function Toasts({ items }: { items: { id: number; text: string; kind: 'ac
   return (
     <>
     {/* While a message is showing, everything behind it fades back so the message can be read; it returns to full strength when the message leaves. */}
-    <div className="fixed inset-0 z-[59] pointer-events-none" style={{ background: 'rgba(8,5,30,.62)', opacity: items.length ? 1 : 0, transition: 'opacity .3s ease' }} aria-hidden="true" />
+    <div className="fixed inset-0 z-[59] pointer-events-none" style={{ background: 'rgba(28,27,34,.45)', opacity: items.length ? 1 : 0, transition: 'opacity .3s ease' }} aria-hidden="true" />
     <div className="fixed top-3 left-0 right-0 z-[60] flex flex-col items-center gap-2 pointer-events-none px-3" style={{ paddingTop: 'var(--safe-t)' }} aria-live="polite">
       {items.map((t) => {
         const ach = t.kind === 'ach'
         return (
-          <div key={t.id} className="slide-r flex items-center gap-2.5 pl-2 pr-4 py-1.5 rounded-full max-w-sm font-extrabold text-sm" style={{ background: ach ? 'linear-gradient(90deg,#ffc72c,#f59e0b)' : 'linear-gradient(90deg, rgba(60,40,170,.96), rgba(26,18,84,.96))', color: ach ? '#3b2300' : '#fff', border: `1px solid ${ach ? '#fff3b0' : 'rgba(255,255,255,.2)'}`, boxShadow: '0 10px 24px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.35)' }}>
-            <span className="grid place-items-center w-8 h-8 rounded-full" style={{ background: ach ? 'rgba(255,255,255,.55)' : 'rgba(255,255,255,.14)' }}><Icon name={ach ? 'trophy' : 'check'} size={18} color={ach ? '#7a4700' : '#9bffc3'} /></span>
+          <div key={t.id} className="slide-r flex items-center gap-2.5 pl-2 pr-4 py-1.5 rounded-full max-w-sm font-extrabold text-sm" style={{ background: ach ? '#f5b91c' : '#fffaf0', color: '#1c1b22', border: '3px solid #1c1b22', boxShadow: '0 4px 0 #1c1b22' }}>
+            <span className="grid place-items-center w-8 h-8 rounded-full" style={{ background: ach ? 'rgba(255,255,255,.6)' : '#cfe3cf' }}><Icon name={ach ? 'trophy' : 'check'} size={18} color={ach ? '#7a4700' : '#2f5a3a'} /></span>
             <span className="leading-tight">{t.text.replace(/^[^\p{L}\p{N}]+\s*/u, '')}</span>
           </div>
         )
@@ -189,9 +189,9 @@ export function Mentor({ children, mood = 'hype', onNext, nextLabel = 'Next', cl
   return (
     <div className={`flex items-end gap-2 ${className}`}>
       <div className="float"><Conductor mood={mood} size={74} /></div>
-      <div className="relative flex-1 rounded-2xl rounded-bl-md px-3.5 py-2.5 pop" style={{ background: '#fffaf0', color: '#1a0f55', boxShadow: '0 10px 24px rgba(0,0,0,.4)' }}>
+      <div className="relative flex-1 rounded-2xl rounded-bl-md px-3.5 py-2.5 pop" style={{ background: '#fffaf0', color: '#1c1b22', border: '3px solid #1c1b22', boxShadow: '0 4px 0 #1c1b22' }}>
         <div className="font-extrabold leading-snug text-[15px]">{children}</div>
-        {onNext && <button className="mt-1.5 text-[12px] font-black uppercase tracking-wide text-violet" style={{ color: '#6a3df5' }} onClick={() => { audio.sfx('click'); onNext() }}>{nextLabel} ▸</button>}
+        {onNext && <button className="mt-1.5 text-[12px] font-black uppercase tracking-wide " style={{ color: '#e07a1f' }} onClick={() => { audio.sfx('click'); onNext() }}>{nextLabel} ▸</button>}
       </div>
     </div>
   )
