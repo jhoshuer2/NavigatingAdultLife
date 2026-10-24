@@ -1,7 +1,7 @@
 // The ten chapters (the lineup from the spec, section 12). Chapters 1 and 2 have a first playable level; the rest are placeholders that show as locked
 // cards until the chapter before them is finished.
 import { CHAPTER1 } from './chapter1'
-import { LEVEL_C2L1, LEVEL_C2L2 } from './chapter2'
+import { LEVEL_C2L1, LEVEL_C2L2, LEVEL_C2L3 } from './chapter2'
 
 export interface ChapterDef {
   id: string; number: number; title: string; blurb: string; levels: string[]; totalLevels: number; built: boolean
@@ -13,7 +13,7 @@ const placeholder = (n: number, title: string, blurb: string): ChapterDef => ({ 
 
 export const CHAPTERS: ChapterDef[] = [
   { id: CHAPTER1.id, number: 1, title: CHAPTER1.title, blurb: CHAPTER1.blurb, levels: ['ch1.l1', 'ch1.l2', 'ch1.l3', 'ch1.l4', 'ch1.l5', 'ch1.l6', 'ch1.l7', 'ch1.l8', 'ch1.l9'], totalLevels: CHAPTER1.totalLevels, built: true },
-  { id: 'ch2', number: 2, title: 'Trial Day', blurb: 'An open football trial, a loud coach and a number on your back.', levels: [LEVEL_C2L1.id, LEVEL_C2L2.id], totalLevels: 9, built: true, prototype: true },
+  { id: 'ch2', number: 2, title: 'Trial Day', blurb: 'An open football trial, a loud coach and a number on your back.', levels: [LEVEL_C2L1.id, LEVEL_C2L2.id, LEVEL_C2L3.id], totalLevels: 9, built: true, prototype: true },
   placeholder(3, 'Market Day', 'Buy, sell, bargain and keep your cool.'),
   placeholder(4, 'Kitchen Rush', 'Orders pile up and the pot will not wait.'),
   placeholder(5, 'Beach Weekend', 'Sun, sand and a plan that keeps changing.'),

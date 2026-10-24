@@ -1,5 +1,6 @@
 // Chapter 2, "Trial Day": the player is a young footballer at an open trial. Only Level 1 exists so far (same rule as chapter 1: one level first, test it).
-import type { LevelDef, TaskDef, Rect, Furn, Hazard } from './schema'
+import type { LevelDef, TaskDef, Rect, Furn, Hazard, Line } from './schema'
+const say = (who: Line['who'], text: string, expr?: Line['expr']): Line => ({ who, text, expr })
 
 const R = (x0: number, x1: number, z0: number, z1: number): Rect => ({ x0, x1, z0, z1 })
 
@@ -131,6 +132,7 @@ const tasks2: TaskDef[] = [
 ]
 
 const D = (x: number, z0: number, z1: number, speed: number, phase: number, color: string): Hazard => ({ x, z0, z1, speed, phase, name: 'dummy', color })
+const RING = (x: number, z: number, r = 1.6) => ({ x, z, r })
 
 export const LEVEL_C2L2: LevelDef = {
   id: 'ch2.l2', sceneKind: 'pitch', kit: true, chapter: 'ch2', title: 'Skills Stations', subtitle: 'Level 2',
@@ -160,6 +162,107 @@ export const LEVEL_C2L2: LevelDef = {
   endBeat: { text: 'The coach writes something on his clipboard. He looks at you. He looks at the clipboard again.', line: 'Your drill will matter in Level 3.' }, choiceLabel: 'drill',
   exitX: 0,
   timeLimit: 20,
-  next: null,
+  next: 'ch2.l3',
   starRules: ['Finish the level', 'Get back to the circle before the timer ends', 'Do it on time with 2 mistakes or fewer'],
+}
+
+// ---------------------------------------------------------------------------------------------------------------- Level 3
+const FURNITURE3: Furn[] = [
+  { name: 'dugout', rect: R(-3.2, 3.2, -5.6, -4.8), h: 0.7, color: '#6b3a1e' },
+  { name: 'goalL', rect: R(11.8, 12.2, -2.2, -1.9), h: 1.6, color: '#fbf8f0' },
+  { name: 'goalR', rect: R(11.8, 12.2, 1.9, 2.2), h: 1.6, color: '#fbf8f0' },
+]
+const ORANGE = '#e07a1f', GREEN = '#2f5a3a', YELLOW = '#f5b91c'
+const BOOTS_FLAG = 'ch2.l1.item' // the boots chosen in level 1
+
+const tasks3: TaskDef[] = [
+  {
+    id: 'ch2.l3.t1', kind: 'goto', title: 'Take your position', purpose: 'Your boots from Level 1 decide where you stand: striker up front, winger on the wing, defender at the back.',
+    objective: 'Walk to your position', controls: 'Move with the stick, arrow keys or by tapping the pitch.', flag: BOOTS_FLAG, variant: true,
+    success: 'You stand in the ring for your position.', failure: 'None.', recovery: 'The ring marks the spot.',
+    feedback: 'The ring pulses where you should stand; the coach calls your position.', reward: '1 point the first time.', persistence: 'Saved when you reach the ring.',
+    introByChoice: {
+      striker: [say('tunde', 'Number 14, striker. Up front. Make me forget my last striker.', 'confident')],
+      winger: [say('tunde', 'Number 14, winger. The wing is yours. Run like the bus is leaving.', 'cheeky')],
+      defender: [say('tunde', 'Number 14, defender. Back there. Nobody scores past you.', 'calm')],
+    },
+    intro: [say('tunde', 'Number 14! Take your place.', 'confident')],
+    done: [say('folake', 'That is my child! Number fourteen! Look at him!', 'proud')],
+    hint: 'Follow the ring: forward for strikers, the north wing for wingers, the back for defenders.',
+  },
+  {
+    id: 'ch2.l3.t2', kind: 'kick', title: 'Complete two passes', purpose: 'Reuse the timing needle from the penalties, now as a pass to a teammate.',
+    objective: 'Complete 2 passes', controls: 'Walk onto the pass spot, then tap Pass when the needle is in the green.',
+    success: 'Two passes reach your teammate.', failure: 'A miss is intercepted and widens the green zone a little.', recovery: 'Try again as often as you need.',
+    feedback: 'The ball flies to the teammate, or an opponent cuts it out.', reward: '1 point the first time.', persistence: 'Saved when the second pass lands.',
+    intro: [say('helper', 'Ball here! Ball here! No, HERE!', 'cheeky'), say('player', 'Eyes on the needle.', 'thinking')],
+    done: [say('tunde', 'Good passing. Now run with it.', 'calm')],
+    hint: 'Stand on the white spot and tap Pass with the needle inside the green bar.',
+  },
+  {
+    id: 'ch2.l3.t3', kind: 'reach', title: 'Beat the defenders', purpose: 'A run through defenders; your position decides how hard and how long.',
+    objective: 'Get past the defenders to the goal ring', controls: 'Move with the stick, arrow keys or by tapping the pitch.', flag: BOOTS_FLAG, variant: true,
+    success: 'You reach the ring before the timer ends.', failure: 'Clipping a defender costs 3 seconds.', recovery: 'A quick get-up, then you keep going. The level never restarts.',
+    feedback: 'A timer on screen and a bump sound when you clip a defender.', reward: '1 point the first time.', persistence: 'Saved when you reach the ring.',
+    intro: [say('tunde', 'Now go through them! They will not move for you!', 'angry')],
+    done: [say('player', 'I am through! I am actually through!', 'laughing')],
+    hint: 'The defenders slide across. Cross behind them, then sprint.',
+  },
+  {
+    id: 'ch2.l3.t4', kind: 'choose', title: 'The decisive moment', purpose: 'The match turns on one choice. All three are fair.',
+    objective: 'Shoot, pass or hold the ball', controls: 'Walk to an option and tap it.',
+    success: 'You choose.', failure: 'None.', recovery: 'There is no wrong answer; the coach just reacts differently.',
+    feedback: 'The ball is played and the crowd reacts.', reward: '1 point the first time.', persistence: 'Saved as a flag for later levels.',
+    intro: [say('player', 'Goal in front of me. A free teammate on my left. Or I just hold it...', 'thinking')],
+    done: [say('tunde', 'Interesting.', 'suspicious')],
+    hint: 'Three signs near the goal: shoot yourself, pass to the free teammate or hold the ball.',
+  },
+  {
+    id: 'ch2.l3.t5', kind: 'goto', title: 'Face the coach', purpose: 'The coach has an opinion about what you just did.',
+    objective: 'Walk to the coach', controls: 'Move with the stick, arrow keys or by tapping the pitch.',
+    success: 'You reach the coach.', failure: 'None.', recovery: 'The ring marks the coach.',
+    feedback: 'The coach reacts to your decision.', reward: '1 point the first time.', persistence: 'Saved when you reach the coach.',
+    introByChoice: {
+      shoot: [say('tunde', 'You shot. Brave. Greedy. Brave and greedy.', 'suspicious')],
+      pass: [say('tunde', 'You passed. Team player. Or you were scared. I will decide.', 'thinking')],
+      hold: [say('tunde', 'You held the ball. For a long time. A VERY long time.', 'tired')],
+    },
+    intro: [say('tunde', 'Come here.', 'calm')],
+    done: [say('tunde', 'Wait there. I am writing something.', 'cheeky')],
+    hint: 'The coach is by the dugout on the north touchline.',
+  },
+]
+
+export const LEVEL_C2L3: LevelDef = {
+  id: 'ch2.l3', sceneKind: 'pitch', kit: true, chapter: 'ch2', title: 'The Trial Match', subtitle: 'Level 3',
+  intro: 'Whistle. Bibs. A real match, and your boots from this morning have an opinion about where you play.',
+  tasks: tasks3,
+  bounds: R(-12.4, 12.4, -6, 6),
+  blockers: FURNITURE3.map((f) => f.rect),
+  furniture: FURNITURE3,
+  spawn: { x: -10.8, z: 0 },
+  spawnAfterFirst: { x: -2.2, z: 1.5 },
+  spots: [],
+  items: [
+    { id: 'shoot', task: 3, x: 7.4, z: -2.4, label: 'Shoot it yourself', color: ORANGE, shape: 'sign', y: 0 },
+    { id: 'pass', task: 3, x: 7.4, z: 0, label: 'Pass to the free teammate', color: GREEN, shape: 'sign', y: 0 },
+    { id: 'hold', task: 3, x: 7.4, z: 2.4, label: 'Hold the ball and wait', color: YELLOW, shape: 'sign', y: 0 },
+  ],
+  guideAreas: [RING(3, -3.8), { x: -2.2, z: 2.4, r: 1 }, RING(9.5, 0), { x: 7.4, z: 0, r: 3 }, RING(0, -4)],
+  // default ring (no boots on record): the wing. The real ring comes from the boots chosen in level 1.
+  gotoAreas: [RING(3, -3.8), null, RING(9.6, 0), null, RING(0, -3.8, 1.8)],
+  kick: { x: -2.2, z: 2.4, goals: 2, goal: { x: 4.6, z: 2.6 }, pass: true },
+  hazards: [D(2.6, -4.4, 4.4, 2.6, 0, '#2b6ad0'), D(5.4, -4.4, 4.4, 2.8, 1.2, '#2b6ad0'), D(8.0, -4.4, 4.4, 2.4, 0.6, '#2b6ad0')],
+  variants: {
+    striker: { label: 'Striker', timeLimit: 14, goals: { 0: RING(8.2, 0) }, hazards: [D(3.2, -4.4, 4.4, 3.6, 0, '#2b6ad0'), D(6.6, -4.4, 4.4, 4.0, 1.3, '#2b6ad0')] },
+    winger: { label: 'Winger', timeLimit: 18, goals: { 0: RING(3, -3.8) }, hazards: [D(2.6, -4.4, 4.4, 2.8, 0, '#2b6ad0'), D(5.4, -4.4, 4.4, 3.0, 1.2, '#2b6ad0'), D(8.0, -4.4, 4.4, 2.6, 0.6, '#2b6ad0')] },
+    defender: { label: 'Defender', timeLimit: 24, goals: { 0: RING(-8, 0) }, hazards: [D(2.6, -4.4, 4.4, 2.2, 0, '#2b6ad0'), D(5.4, -4.4, 4.4, 2.4, 1.2, '#2b6ad0'), D(8.0, -4.4, 4.4, 2.0, 0.6, '#2b6ad0')] },
+  },
+  crowd: [{ x: -6.5, z: -3.6, rot: 0.6 }, { x: -6.5, z: 3.8, rot: -0.6 }, { x: 0.4, z: 4.4, rot: 3.1 }, { x: 4.4, z: -5.0, rot: 0 }, { x: 10.4, z: 4.2, rot: -2.2 }, { x: -9.4, z: 1.0, rot: 1.4 }],
+  npcs: { folake: { x: -9.4, z: -4.8, rot: 0.7 }, tunde: { x: 0, z: -4.2, rot: 0.1 } },
+  endBeat: { text: 'The coach writes a number next to your name. You are not allowed to see it.', line: 'Your position will matter in Level 4.' }, choiceLabel: 'decision',
+  exitX: 0,
+  timeLimit: 18,
+  next: null,
+  starRules: ['Finish the level', 'Get through the defenders before the timer ends', 'Do it on time with 2 mistakes or fewer'],
 }

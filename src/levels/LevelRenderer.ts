@@ -190,7 +190,8 @@ export class LevelRenderer {
       const kb = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.36, 1.5, 10), lam('#e07a1f')); kb.position.y = 0.8; kg.add(kb)
       const kh = new THREE.Mesh(new THREE.SphereGeometry(0.3, 10, 8), lam('#f3e7cf')); kh.position.y = 1.75; kg.add(kh)
       for (const sx of [-1, 1]) { const gl = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.2, 0.2), lam('#fbf8f0')); gl.position.set(0, 1.0, sx * 0.5); kg.add(gl) } // gloves
-      kg.position.set(K.goal.x - 0.4, 0, 0); this.scene.add(kg); this.keeper = kg
+      if (!K.pass) { kg.position.set(K.goal.x - 0.4, 0, 0); this.scene.add(kg); this.keeper = kg }
+      else { const tm = buildToon({ ...neighbour(40), top: 'tee', topColor: '#2f5a3a', bottom: 'shorts', bottomColor: '#fbf8f0', accessories: [] }); tm.group.position.set(K.goal.x, 0, K.goal.z); tm.group.rotation.y = Math.atan2(K.x - K.goal.x, K.z - K.goal.z); this.scene.add(tm.group); this.crowdParts.push(tm) }
     }
     for (const c of this.level.crowd ?? []) { // other hopefuls in kits, standing about
       const i = this.crowdParts.length
@@ -395,8 +396,8 @@ export class LevelRenderer {
     const a = this.kickAnim!, K = this.level.kick!, ball = this.shotBall!
     a.t += dt; const u = Math.min(1, a.t / a.dur)
     const from = { x: K.x + 0.9, z: K.z }
-    const tz = a.success ? a.side * 1.1 : a.side * 3.2 // goals go inside the posts, misses go wide
-    const tx = K.goal.x + 0.4
+    const tz = K.pass ? (a.success ? K.goal.z : K.goal.z + a.side * 3.4) : (a.success ? a.side * 1.1 : a.side * 3.2) // goals go inside the posts, passes land at the teammate, misses go wide
+    const tx = K.pass ? K.goal.x : K.goal.x + 0.4
     const e = u < 0.25 ? 0 : (u - 0.25) / 0.75 // a short wind-up, then the ball flies
     ball.position.set(from.x + (tx - from.x) * e, 0.24 + Math.sin(e * Math.PI) * 0.9, from.z + (tz - from.z) * e)
     // leg swing
@@ -478,7 +479,7 @@ export class LevelRenderer {
       if (run.task.kind === 'find' && !run.found) for (const s of L.spots) if (s.task === idx) consider(s, 'spot')
       if (run.task.kind === 'collect' || run.task.kind === 'sequence') for (const it of L.items) if (it.task === idx && !run.collected.includes(it.id)) consider(it, 'item')
       if (run.task.kind === 'choose' && !run.choice) for (const it of L.items) if (it.task === idx) consider(it, 'item')
-      if (run.task.kind === 'kick' && L.kick && !this.kickAnim && Math.hypot(L.kick.x - this.px, L.kick.z - this.pz) < 1.3) best = { kind: 'spot', id: 'kick', label: 'Kick!' }
+      if (run.task.kind === 'kick' && L.kick && !this.kickAnim && Math.hypot(L.kick.x - this.px, L.kick.z - this.pz) < 1.3) best = { kind: 'spot', id: 'kick', label: L.kick.pass ? 'Pass!' : 'Kick!' }
     }
     if (this.act) best = null
     const key = best ? `${(best as Nearby).kind}:${(best as Nearby).id}` : ''

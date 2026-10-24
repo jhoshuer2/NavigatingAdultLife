@@ -45,9 +45,9 @@ export class TaskRunner {
   misses = 0
   get kickBand() { return 0.16 + 0.03 * Math.min(5, this.misses) }
   /** what the timed task uses: the variant picked in the choice before it, or the level's own */
-  get variant() { if (!this.task.variant) return undefined; const c = this.progress.flags[this.flagKey]; return c ? this.level.variants?.[c] : undefined }
+  get variant() { if (!this.task.variant) return undefined; const c = this.progress.flags[this.task.flag ?? this.flagKey]; return c ? this.level.variants?.[c] : undefined }
   /** the area a walk-to or run-to task ends in (a variant can move it) */
-  get goalArea() { return this.variant?.goal ?? this.level.gotoAreas?.[this.idx] ?? null }
+  get goalArea() { return this.variant?.goals?.[this.idx] ?? this.variant?.goal ?? this.level.gotoAreas?.[this.idx] ?? null }
   /** shopping: money spent so far, held-for seconds, position in a sequence */
   spent = 0
   holdT = 0
@@ -72,7 +72,7 @@ export class TaskRunner {
     this.wrong = 0; this.found = false; this.collected = []; this.buzzing = false; this.choice = null; this.goals = 0; this.misses = 0; this.spent = 0; this.holdT = 0; this.seqPos = 0
     if (this.task.kind === 'reach') this.timeLeft = this.timeLimit
     this.h.taskStarted(this.idx)
-    const flag = this.progress.flags[this.flagKey]
+    const flag = this.progress.flags[this.task.flag ?? this.flagKey]
     for (const l of (flag && this.task.introByChoice?.[flag]) || this.task.intro) this.h.say(l)
     this.h.changed()
   }
@@ -141,10 +141,10 @@ export class TaskRunner {
     this.sinceProgress = 0
     const need = this.level.kick?.goals ?? 3
     if (success) {
-      this.goals++; this.h.sfx?.('pick'); this.h.toast(`GOAL! ${this.goals}/${need}`)
+      this.goals++; this.h.sfx?.('pick'); this.h.toast(this.level.kick?.pass ? `Great pass! ${this.goals}/${need}` : `GOAL! ${this.goals}/${need}`)
       if (this.goals >= need) { this.complete(); return }
     } else {
-      this.misses++; this.mistakes++; this.h.sfx?.('nope'); this.h.toast('Wide! Try again')
+      this.misses++; this.mistakes++; this.h.sfx?.('nope'); this.h.toast(this.level.kick?.pass ? 'Intercepted! Try again' : 'Wide! Try again')
     }
     this.h.changed()
   }

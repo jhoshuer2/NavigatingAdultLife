@@ -28,6 +28,8 @@ export interface TaskDef {
   hint: string
   /** lines that replace `intro` depending on the choice made earlier in the level (keyed by the chosen item id) */
   introByChoice?: Record<string, Line[]>
+  /** which saved flag this task's variant and choice-dependent lines read (default: this level's own choice); lets a level react to an earlier level's choice */
+  flag?: string
   /** this task uses the variant (time, hazards, goal) picked by the choice before it */
   variant?: boolean
   /** extra hint shown automatically after this many wrong tries or seconds, so nobody is stuck */
@@ -66,9 +68,9 @@ export interface LevelDef {
   /** for 'goto' tasks: the area to walk into, per task index */
   gotoAreas?: ({ x: number; z: number; r: number } | null)[]
   /** a penalty-kick task: stand on the spot, tap Kick with the needle in the green, score `goals` times */
-  kick?: { x: number; z: number; goals: number; goal: { x: number; z: number } }
+  kick?: { x: number; z: number; goals: number; goal: { x: number; z: number }; /** a pass to a teammate instead of a shot at goal: no keeper */ pass?: boolean }
   /** the timed task changes with the choice made before it: its own time limit and hazards */
-  variants?: Record<string, { timeLimit: number; hazards: Hazard[]; label: string; goal?: { x: number; z: number; r: number } }>
+  variants?: Record<string, { timeLimit: number; hazards: Hazard[]; label: string; goal?: { x: number; z: number; r: number }; /** a different ring per task index */ goals?: Record<number, { x: number; z: number; r: number }> }>
   /** other hopefuls standing about, drawn as characters */
   crowd?: { x: number; z: number; rot: number }[]
   /** the closing beat shown on the result screen */
