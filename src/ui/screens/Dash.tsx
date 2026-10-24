@@ -337,8 +337,8 @@ export default function Dash({ rush, again }: { rush?: boolean; again?: () => vo
             <button className="tile w-full text-left mt-4 !p-3" onClick={startSolo}><div className="font-display text-2xl">🏃 {rush ? 'Play alone' : 'Run alone'}</div><div className="text-xs opacity-80 mt-0.5">{rush ? 'Go as far as you can. Beat your best.' : 'Your normal run. Go as far as you can. This is the run that counts for your trophies.'}</div></button>
             <button className="tile w-full text-left mt-2 !p-3" onClick={startRace}><div className="font-display text-2xl">🏁 {rush ? 'Find a player' : 'Play against someone'}</div><div className="text-xs opacity-80 mt-0.5">{rush ? `Same road, ${fmtT(secs)}. If nobody is online you can race Alfred ai, a computer runner.` : `Same road, ${RACE_SECS} seconds. Most points wins a 10 coin bonus.`}</div></button>
             {rush && <button className="tile w-full text-left mt-2 !p-3 opacity-60" disabled><div className="font-display text-2xl">🤝 Challenge a friend</div><div className="text-xs opacity-80 mt-0.5">Coming soon. It needs the online service.</div></button>}
-            {rush && <DurationPicker secs={secs} onPick={setSecs} />}
-            {rush && <p className="text-[11px] opacity-70 mt-3 text-center">Swipe to change lane · up jumps · down slides. Grab ⚡ boosts, 🪽 wings (dodge the sky!) and 🛹🚲🛶 rides. Alfred grabs them too.</p>}
+            {rush && <div className="mt-5"><DurationPicker secs={secs} onPick={setSecs} /></div>}
+            {rush && <p className="text-[11px] opacity-70 mt-4 text-center">Swipe to change lane · up jumps · down slides. Grab ⚡ boosts, 🪽 wings (dodge the sky!) and 🛹🚲🛶 rides. Alfred grabs them too.</p>}
             <Btn variant="ghost" className="w-full mt-3" onClick={() => rush ? useGame.getState().go('home') : setPhase('ready')}>{rush ? 'Home' : 'Back'}</Btn>
           </div>
         </div>
@@ -402,7 +402,7 @@ function toMini(r: DashResult & { raceWon?: boolean }) {
 function DurationPicker({ secs, onPick }: { secs: number; onPick: (n: number) => void }) {
   return (
     <div>
-      <div className="text-[11px] font-extrabold uppercase tracking-wide opacity-70 text-center">Run time</div>
+      <div className="text-[11px] font-extrabold uppercase tracking-wide opacity-70 text-center pb-0.5">Run time</div>
       <div className="flex gap-1.5 justify-center mt-1">
         {RUSH_DURATIONS.map((d) => (
           <button key={d} className="rounded-full px-2.5 py-1 text-xs font-extrabold" style={{ background: d === secs ? '#f5b91c' : '#fffaf0', color: '#1c1b22', border: '2px solid #1c1b22' }} onClick={() => { audio.sfx('tap'); onPick(d) }}>{fmtT(d)}</button>
