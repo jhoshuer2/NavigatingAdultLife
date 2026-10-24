@@ -127,6 +127,14 @@ describe('chapter 1 and 2: every level', () => {
     r.interact('t:adeyemi'); for (const id of ['story', 'honest']) { expect(r.convo).toBeTruthy(); r.interact(`c:${id}`) }
     expect(r.convoOptions!.map((o) => o.id)).toEqual(['grow', 'need', 'city']); r.interact('c:city'); expect(r.idx).toBe(3)
   })
+  it('chapters 2 to 4: no two levels in a chapter share the same ordered task kinds, each level is a bigger place and starts with the chapter vehicle', () => {
+    const vehicle: Record<number, string> = { 2: 'train', 3: 'helicopter', 4: 'ferry' }
+    for (const c of [2, 3, 4]) {
+      const lv = Array.from({ length: 9 }, (_, i) => LEVELS[`ch${c}.l${i + 1}`])
+      expect(new Set(lv.map((l) => l.tasks.map((t) => t.kind).join('>'))).size, `chapter ${c}`).toBe(9)
+      for (const l of lv.slice(c === 2 ? 1 : 0)) { expect(l.bounds.x1 - l.bounds.x0, l.id).toBeGreaterThanOrEqual(46); expect(l.tasks[0].kind, l.id).toBe('ride'); expect(l.rides![0].vehicle, l.id).toBe(vehicle[c]) }
+    }
+  })
   it('every Chapter 1 level mixes tasks differently: no two levels share the same ordered list of task kinds', () => {
     const lists = Array.from({ length: 9 }, (_, i) => LEVELS[`ch1.l${i + 1}`].tasks.map((t) => t.kind).join('>'))
     expect(new Set(lists).size).toBe(9)
