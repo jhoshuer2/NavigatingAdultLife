@@ -127,4 +127,27 @@ CREATE INDEX account_attempts_key ON account_attempts (key, kind, at);
 CREATE TABLE blocked_origins (day date NOT NULL, origin text NOT NULL, n int NOT NULL DEFAULT 0, PRIMARY KEY (day, origin));
 `,
   },
+  {
+    id: 5,
+    sql: `
+-- Live races in The Rush (docs/PRD-multiplayer.md): a challenge is sent to the players active right now; everyone who accepts races the same seed.
+CREATE TABLE rush_matches (
+  match_id uuid PRIMARY KEY, host_id uuid NOT NULL REFERENCES accounts(account_id) ON DELETE CASCADE,
+  seed int NOT NULL, secs int NOT NULL, status text NOT NULL DEFAULT 'inviting',
+  created_at timestamptz NOT NULL DEFAULT now(), invite_until timestamptz NOT NULL, start_at timestamptz, finished_at timestamptz
+);
+CREATE INDEX rush_matches_created ON rush_matches (created_at);
+CREATE TABLE rush_players (
+  match_id uuid NOT NULL REFERENCES rush_matches(match_id) ON DELETE CASCADE, account_id uuid NOT NULL REFERENCES accounts(account_id) ON DELETE CASCADE,
+  status text NOT NULL DEFAULT 'invited', snap jsonb, snap_at timestamptz, score int NOT NULL DEFAULT 0, dist int NOT NULL DEFAULT 0, rank int,
+  PRIMARY KEY (match_id, account_id)
+);
+CREATE INDEX rush_players_account ON rush_players (account_id, status);
+CREATE TABLE rush_board (
+  account_id uuid PRIMARY KEY REFERENCES accounts(account_id) ON DELETE CASCADE,
+  points int NOT NULL DEFAULT 0, wins int NOT NULL DEFAULT 0, plays int NOT NULL DEFAULT 0, best_dist int NOT NULL DEFAULT 0, updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX rush_board_points ON rush_board (points DESC, wins DESC);
+`,
+  },
 ]

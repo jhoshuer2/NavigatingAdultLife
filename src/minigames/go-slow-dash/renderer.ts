@@ -266,12 +266,14 @@ export class DashRenderer {
     return g
   }
 
-  private rival?: { group: THREE.Group; parts: { legL?: THREE.Object3D; legR?: THREE.Object3D; armL?: THREE.Object3D; armR?: THREE.Object3D } }
+  private rivals: { group: THREE.Group; parts: { legL?: THREE.Object3D; legR?: THREE.Object3D; armL?: THREE.Object3D; armR?: THREE.Object3D }; gear: ReturnType<DashRenderer['makeGear']> }[] = []
   /** Add a second runner: a teal robot on foot, or a teal cab on the road. */
-  setRival(name: string) {
-    if (this.rival) return
+  setRival(name: string) { void name; this.setRivals(1) }
+  /** Make sure there are `n` other runners (live races can have several). Each gets its own colour. */
+  setRivals(n: number) { while (this.rivals.length < n) this.addRival(this.rivals.length) }
+  private addRival(index: number) {
     const g = new THREE.Group(), parts: { legL?: THREE.Object3D; legR?: THREE.Object3D; armL?: THREE.Object3D; armR?: THREE.Object3D } = {}
-    const teal = 0x1ec8b4
+    const teal = [0x1ec8b4, 0xff9f1c, 0xb36bff, 0xff5d8f, 0x6bd3ff, 0xc8e64a][index % 6]
     if (this.mode === 'danfo') {
       const body = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.9, 5.2), mat(teal)); body.position.y = 1.55; g.add(body)
       const st = new THREE.Mesh(new THREE.BoxGeometry(2.24, 0.34, 5.24), mat(0x1c1b22)); st.position.y = 1.35; g.add(st)
@@ -287,10 +289,9 @@ export class DashRenderer {
       parts.legL = limb(-0.2, 0.9, 0.9, 0x2a3a44); parts.legR = limb(0.2, 0.9, 0.9, 0x2a3a44); parts.armL = limb(-0.55, 1.75, 0.8, 0xdfe8ec); parts.armR = limb(0.55, 1.75, 0.8, 0xdfe8ec)
     }
     g.traverse((o) => { const m = o as THREE.Mesh; const mt = m.material as THREE.Material | undefined; if (mt && 'opacity' in mt) { mt.transparent = true; (mt as THREE.MeshLambertMaterial).opacity = 0.85 } })
-    void name // no floating name over the rival: it only got in the way of the road
-    this.rivalGear = this.makeGear(); for (const m of Object.values(this.rivalGear)) g.add(m)
+    const gear = this.makeGear(); for (const m of Object.values(gear)) g.add(m) // no floating name over a rival: it only got in the way of the road
     g.visible = false
-    this.root.add(g); this.rival = { group: g, parts }
+    this.root.add(g); this.rivals.push({ group: g, parts, gear })
   }
 
   /** a ride (skateboard, bike or canoe) as it looks under a runner's feet; also used, bigger, as the pickup */
@@ -333,7 +334,6 @@ export class DashRenderer {
     return { skate, bike, canoe, wings }
   }
   private playerGear?: ReturnType<DashRenderer['makeGear']>
-  private rivalGear?: ReturnType<DashRenderer['makeGear']>
   private applyGear(gear: ReturnType<DashRenderer['makeGear']> | undefined, s: DashState, time: number) {
     if (!gear) return
     for (const k of ['skate', 'bike', 'canoe'] as const) gear[k].visible = s.ride?.kind === k
@@ -438,20 +438,21 @@ export class DashRenderer {
   hit() { this.shake = 0.5 }
 
   private tunnelDim = 0
-  private drawRival(st: DashState, rv: DashState | undefined, time: number) {
-    const r = this.rival
-    if (!r) return
-    if (!rv) { r.group.visible = false; return }
-    const rel = rv.dist - st.dist
-    r.group.visible = rel > -6 && rel < 140
-    r.group.position.set(rv.x * LANE_W + (Math.abs(rv.x - st.x) < 0.4 && Math.abs(rel) < 4 ? 0.7 : 0), rv.y, -rel)
-    if (rv.over) r.group.rotation.z = Math.min(1.4, r.group.rotation.z + 0.1)
-    this.applyGear(this.rivalGear, rv, time)
-    const sw = Math.sin(time * (8 + rv.speed * 0.5)) * 0.9
-    if (r.parts.legL) { r.parts.legL.rotation.x = sw; r.parts.legR!.rotation.x = -sw; r.parts.armL!.rotation.x = -sw; r.parts.armR!.rotation.x = sw }
+  private drawRival(st: DashState, rvs: DashState[], time: number) {
+    this.rivals.forEach((r, i) => {
+      const rv = rvs[i]
+      if (!rv) { r.group.visible = false; return }
+      const rel = rv.dist - st.dist
+      r.group.visible = rel > -6 && rel < 140
+      r.group.position.set(rv.x * LANE_W + (Math.abs(rv.x - st.x) < 0.4 && Math.abs(rel) < 4 ? 0.7 : 0), rv.y, -rel)
+      r.group.rotation.z = rv.over ? Math.min(1.4, r.group.rotation.z + 0.1) : 0
+      this.applyGear(r.gear, rv, time)
+      const sw = Math.sin(time * (8 + rv.speed * 0.5)) * 0.9
+      if (r.parts.legL) { r.parts.legL.rotation.x = sw; r.parts.legR!.rotation.x = -sw; r.parts.armL!.rotation.x = -sw; r.parts.armR!.rotation.x = sw }
+    })
   }
 
-  render(st: DashState, dt: number, time: number, rival?: DashState) {
+  render(st: DashState, dt: number, time: number, rival?: DashState | DashState[]) {
     if (this.ctxLost) return
     const t0 = performance.now()
     const dist = st.dist
@@ -473,7 +474,7 @@ export class DashRenderer {
       this.busHeads.forEach((h, i) => { h.visible = i < st.aboard })
     }
     this.applyGear(this.playerGear, st, time)
-    this.drawRival(st, rival, time)
+    this.drawRival(st, rival ? (Array.isArray(rival) ? rival : [rival]) : [], time)
     this.player.visible = st.invuln <= 0 || Math.floor(time * 14) % 2 === 0 || st.powers.suya > 0
     this.shadow.position.set(st.x * LANE_W, 0.04, 0); this.shadow.scale.setScalar(this.mode === 'danfo' ? 2 : 1 - Math.min(0.5, st.y * 0.15))
     // camera

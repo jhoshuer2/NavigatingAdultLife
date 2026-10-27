@@ -9,7 +9,12 @@ import { plain, vlang } from '@content/lang'
 import { speakLine, stopSpeaking } from '@platform/voice'
 import { createDash, resultOf, segmentAt, stepDash, ROUTES, LEVELS, type DashEvent, type DashResult, type DashState } from '../../minigames/go-slow-dash/sim'
 import { createRival, stepRival, raceOutcome, RACE_SECS, RIVAL_NAME, type RaceOutcome, type Rival } from '../../minigames/go-slow-dash/race'
-import { findRunner } from '@platform/match'
+import { sendChallenge, watchLobby, msUntilStart, RaceLink } from '@platform/match'
+import { rushBlocked, rushBlockedText, rushLeave, serverNow } from '@platform/rush'
+import { useRush } from '@platform/rushStore'
+import { Ghosts, snapshotOf, standing, ordinal } from '../../minigames/go-slow-dash/ghost'
+import { savedAccount } from '@platform/account'
+import type { MatchView } from '@shared/rush'
 import { DashRenderer } from '../../minigames/go-slow-dash/renderer'
 import { audio } from '@platform/audio'
 import { traitSum } from '@engine/core/helpers'
@@ -17,9 +22,12 @@ import { progressOf, recordRush } from '../../levels/progress'
 import { charSpec } from './V2'
 import { track } from '@platform/analytics'
 
+const savedMe = () => savedAccount()?.id ?? ''
+/** the runners actually in the race (players who said no or never answered are not on the road) */
+const racers = (v: MatchView) => v.players.filter((p) => p.status !== 'declined' && p.status !== 'invited')
 export const RUSH_DURATIONS = [60, 90, 120, 180, 300] as const
 const fmtT = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
-interface Hud { gap: number | null; ride: { kind: string; t: number } | null; score: number; coins: number; hearts: number; speed: number; dist: number; seg: string; next: string; toNext: number; segPct: number; missions: { text: string; pct: number; done: boolean }[]; powers: Record<'magnet' | 'hop' | 'suya' | 'boost' | 'wings', number>; aboard: number; fares: number; combo: number; brake: boolean; level: number; levelPct: number; rival: number | null; rivalOver: boolean; left: number }
+interface Hud { live: { rank: number; of: number; leader: number } | null; gap: number | null; ride: { kind: string; t: number } | null; score: number; coins: number; hearts: number; speed: number; dist: number; seg: string; next: string; toNext: number; segPct: number; missions: { text: string; pct: number; done: boolean }[]; powers: Record<'magnet' | 'hop' | 'suya' | 'boost' | 'wings', number>; aboard: number; fares: number; combo: number; brake: boolean; level: number; levelPct: number; rival: number | null; rivalOver: boolean; left: number }
 type Phase = 'ready' | 'choose' | 'search' | 'count' | 'run' | 'paused' | 'over'
 
 /** `rush`: The Rush as its own game (no life, no energy, the 2.0 character); without it, the old in-life run. */
@@ -29,8 +37,16 @@ export default function Dash({ rush, again }: { rush?: boolean; again?: () => vo
   const dashMode = rush ? 'foot' : modeState
   const rushSpec = charSpec(progressOf(meta).character)
   const [rushPts, setRushPts] = useState<number | null>(null)
+  // a live race: the Rush screen starts fresh with the match's seed (live) or waits in its lobby (invited players)
+  const [initialRace] = useState(() => (rush ? useRush.getState().race : null))
+  const live = initialRace?.stage === 'live' ? initialRace : null
+  const liveMe = initialRace?.me ?? ''
+  const [lobby, setLobby] = useState<MatchView | null>(initialRace?.stage === 'lobby' ? initialRace.view : null)
+  const [liveView, setLiveView] = useState<MatchView | null>(live?.view ?? null)
+  const [liveSettled, setLiveSettled] = useState(false)
+  const linkRef = useRef<RaceLink | null>(null)
   // how long a run lasts (The Rush only): the player picks it and can change it any time, in the lobby, in the pause menu and after a run
-  const secs = rush ? progressOf(meta).rush.secs ?? 90 : RACE_SECS
+  const secs = live ? live.view.secs : rush ? progressOf(meta).rush.secs ?? 90 : RACE_SECS
   const limitRef = useRef(secs)
   limitRef.current = secs
   const setSecs = (n: number) => { const st = useGame.getState(); const p = progressOf(st.meta); st.saveProgress({ ...p, rush: { ...p.rush, secs: n } }) }
@@ -45,8 +61,9 @@ export default function Dash({ rush, again }: { rush?: boolean; again?: () => vo
   const dashLine = [plain(meta.settings.lang, how.title), ...how.steps.map((x) => plain(meta.settings.lang, x.say)), plain(meta.settings.lang, how.goal)].join('. ')
   const simRef = useRef<DashState | null>(null)
   const rendRef = useRef<DashRenderer | null>(null)
-  const phaseRef = useRef<Phase>(rush ? 'choose' : 'ready')
-  const [phase, setPhaseState] = useState<Phase>(rush ? 'choose' : 'ready')
+  const firstPhase: Phase = !rush ? 'ready' : live ? 'count' : initialRace ? 'search' : 'choose'
+  const phaseRef = useRef<Phase>(firstPhase)
+  const [phase, setPhaseState] = useState<Phase>(firstPhase)
   useEffect(() => { if (phase === 'ready' && meta.settings.guide !== false && meta.settings.sound && meta.settings.voice !== false) void speakLine({ id: howVoice, lang: vlang(meta.settings.lang), text: dashLine, key: 'howto:dash', gapMs: 20000 }) }, [phase]) // eslint-disable-line react-hooks/exhaustive-deps
   const [hud, setHud] = useState<Hud | null>(null)
   const [pops, setPops] = useState<{ id: number; text: string }[]>([])
@@ -70,7 +87,7 @@ export default function Dash({ rush, again }: { rush?: boolean; again?: () => vo
 
   const config = useMemo(() => {
     const hearts = rush ? 3 : 3 + (traitSum(life!.character, 'dashHearts') > 0 ? 1 : 0)
-    return { seed: (Math.random() * 2 ** 31) >>> 0, mode: dashMode, hearts, assist: meta.settings.assist, routeId: city === 'abuja' ? 'abuja' : 'oshodi' }
+    return { seed: live ? live.view.seed : (Math.random() * 2 ** 31) >>> 0, mode: dashMode, hearts, assist: meta.settings.assist, routeId: city === 'abuja' ? 'abuja' : 'oshodi' }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -95,6 +112,9 @@ export default function Dash({ rush, again }: { rush?: boolean; again?: () => vo
       setRace(o); (res as DashResult & { raceWon?: boolean }).raceWon = o.youWon
     }
     setTimeUp(timeUp); setResult(res); setPhase('over')
+    // a live race: hand in the final score, then follow the others until they are done too
+    const link = linkRef.current
+    if (link && !link.finished) void link.finish(st.score, st.dist, setLiveView).then((v) => { setLiveView(v); setLiveSettled(true) })
   }, [])
 
   const handleEvents = useCallback((evs: DashEvent[]) => {
@@ -130,6 +150,8 @@ export default function Dash({ rush, again }: { rush?: boolean; again?: () => vo
     let r: DashRenderer
     try { r = new DashRenderer(el, rush ? { mode: 'foot', toon: rushSpec, look: undefined as never, gender: 'male', age: 22, city } : { mode: dashMode, look: life!.character.appearance, gender: life!.character.gender, age: life!.character.age, wear: wearOf(life!.character.items), city }) } catch { setWebglFail(true); return }
     rendRef.current = r
+    const ghosts = new Ghosts()
+    if (live) { r.setRivals(Math.max(0, racers(live.view).length - 1)); linkRef.current = new RaceLink(live.view, live.me); ghosts.update(racers(live.view), live.me, performance.now()) }
     if (location.search.includes('debug=1')) (window as unknown as { __dash: unknown }).__dash = { st, rival: () => rivalRef.current, phase: () => phaseRef.current }
     audio.playMusic('dash')
     const ro = new ResizeObserver(() => r.resize()); ro.observe(el)
@@ -149,7 +171,14 @@ export default function Dash({ rush, again }: { rush?: boolean; again?: () => vo
           } else if (rush && !st.over && st.t >= limitRef.current) { audio.sfx('level'); finishRun(true) }
         }
       }
-      r.render(st, dt, time, rivalRef.current?.st)
+      const link = linkRef.current
+      if (link) {
+        const nowMs = performance.now()
+        if (phaseRef.current === 'run' && !st.over) void link.tick(snapshotOf(st), nowMs).then((fresh) => { if (fresh) ghosts.update(racers(link.latest), link.me, performance.now()) })
+        else if (st.over && !link.finished) void link.tick(snapshotOf(st), nowMs)
+        ghosts.step(dt, nowMs)
+      }
+      r.render(st, dt, time, link ? ghosts.states() : rivalRef.current?.st)
       hudT += dt
       if (hudT > 0.1) {
         hudT = 0
@@ -159,14 +188,15 @@ export default function Dash({ rush, again }: { rush?: boolean; again?: () => vo
         setHud({
           score: st.score, coins: st.coins, hearts: st.hearts, speed: Math.round(st.speed * 3.6), dist: Math.round(st.dist), seg: sg.seg.name, next: route[(sg.index + 1) % route.length].name, toNext: Math.round(sg.toNext), segPct: sg.into / sg.seg.length,
           missions: st.missions.map((m) => ({ text: m.text, pct: Math.min(1, m.progress / m.target), done: m.done })), powers: { ...st.powers }, aboard: st.aboard, fares: st.fares, combo: Math.round(st.combo * 10) / 10, brake: st.braking,
-          level: st.level, levelPct: lvEnd ? (st.dist - lvStart) / (lvEnd - lvStart) : 1, rival: rivalRef.current ? rivalRef.current.st.score : null, rivalOver: !!rivalRef.current?.st.over, left: Math.max(0, limitRef.current - st.t), gap: rivalRef.current ? rivalRef.current.st.dist - st.dist : null, ride: st.ride ? { kind: st.ride.kind, t: st.ride.t } : null,
+          live: linkRef.current ? standing(st.score, ghosts.list()) : null, level: st.level, levelPct: lvEnd ? (st.dist - lvStart) / (lvEnd - lvStart) : 1, rival: rivalRef.current ? rivalRef.current.st.score : null, rivalOver: !!rivalRef.current?.st.over, left: Math.max(0, limitRef.current - st.t), gap: rivalRef.current ? rivalRef.current.st.dist - st.dist : null, ride: st.ride ? { kind: st.ride.kind, t: st.ride.t } : null,
         })
       }
     }
     raf = requestAnimationFrame(loop)
-    const onVis = () => { if (document.visibilityState === 'hidden' && phaseRef.current === 'run') setPhase('paused') }
+    const onVis = () => { if (document.visibilityState === 'hidden' && phaseRef.current === 'run' && !linkRef.current) setPhase('paused') } // a live race cannot be paused
     document.addEventListener('visibilitychange', onVis)
     return () => { cancelAnimationFrame(raf); ro.disconnect(); document.removeEventListener('visibilitychange', onVis); r.dispose(); rendRef.current = null; audio.playMusic('play') }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [life, rush, config, dashMode, handleEvents, finishRun, pop])
 
   // missions are not drawn all the time: one line appears for 3 s when the first open mission moves (or one is finished)
@@ -192,7 +222,7 @@ export default function Dash({ rush, again }: { rush?: boolean; again?: () => vo
       else if (['arrowright', 'd'].includes(k)) act('right')
       else if (['arrowup', 'w', ' '].includes(k)) { if (phaseRef.current === 'ready') setPhase('choose'); else act('jump') }
       else if (['arrowdown', 's'].includes(k)) { if (dashMode === 'danfo') st.braking = true; else act('slide') }
-      else if (k === 'p' || k === 'escape') setPhase(phaseRef.current === 'run' ? 'paused' : phaseRef.current === 'paused' ? 'run' : phaseRef.current)
+      else if ((k === 'p' || k === 'escape') && !live) setPhase(phaseRef.current === 'run' ? 'paused' : phaseRef.current === 'paused' ? 'run' : phaseRef.current)
       if (k.startsWith('arrow') || k === ' ') e.preventDefault()
     }
     const up = (e: KeyboardEvent) => { if (['arrowdown', 's'].includes(e.key.toLowerCase()) && simRef.current) simRef.current.braking = false }
@@ -214,15 +244,36 @@ export default function Dash({ rush, again }: { rush?: boolean; again?: () => vo
 
   const start = () => { audio.unlock(); setPhase('run'); pop('GO! 🏁') }
   const startSolo = () => { stopSpeaking(); rivalRef.current = null; setRace(null); start() }
-  /** Look for a runner nearby; with nobody around, race the computer runner. Both get the same road. */
+  /** The Rush: challenge everyone online right now and wait for takers. The old in-life run keeps its short search and then races the computer runner. */
   const startRace = () => {
-    stopSpeaking(); audio.unlock(); setPhase('search'); setSearchMsg('Looking for a runner near you…')
-    const m = findRunner(); searchRef.current = m
-    void m.promise.then((opp) => {
-      if (phaseRef.current !== 'search') return
-      if (!opp && rush) { setOffer(true); setSearchMsg('Nobody is online right now.'); return } // no pretending: Alfred ai is only ever offered as Alfred ai
-      proceed(opp)
+    stopSpeaking(); audio.unlock(); setPhase('search'); setOffer(false); setLobby(null)
+    if (!rush) {
+      setSearchMsg('Looking for a runner near you…')
+      timers.current.push(window.setTimeout(() => { if (phaseRef.current === 'search') proceed(null) }, 3200))
+      searchRef.current = { cancel: () => {} }
+      return
+    }
+    const blocked = rushBlocked()
+    if (blocked) { setSearchMsg(rushBlockedText(blocked)); setOffer(true); return } // say why nobody can answer, and still offer Alfred ai
+    setSearchMsg('Sending your challenge to everyone who is online…')
+    let stop = () => {}, cancelled = false
+    searchRef.current = { cancel: () => { cancelled = true; stop() } }
+    void sendChallenge(secs).then((m) => {
+      if (cancelled || phaseRef.current !== 'search') return
+      if (!m) { setSearchMsg('Could not reach the race server.'); setOffer(true); return }
+      onLobby(m)
+      if (m.status === 'inviting') stop = watchLobby(m.id, onLobby)
     })
+  }
+  /** Every lobby update, for the host and for invited players: start when the race is on, offer Alfred ai only when nobody accepted. */
+  const onLobby = (m: MatchView) => {
+    if (phaseRef.current !== 'search') return
+    setLobby(m)
+    if (m.status === 'running') { useRush.getState().setRace({ stage: 'live', view: m, me: savedMe() }); return } // the Rush screen restarts with the shared road
+    if (m.status === 'no_takers' || m.status === 'done') {
+      if (initialRace?.stage === 'lobby') { setSearchMsg('This race was called off.'); return }
+      setSearchMsg(m.invited === 0 ? 'Nobody else is online right now.' : 'Nobody accepted in time.'); setOffer(true)
+    }
   }
   const raceAlfred = () => { setOffer(false); proceed(null) }
   const proceed = (opp: { name: string } | null) => {
@@ -234,19 +285,43 @@ export default function Dash({ rush, again }: { rush?: boolean; again?: () => vo
       for (const [t, ms] of seq) timers.current.push(window.setTimeout(() => { if (phaseRef.current !== 'count') return; setCount(t); audio.sfx(t === 'GO!' ? 'level' : 'click'); if (t === 'GO!') { setPhase('run'); window.setTimeout(() => setCount(null), 700) } }, ms))
     }
   }
-  const cancelSearch = () => { setOffer(false); searchRef.current?.cancel(); timers.current.forEach(clearTimeout); timers.current = []; rivalRef.current = null; setCount(null); setPhase('choose') }
+  const cancelSearch = () => { if (lobby && lobby.status === 'inviting') void rushLeave(lobby.id); setLobby(null); setOffer(false); searchRef.current?.cancel(); timers.current.forEach(clearTimeout); timers.current = []; rivalRef.current = null; setCount(null); setPhase('choose') }
+  // invited players wait in the lobby until the host's window closes; a live race counts down to the shared start time
+  useEffect(() => {
+    if (!initialRace || initialRace.stage !== 'lobby') return
+    setSearchMsg(`${initialRace.view.host} challenged you. Waiting for the others…`)
+    const stop = watchLobby(initialRace.view.id, onLobby)
+    searchRef.current = { cancel: stop }
+    return stop
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  useEffect(() => {
+    if (!live) return
+    const wait = msUntilStart(live.view)
+    setSearchMsg('Race on!')
+    if (wait < -800) { setPhase('run'); return } // late to the start: just go
+    for (const [t, off] of [['3', 3000], ['2', 2000], ['1', 1000], ['GO!', 0]] as [string, number][]) {
+      const delay = wait - off; if (delay < -200) continue
+      timers.current.push(window.setTimeout(() => { if (phaseRef.current !== 'count') return; setCount(t); audio.sfx(t === 'GO!' ? 'level' : 'click'); if (t === 'GO!') { setPhase('run'); window.setTimeout(() => setCount(null), 700) } }, Math.max(0, delay)))
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  // tell the popup not to interrupt a lobby or a race
+  useEffect(() => { useRush.getState().setBusy(['search', 'count', 'run', 'paused'].includes(phase)); return () => useRush.getState().setBusy(false) }, [phase])
   const goAgain = () => { if (rush) { again?.(); return } if (!result) return; finishDash(toMini(result)); useGame.getState().startDash() }
-  const back = () => { if (rush) { useGame.getState().go('home'); return } if (result) finishDash(toMini(result)) }
+  const back = () => { if (rush) { useRush.getState().setRace(null); useGame.getState().go('home'); return } if (result) finishDash(toMini(result)) }
   // The Rush: record the run once when it ends (1 point for a new personal best over 100 m, 1 for the first win)
   const recorded = useRef(false)
   useEffect(() => {
     if (!rush || phase !== 'over' || !result || recorded.current) return
+    if (live && !liveSettled && liveView?.status !== 'done') return // wait for the final ranking so a win is counted
     recorded.current = true
     const st = useGame.getState(), cur = progressOf(st.meta)
-    const rec = recordRush(cur, { distance: result.distance, won: race?.youWon })
+    const rec = recordRush(cur, { distance: result.distance, won: live ? !!liveView && liveView.winner === liveMe : race?.youWon })
     st.saveProgress(rec.progress); setRushPts(rec.points)
-    track('rush_finished', { mode: race ? 'race' : 'solo', distance: Math.round(result.distance), won: !!race?.youWon })
-  }, [rush, phase, result, race])
+    track('rush_finished', { mode: live ? 'live' : race ? 'race' : 'solo', distance: Math.round(result.distance), won: live ? liveView?.winner === liveMe : !!race?.youWon })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rush, phase, result, race, liveSettled, liveView])
   const quit = () => { if (simRef.current) finishRun(false) }
   const route = ROUTES[config.routeId]
   void route
@@ -273,7 +348,7 @@ export default function Dash({ rush, again }: { rush?: boolean; again?: () => vo
                 <div className="chip mt-1 ml-1" style={{ background: '#f5b91c', color: '#1c1b22' }}>LV {hud.level} · {LEVELS[hud.level - 1].name}</div>
               </div>
               <div className="text-2xl drop-shadow" aria-label={`${hud.hearts} hearts left`}>{Array.from({ length: Math.max(config.hearts, hud.hearts) }, (_, i) => <span key={i} style={{ opacity: i < hud.hearts ? 1 : 0.25 }}>{dashMode === 'foot' ? '❤️' : '🔧'}</span>)}</div>
-              <button className="btn btn-ghost !min-h-10 !px-3 pointer-events-auto" onClick={() => setPhase(phase === 'paused' ? 'run' : 'paused')} aria-label="Pause">⏸</button>
+              {!live && <button className="btn btn-ghost !min-h-10 !px-3 pointer-events-auto" onClick={() => setPhase(phase === 'paused' ? 'run' : 'paused')} aria-label="Pause">⏸</button>}
             </div>
             {(rush || hud.rival !== null) && (
               // one slim row at the very top: time left with a thin bar, and where Alfred is compared with you. Nothing in the lanes.
@@ -281,7 +356,9 @@ export default function Dash({ rush, again }: { rush?: boolean; again?: () => vo
                 <span className="tabular-nums" style={{ color: hud.left < 10 ? '#c4562a' : '#1c1b22' }}>⏱ {fmtT(hud.left)}</span>
                 <span className="flex-1 h-[3px] rounded bg-black/20"><i className="block h-full rounded" style={{ width: `${Math.min(100, (1 - hud.left / limitRef.current) * 100)}%`, background: hud.left < 10 ? '#c4562a' : '#e07a1f' }} /></span>
                 {hud.gap !== null && <span style={{ color: hud.gap > 0 ? '#c4562a' : '#2f5a3a' }}>{hud.rivalOver ? '🤖 out' : hud.gap > 1 ? `🤖 ${Math.round(hud.gap)} m ahead` : hud.gap < -1 ? `🤖 ${Math.round(-hud.gap)} m behind` : '🤖 beside you'}</span>}
-                {hud.rival !== null && <span className="tabular-nums opacity-90">{hud.score.toLocaleString()}–{hud.rival.toLocaleString()}</span>}
+                {hud.rival !== null && !hud.live && <span className="tabular-nums opacity-90">{hud.score.toLocaleString()}–{hud.rival.toLocaleString()}</span>}
+                {hud.live && <span style={{ color: hud.live.rank === 1 ? '#2f5a3a' : '#c4562a' }}>🏁 {ordinal(hud.live.rank)} of {hud.live.of}</span>}
+                {hud.live && hud.live.of > 1 && <span className="tabular-nums opacity-90">lead {hud.live.leader.toLocaleString()}</span>}
               </div>
             )}
             {!rush && hud.dist > 80 && !banner && !pops.length && (
@@ -335,7 +412,7 @@ export default function Dash({ rush, again }: { rush?: boolean; again?: () => vo
           <div className="card p-5 w-full max-w-sm pop" style={{ background: '#f3e7cf' }}>
             <h2 className="font-display text-3xl text-danfo text-center">{rush ? 'The Rush' : 'How do you want to run?'}</h2>
             <button className="tile w-full text-left mt-4 !p-3" onClick={startSolo}><div className="font-display text-2xl">🏃 {rush ? 'Play alone' : 'Run alone'}</div><div className="text-xs opacity-80 mt-0.5">{rush ? 'Go as far as you can. Beat your best.' : 'Your normal run. Go as far as you can. This is the run that counts for your trophies.'}</div></button>
-            <button className="tile w-full text-left mt-2 !p-3" onClick={startRace}><div className="font-display text-2xl">🏁 {rush ? 'Find a player' : 'Play against someone'}</div><div className="text-xs opacity-80 mt-0.5">{rush ? `Same road, ${fmtT(secs)}. If nobody is online you can race Alfred ai, a computer runner.` : `Same road, ${RACE_SECS} seconds. Most points wins a 10 coin bonus.`}</div></button>
+            <button className="tile w-full text-left mt-2 !p-3" onClick={startRace}><div className="font-display text-2xl">🏁 {rush ? 'Find a player' : 'Play against someone'}</div><div className="text-xs opacity-80 mt-0.5">{rush ? `Challenges everyone online now. Same road, ${fmtT(secs)}, best score wins. If nobody accepts you can race Alfred ai.` : `Same road, ${RACE_SECS} seconds. Most points wins a 10 coin bonus.`}</div></button>
             {rush && <button className="tile w-full text-left mt-2 !p-3 opacity-60" disabled><div className="font-display text-2xl">🤝 Challenge a friend</div><div className="text-xs opacity-80 mt-0.5">Coming soon. It needs the online service.</div></button>}
             {rush && <div className="mt-5"><DurationPicker secs={secs} onPick={setSecs} /></div>}
             {rush && <p className="text-[11px] opacity-70 mt-4 text-center">Swipe to change lane · up jumps · down slides. Grab ⚡ boosts, 🪽 wings (dodge the sky!) and 🛹🚲🛶 rides. Alfred grabs them too.</p>}
@@ -347,8 +424,9 @@ export default function Dash({ rush, again }: { rush?: boolean; again?: () => vo
         <div className="absolute inset-0 grid place-items-center p-5 pointer-events-none" style={{ background: count ? 'transparent' : 'rgba(28,27,34,.6)' }}>
           {!count && (
             <div className="card p-5 w-full max-w-sm text-center pop pointer-events-auto" style={{ background: '#f3e7cf' }}>
-              <div className={`text-5xl inline-block ${rivalRef.current ? '' : 'animate-spin'}`}>{rivalRef.current ? '🤖' : '🔎'}</div>
+              <div className={`text-5xl inline-block ${rivalRef.current || live ? '' : 'animate-spin'}`}>{rivalRef.current ? '🤖' : live ? '🏁' : '🔎'}</div>
               <h2 className="font-display text-2xl mt-2">{searchMsg}</h2>
+              {lobby && lobby.status === 'inviting' && <LobbyList view={lobby} me={savedMe()} />}
               {offer && <Btn variant="green" className="w-full mt-3" onClick={raceAlfred}>Race Alfred ai (computer)</Btn>}
               {phase === 'search' && !rivalRef.current && <Btn variant="ghost" className="w-full mt-3" onClick={cancelSearch}>Cancel</Btn>}
             </div>
@@ -369,7 +447,8 @@ export default function Dash({ rush, again }: { rush?: boolean; again?: () => vo
       {phase === 'over' && result && (
         <div className="absolute inset-0 grid place-items-center p-4 overflow-y-auto" style={{ background: 'rgba(28,27,34,.6)' }}>
           <div className="card p-5 w-full max-w-sm text-center pop" style={{ background: '#f3e7cf' }}>
-            {race
+            {live ? <LiveResult view={liveView} me={liveMe} settled={liveSettled} />
+              : race
               ? <div className={`font-display text-4xl -rotate-2 ${race.youWon ? 'text-green-700' : race.draw ? 'text-danfo' : 'text-red-700'}`}>{race.youWon ? 'YOU WIN! 🏆' : race.draw ? 'DRAW! 🤝' : `${RIVAL_NAME} wins 🤖`}</div>
               : <div className={`font-display text-5xl -rotate-2 ${timeUp ? 'text-green-700' : 'text-red-700'}`}>{timeUp ? 'TIME UP!' : 'WAHALA!'}</div>}
             {race && <div className="text-xs font-bold opacity-80 mt-1">{race.timeUp ? 'Time up. ' : carried ? `${RIVAL_NAME} kept running after you crashed. ` : ''}You {race.you.toLocaleString()} · {RIVAL_NAME} {race.rival.toLocaleString()}{race.youWon ? ' · +10 coin bonus' : ''}</div>}
@@ -408,6 +487,44 @@ function DurationPicker({ secs, onPick }: { secs: number; onPick: (n: number) =>
           <button key={d} className="rounded-full px-2.5 py-1 text-xs font-extrabold" style={{ background: d === secs ? '#f5b91c' : '#fffaf0', color: '#1c1b22', border: '2px solid #1c1b22' }} onClick={() => { audio.sfx('tap'); onPick(d) }}>{fmtT(d)}</button>
         ))}
       </div>
+    </div>
+  )
+}
+
+/** The waiting room: who was asked, who said yes, and how long the others have to answer. */
+function LobbyList({ view, me }: { view: MatchView; me: string }) {
+  const [, tick] = useState(0)
+  useEffect(() => { const t = setInterval(() => tick((n) => n + 1), 250); return () => clearInterval(t) }, [])
+  const left = Math.max(0, view.invite_until - serverNow()), total = 20000
+  const label = (st: string) => st === 'accepted' || st === 'host' ? '✅ In' : st === 'declined' ? '✖ No' : '⏳ Thinking'
+  return (
+    <div className="mt-2 text-left">
+      <div className="text-xs font-bold opacity-80 text-center">{view.invited} player{view.invited === 1 ? '' : 's'} asked · {Math.ceil(left / 1000)}s to accept</div>
+      <div className="h-1.5 rounded bg-black/15 mt-1"><i className="block h-full rounded" style={{ width: `${Math.min(100, (left / total) * 100)}%`, background: '#e07a1f' }} /></div>
+      <ul className="mt-2 space-y-1">{view.players.map((p) => <li key={p.id} className="flex justify-between text-sm font-bold rounded-lg px-2 py-0.5" style={{ background: '#fffaf0', border: '2px solid #1c1b22' }}><span>{p.id === me ? 'You' : p.label}</span><span>{label(p.status)}</span></li>)}</ul>
+    </div>
+  )
+}
+
+/** Race result for a live race: your place, the winner and the standings (the winner earns leaderboard points). */
+function LiveResult({ view, me, settled }: { view: MatchView | null; me: string; settled: boolean }) {
+  if (!view) return null
+  const ranked = view.players.filter((p) => p.rank !== null).sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99))
+  const mine = view.players.find((p) => p.id === me)
+  const done = view.status === 'done'
+  const won = done && view.winner === me
+  return (
+    <div>
+      <div className={`font-display text-4xl -rotate-2 ${won ? 'text-green-700' : 'text-danfo'}`}>{!done ? 'Waiting for the others…' : won ? 'YOU WIN! 🏆' : view.winner ? `${view.players.find((p) => p.id === view.winner)?.label ?? 'Someone'} wins` : 'DRAW! 🤝'}</div>
+      {won && <div className="text-sm font-extrabold mt-1">⭐ +3 leaderboard points</div>}
+      {!done && settled && <div className="text-xs font-bold opacity-70 mt-1">Some runners are still going. Your score is in.</div>}
+      <ul className="mt-2 space-y-1 text-left">
+        {(ranked.length ? ranked : mine ? [mine] : []).map((p) => (
+          <li key={p.id} className="flex items-center justify-between text-sm font-bold rounded-lg px-2 py-0.5" style={{ background: p.id === me ? '#ffe9a8' : '#fffaf0', border: '2px solid #1c1b22' }}>
+            <span>{p.rank ? `${ordinal(p.rank)} · ` : ''}{p.id === me ? 'You' : p.label}</span><span className="tabular-nums">{p.score.toLocaleString()}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }

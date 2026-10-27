@@ -34,14 +34,14 @@ const randomCode = (n: number) => Array.from({ length: n }, () => CROCKFORD[rand
 const newRecovery = () => { const c = randomCode(16); return `${c.slice(0, 4)}-${c.slice(4, 8)}-${c.slice(8, 12)}-${c.slice(12)}` }
 const recoveryHash = (code: string) => hmac(`recovery:${code.replace(/-/g, '').toUpperCase()}`)
 
-interface Row { account_id: string; name: string; tag: number; friend_code: string; age_band: string; mp_enabled: boolean; chat_level: string; guardian_pin_hash: string | null; token_ver: number; created_at: Date | string }
+export interface Row { account_id: string; name: string; tag: number; friend_code: string; age_band: string; mp_enabled: boolean; chat_level: string; guardian_pin_hash: string | null; token_ver: number; created_at: Date | string }
 const toPublic = (r: Row): AccountPublic => ({
   id: r.account_id, name: r.name, tag: r.tag, label: `${r.name}#${r.tag}`, friend_code: r.friend_code, age_band: r.age_band as AccountPublic['age_band'],
   mp_enabled: r.mp_enabled, has_guardian_pin: !!r.guardian_pin_hash, chat_level: r.chat_level as AccountPublic['chat_level'], created_at: new Date(r.created_at).toISOString(),
 })
 
 /** Count recent attempts for a key and record this one. Returns false when over the limit. */
-async function throttle(db: Db, key: string, kind: string, max: number, windowMs: number): Promise<boolean> {
+export async function throttle(db: Db, key: string, kind: string, max: number, windowMs: number): Promise<boolean> {
   const since = new Date(Date.now() - windowMs).toISOString()
   const n = Number((await db.query<{ n: string }>('SELECT count(*)::int AS n FROM account_attempts WHERE key=$1 AND kind=$2 AND at > $3', [key, kind, since])).rows[0]?.n ?? 0)
   if (n >= max) return false
@@ -59,7 +59,7 @@ export function accountCors(req: Request): Record<string, string> {
 const STATUS: Record<AccountError, number> = { bad_request: 400, bad_name: 400, unauthorized: 401, guardian_required: 403, pin_required: 403, bad_pin: 403, rate_limited: 429, not_found: 404, server: 500 }
 const fail = (e: AccountError, cors: Record<string, string>) => json({ error: e } satisfies AccountResponse, STATUS[e], cors)
 
-async function load(db: Db, token: string | null): Promise<Row | null> {
+export async function load(db: Db, token: string | null): Promise<Row | null> {
   const t = readToken(token); if (!t) return null
   const r = (await db.query<Row>('SELECT * FROM accounts WHERE account_id=$1', [t.a])).rows[0]
   return r && r.token_ver === t.v ? r : null
@@ -171,6 +171,7 @@ export async function purgeInactiveAccounts(db: Db, now = new Date()): Promise<n
   const cutoff = new Date(now.getTime() - 548 * 86400e3).toISOString()
   const r = await db.query('DELETE FROM accounts WHERE last_seen < $1', [cutoff])
   await db.query("DELETE FROM account_attempts WHERE at < now() - interval '2 days'")
+  await db.query('DELETE FROM rush_matches WHERE created_at < $1', [new Date(now.getTime() - 7 * 86400e3).toISOString()]) // finished and abandoned races
   return r.rowCount
 }
 void randomBytes

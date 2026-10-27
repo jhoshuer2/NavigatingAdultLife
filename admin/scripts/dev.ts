@@ -6,6 +6,7 @@ import { memoryDb, setDb } from '../server/db'
 import { handleAdmin } from '../server/admin'
 import { handleCollect, handleForget } from '../server/collector'
 import { handleAccount } from '../server/account'
+import { handleRush } from '../server/rush'
 import { seedPlayers } from '../server/seed'
 
 process.env.ACCOUNT_SECRET ??= 'dev-account-secret-change-me'
@@ -22,6 +23,7 @@ const handler = async (req: Request): Promise<Response> => {
   if (p === '/api/collect') return handleCollect(req)
   if (p === '/api/forget') return handleForget(req)
   if (p === '/api/account') return handleAccount(req, db)
+  if (p === '/api/rush') return handleRush(req, db)
   if (p.startsWith('/api/admin')) return handleAdmin(req, db)
   if (p === '/dev/code' && process.env.DEV_TOTP === '1') {
     const s = (await db.query<{ totp_secret: string }>("SELECT totp_secret FROM admin_users WHERE email='owner@example.com'")).rows[0]

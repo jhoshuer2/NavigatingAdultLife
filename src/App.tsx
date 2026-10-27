@@ -13,6 +13,9 @@ const CharacterSheet = lazy(() => import('./dev/CharacterSheet'))
 const PoseSheet = lazy(() => import('./dev/PoseSheet'))
 import { audio } from '@platform/audio'
 import { setAnalyticsContext, startAnalytics } from '@platform/analytics'
+import { startPresence } from '@platform/presence'
+import { useRush } from '@platform/rushStore'
+import RushInvites from './ui/RushInvites'
 
 /** Shown whenever sound is switched on but the browser is still blocking it, so silence is never a mystery. One tap turns it on. */
 function SoundPill({ enabled }: { enabled: boolean }) {
@@ -30,6 +33,9 @@ export default function App() {
   const { screen, toasts, init, tick, meta, openSheet, levelNonce } = useGame()
   const last = useRef(Date.now())
   const [rushKey, setRushKey] = useState(0)
+  const raceN = useRush((r) => r.raceN)
+  useEffect(() => { if (screen !== 'rushLobby' && screen !== 'rushPlay') useRush.getState().clearRace() }, [screen]) // a finished race must not come back next time
+  useEffect(() => startPresence((l) => useRush.getState().setInvites(l)), []) // active players are asked to race
   useEffect(() => { init(); startAnalytics(); if (new URLSearchParams(location.search).get('debug') === '1') (window as unknown as Record<string, unknown>).__store = useGame }, [init])
   useEffect(() => { document.documentElement.classList.toggle('reduce-motion', meta.settings.reducedMotion) }, [meta.settings.reducedMotion])
 
@@ -53,13 +59,14 @@ export default function App() {
     <div className="shell">
       <Toasts items={toasts} />
       <SoundPill enabled={meta.settings.sound} />
+      <RushInvites />
       {screen === 'home' && <Home />}
       {screen === 'chapters' && <Chapters />}
       {screen === 'levelIntro' && <LevelIntro />}
       {screen === 'levelPlay' && <Suspense fallback={<div className="p-8 text-center font-display text-3xl">Loading…</div>}><LevelPlay key={levelNonce} /></Suspense>}
       {screen === 'levelResult' && <LevelResult />}
       {screen === 'leaderboard' && <Leaderboard />}
-      {(screen === 'rushLobby' || screen === 'rushPlay') && <Suspense fallback={<div className="p-8 text-center font-display text-3xl">Loading the road…</div>}><Dash key={rushKey} rush again={() => setRushKey((k) => k + 1)} /></Suspense>}
+      {(screen === 'rushLobby' || screen === 'rushPlay') && <Suspense fallback={<div className="p-8 text-center font-display text-3xl">Loading the road…</div>}><Dash key={`${rushKey}-${raceN}`} rush again={() => { useRush.getState().setRace(null); setRushKey((k) => k + 1) }} /></Suspense>}
       {screen === 'create' && <Create />}
       {screen === 'play' && <Play />}
       {screen === 'ending' && <Ending />}

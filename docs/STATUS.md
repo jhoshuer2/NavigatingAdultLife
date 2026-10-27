@@ -377,3 +377,10 @@ Nine levels in `src/levels/chapter10.ts`, each opening with a ride in the teal f
 8. Sunday Service: talk, hold, sequence, goto
 9. The Last Dinner: serve, talk, hold (dance), goto (badge "Family Weekend")
 New poses: hug, dance.
+
+## Live Rush races (challenge, multi-player, global leaderboard)
+"Find a player" in The Rush now works for real players (it used to be a stub that always ended with Alfred). The host's challenge goes to every online player active in the last 30 s; a popup (any screen) gives them 20 s to accept; everyone who accepts races the same seed with a synced countdown and ghosts of each other; the winner gets +3 on the new Global leaderboard tab. If nobody accepts, Alfred ai is offered (only then).
+- Server: `POST /api/rush` (`admin/server/rush.ts`, migration 5, `shared/rush.ts`), polling transport on the existing admin app; 9 tests in `admin/tests/rush.test.ts`.
+- Client: `src/platform/rush.ts`, `presence.ts`, `match.ts`, `rushStore.ts`, `src/ui/RushInvites.tsx`, `go-slow-dash/ghost.ts` (ghosts, standings), renderer draws several rivals; `tests/rush-net.test.ts`; end-to-end two-browser script `tests/e2e/rush-race.mjs` (accept and win, nobody accepts).
+- Needs deploying: admin project with `ACCOUNT_SECRET`, `DATABASE_URL`, `GAME_ORIGINS`; game built with `VITE_COLLECTOR_URL`; players need an online profile with online play on. Without these Rush still plays solo and against Alfred, and the lobby says why a live race is unavailable.
+- Known limits: scores are client-reported (plausibility caps only); a draw scores no points; "Challenge a friend" still needs a friends list.

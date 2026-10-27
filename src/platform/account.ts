@@ -7,6 +7,9 @@ const URL_ = env?.VITE_ACCOUNT_URL || (env?.VITE_COLLECTOR_URL ? env.VITE_COLLEC
 const KEY = 'nal.account.v1'
 
 export const accountAvailable = () => !!URL_
+/** The sign-in token and the account API address, for the other online services (races) that use the same account. */
+export const accountToken = () => read()?.token ?? null
+export const accountUrl = () => URL_
 
 interface Saved { token: string; account: AccountPublic }
 const read = (): Saved | null => { try { const r = localStorage.getItem(KEY); return r ? (JSON.parse(r) as Saved) : null } catch { return null } }

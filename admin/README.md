@@ -68,6 +68,8 @@ Tests: `npm test` (collector, auth, roles, dashboards run on in-process Postgres
 
 `POST /api/account` (one endpoint, `op` field) implements the accounts part of `docs/PRD-multiplayer.md`: anonymous accounts with a display name and tag (`Tobi#4821`), a friend code, an age band (`under13`, `13to17`, `18plus`), an optional 4-digit guardian PIN and a recovery code for restoring on another device. No email or phone is collected. The game talks to it from Settings > Online profile.
 
+`POST /api/rush` (same account token and CORS) runs live Rush races: presence pings, challenges to active players, accept/decline, race snapshots, results and the global board (`shared/rush.ts`, `server/rush.ts`, migration 5). The game needs `VITE_COLLECTOR_URL` (or `VITE_ACCOUNT_URL`) at build time and `GAME_ORIGINS` set on this project, like the accounts API.
+
 - Under-13 accounts cannot switch online play on until a guardian PIN is set; once a PIN exists, switching it on needs the PIN (switching off never does). Free chat stays off for everyone (`chat_level: none`) until the chat phase.
 - Tokens are signed (HMAC) with `ACCOUNT_SECRET`, valid 60 days, and revoked by recovery or "sign out everywhere".
 - Throttling: 8 creations per hour and 10 recovery tries per hour per address, 8 PIN tries per hour per account.

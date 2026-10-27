@@ -8875,6 +8875,17 @@ var EVENT_PROPS = {
   tutorial_step: ["step"],
   tutorial_skipped: ["step"],
   tutorial_completed: [],
+  // chapters (2.0)
+  first_task_started: ["task", "ms_since_open"],
+  first_task_completed: ["task", "duration_s"],
+  level_started: ["level", "character", "resumed"],
+  level_completed: ["level", "stars", "duration_s", "mistakes", "hints"],
+  level_abandoned: ["level", "task", "duration_s"],
+  task_failed: ["task", "reason"],
+  hint_used: ["task"],
+  session_resume: ["level", "task"],
+  level_feedback: ["level", "rating", "issue"],
+  rush_finished: ["mode", "distance", "won"],
   // life
   life_started: ["life_index"],
   year_ended: ["age", "life_index"],
@@ -9251,6 +9262,29 @@ CREATE INDEX account_attempts_key ON account_attempts (key, kind, at);
     sql: `
 -- Web addresses that tried to call the collector but are not in GAME_ORIGINS (so the owner can see what to add)
 CREATE TABLE blocked_origins (day date NOT NULL, origin text NOT NULL, n int NOT NULL DEFAULT 0, PRIMARY KEY (day, origin));
+`
+  },
+  {
+    id: 5,
+    sql: `
+-- Live races in The Rush (docs/PRD-multiplayer.md): a challenge is sent to the players active right now; everyone who accepts races the same seed.
+CREATE TABLE rush_matches (
+  match_id uuid PRIMARY KEY, host_id uuid NOT NULL REFERENCES accounts(account_id) ON DELETE CASCADE,
+  seed int NOT NULL, secs int NOT NULL, status text NOT NULL DEFAULT 'inviting',
+  created_at timestamptz NOT NULL DEFAULT now(), invite_until timestamptz NOT NULL, start_at timestamptz, finished_at timestamptz
+);
+CREATE INDEX rush_matches_created ON rush_matches (created_at);
+CREATE TABLE rush_players (
+  match_id uuid NOT NULL REFERENCES rush_matches(match_id) ON DELETE CASCADE, account_id uuid NOT NULL REFERENCES accounts(account_id) ON DELETE CASCADE,
+  status text NOT NULL DEFAULT 'invited', snap jsonb, snap_at timestamptz, score int NOT NULL DEFAULT 0, dist int NOT NULL DEFAULT 0, rank int,
+  PRIMARY KEY (match_id, account_id)
+);
+CREATE INDEX rush_players_account ON rush_players (account_id, status);
+CREATE TABLE rush_board (
+  account_id uuid PRIMARY KEY REFERENCES accounts(account_id) ON DELETE CASCADE,
+  points int NOT NULL DEFAULT 0, wins int NOT NULL DEFAULT 0, plays int NOT NULL DEFAULT 0, best_dist int NOT NULL DEFAULT 0, updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX rush_board_points ON rush_board (points DESC, wins DESC);
 `
   }
 ];

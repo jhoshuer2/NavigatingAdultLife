@@ -54,6 +54,10 @@ Every co-op task already works with AI partners, so a lobby can **start immediat
 - Profanity and PII filter (phone numbers, emails, addresses, links) for any free text, English plus Pidgin, Yoruba, Igbo and Hausa word lists maintained by the owner.
 - Guardian controls: a setting to turn multiplayer off, with a parent PIN.
 
+### 2.5 Rush races (built)
+A live race for The Rush, ahead of the hangout and co-op phases. Tapping **Find a player** sends a challenge to every online player who is active in the game right now (online play on, pinged within 30 s, not already in a race). They get a popup on any screen and have 20 s to accept. Everyone who accepts races the same road (shared seed, synced 3-2-1); each phone simulates its own run and sends a small snapshot about 2.5 times a second, and the others are drawn as ghosts. The highest score wins and earns 3 points on the Global leaderboard. If nobody accepts (or nobody is around) the host is offered Alfred ai, and only then.
+Transport is plain polling over `POST /api/rush` (`ping`, `challenge`, `respond`, `lobby`, `state`, `finish`, `leave`, `board`) on the admin app and its Postgres (tables `rush_matches`, `rush_players`, `rush_board`), because Vercel Functions cannot hold websockets. The match state machine advances lazily on each call, so there is no worker. Scores are client-reported and only capped for plausibility; a runner whose snapshots stop for 10 s is dropped and scored on their last snapshot. A real-time transport (PartyKit etc.) can replace the polling later behind `src/platform/rush.ts` without touching the game.
+
 ## 3. Functional requirements
 
 **FR-M1 Accounts.** Multiplayer requires an account (anonymous device account is allowed, upgradeable to email or Google). The server issues a short-lived signed session token. This is also the prerequisite for the server token ledger and payments in the main PRD.

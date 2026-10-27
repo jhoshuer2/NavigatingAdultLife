@@ -9,6 +9,9 @@ import { progressOf, chapterState, type CharacterId } from '../../levels/progres
 import { LEVELS } from '../../levels/levels'
 import { CHAPTERS } from '../../levels/chapters'
 import { track } from '@platform/analytics'
+import { rushBlocked, rushBlockedText, rushBoard } from '@platform/rush'
+import { ordinal } from '../../minigames/go-slow-dash/ghost'
+import type { RushResponse } from '@shared/rush'
 
 import { INK, CREAM, ORANGE, FOREST, YELLOW } from '../theme'
 export { INK, CREAM, ORANGE, FOREST, YELLOW }
@@ -160,6 +163,7 @@ export function LevelResult() {
 
 export function Leaderboard() {
   const { meta, go } = useGame()
+  const [tab, setTab] = useState<'local' | 'global'>('local')
   const p = progressOf(meta)
   const spec = charSpec(p.character)
   const stars = Object.values(p.stars).reduce((a, b) => a + b, 0)
@@ -169,16 +173,16 @@ export function Leaderboard() {
       <div className="flex-1 overflow-y-auto px-5 pb-6 pt-3 max-w-xl w-full mx-auto grid content-start gap-4">
         <h1 className="font-display text-5xl text-center">Leaderboard</h1>
         <div className="grid grid-cols-2 gap-2">
-          <div className="rounded-2xl py-2 text-center font-display text-xl" style={{ background: YELLOW, border: `3px solid ${INK}` }}>Local</div>
-          <div className="rounded-2xl py-2 text-center font-display text-xl opacity-50" style={{ background: '#fff8', border: `3px solid ${INK}` }}>Global · soon</div>
+          {(['local', 'global'] as const).map((t) => <button key={t} onClick={() => { audio.sfx('tap'); setTab(t) }} aria-pressed={tab === t} className="rounded-2xl py-2 text-center font-display text-xl" style={{ background: tab === t ? YELLOW : '#fff8', border: `3px solid ${INK}` }}>{t === 'local' ? 'Local' : 'Global'}</button>)}
         </div>
-        <div className="flex items-center gap-3 rounded-2xl p-3" style={{ background: '#fff', border: `3px solid ${INK}` }}>
+        {tab === 'global' && <GlobalBoard />}
+        {tab === 'local' && <div className="flex items-center gap-3 rounded-2xl p-3" style={{ background: '#fff', border: `3px solid ${INK}` }}>
           <span className="font-display text-3xl w-8 text-center">1</span>
           <Portrait spec={spec} expression="proud" size={64} />
           <div className="flex-1"><div className="font-display text-2xl leading-none">{spec.name} (you)</div><div className="text-sm font-bold opacity-70">{stars} stars · Rush best {p.rush.best} m</div></div>
           <div className="text-right"><div className="font-display text-3xl leading-none">{p.points}</div><div className="text-xs font-bold">points</div></div>
-        </div>
-        <p className="text-sm font-semibold opacity-80 text-center">The local board shows the players on this device. Global ranking needs the online service and is not built yet; points on this device will count when it is.</p>
+        </div>}
+        {tab === 'local' && <p className="text-sm font-semibold opacity-80 text-center">The local board shows the players on this device. Race other players in The Rush to climb the Global board: the winner of each race earns 3 points.</p>}
       </div>
     </Shell>
   )
@@ -262,5 +266,28 @@ export function Chapters() {
       <div className="flex justify-center gap-1.5 pb-2" aria-hidden="true">{CHAPTERS.map((c, i) => <span key={c.id} className="w-2.5 h-2.5 rounded-full" style={{ background: i === at ? INK : '#0003' }} />)}</div>
       {hint && <div className="fixed inset-x-0 bottom-8 flex justify-center pointer-events-none"><div className="fade-in rounded-full px-4 py-2 font-extrabold text-sm" style={{ background: INK, color: '#fff' }}>{hint}</div></div>}
     </Shell>
+  )
+}
+
+/** Global ranking from live Rush races. Needs the online service, an online profile and online play switched on. */
+function GlobalBoard() {
+  const [data, setData] = useState<RushResponse | 'loading' | 'error'>('loading')
+  const blocked = rushBlocked()
+  useEffect(() => { if (blocked) return; let live = true; void rushBoard().then((r) => { if (live) setData(r.board ? r : 'error') }); return () => { live = false } }, [blocked])
+  if (blocked) return <p className="text-sm font-semibold opacity-80 text-center">{rushBlockedText(blocked)}</p>
+  if (data === 'loading') return <p className="text-center font-bold opacity-70">Loading the ranking…</p>
+  if (data === 'error' || !data.board) return <p className="text-center font-bold opacity-80">Could not load the ranking. Try again later.</p>
+  if (!data.board.length) return <p className="text-sm font-semibold opacity-80 text-center">No races yet. Tap Find a player in The Rush, and win to get on the board.</p>
+  return (
+    <div className="grid gap-2">
+      {data.board.map((r, i) => (
+        <div key={r.label} className="flex items-center gap-3 rounded-2xl p-3" style={{ background: r.me ? '#ffe9a8' : '#fff', border: `3px solid ${INK}` }}>
+          <span className="font-display text-3xl w-8 text-center">{i + 1}</span>
+          <div className="flex-1 min-w-0"><div className="font-display text-xl leading-none truncate">{r.label}{r.me ? ' (you)' : ''}</div><div className="text-xs font-bold opacity-70">{r.wins} win{r.wins === 1 ? '' : 's'} · {r.plays} race{r.plays === 1 ? '' : 's'} · best {r.best_dist} m</div></div>
+          <div className="text-right"><div className="font-display text-3xl leading-none">{r.points}</div><div className="text-xs font-bold">points</div></div>
+        </div>
+      ))}
+      {data.me && !data.board.some((r) => r.me) && <div className="rounded-2xl p-3 text-center font-bold" style={{ background: '#ffe9a8', border: `3px solid ${INK}` }}>You are {ordinal(data.me.rank)} with {data.me.points} points</div>}
+    </div>
   )
 }
