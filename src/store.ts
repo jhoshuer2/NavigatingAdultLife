@@ -3,6 +3,7 @@ import type { GameState, NewLifeConfig, Lifestyle, QuizQuestion } from '@engine/
 import { createNewLife, doActivity, setClock, setFlag, payCash, submitQuizAnswer, finishActions, chooseOption, continueAfterEvent, advanceYear, setLifestyle, applyDashResult, relocate, finishDreamLife, type ActivityArgs, type MiniGameResult } from '@engine/api'
 import { ACHIEVEMENT_BY_ID } from '@content/achievements'
 import { defaultMeta, mergeEnding, UNLOCKABLES, type MetaProfile, type Settings } from '@platform/meta'
+import { badgeState, earnedIds } from '@content/badges'
 import { progressOf, withProgress, type ChapterProgress, type CharacterId } from './levels/progress'
 import type { LevelResult } from './levels/TaskRunner'
 import { loadLife, loadMeta, saveLife, saveMeta, importSave, exportSave } from '@platform/storage'
@@ -197,7 +198,14 @@ export const useGame = create<Store>((set, get) => {
       if (p.level !== id) setMeta(withProgress(get().meta, { ...p, level: id, task: 0 }))
       set({ activeLevel: id, screen: 'levelIntro', sheet: null }); setAnalyticsContext({ screen: 'levelIntro' })
     },
-    saveProgress: (p) => setMeta(withProgress(get().meta, p)),
+    saveProgress: (p) => {
+      const before = new Set(earnedIds(progressOf(get().meta)))
+      setMeta(withProgress(get().meta, p))
+      // an old save can earn several badges at once (they are worked out from past progress): name two, count the rest
+      const fresh = badgeState(p).filter((b) => b.earned && !before.has(b.id))
+      for (const b of fresh.slice(0, 2)) get().toast(`${b.icon} New badge: ${b.title}`, 'ach')
+      if (fresh.length > 2) get().toast(`🏅 ${fresh.length - 2} more new badges in your Profile`, 'ach')
+    },
     chooseCharacter: (c) => setMeta(withProgress(get().meta, { ...progressOf(get().meta), character: c })),
     openLevel: (startTask) => { set((st) => ({ levelNonce: st.levelNonce + 1 })); set({ levelStart: startTask, screen: 'levelPlay', sheet: null }); setAnalyticsContext({ screen: 'levelPlay' }) },
     showLevelResult: (r) => { set({ lastLevel: r, screen: 'levelResult' }); setAnalyticsContext({ screen: 'levelResult' }) },

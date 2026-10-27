@@ -10,7 +10,7 @@ import { speakLine, stopSpeaking } from '@platform/voice'
 import { createDash, resultOf, segmentAt, stepDash, ROUTES, LEVELS, type DashEvent, type DashResult, type DashState } from '../../minigames/go-slow-dash/sim'
 import { createRival, stepRival, raceOutcome, raceNote, RACE_SECS, RIVAL_NAME, type RaceOutcome, type Rival } from '../../minigames/go-slow-dash/race'
 import { sendChallenge, watchLobby, msUntilStart, RaceLink } from '@platform/match'
-import { rushBlocked, rushBlockedText, rushLeave, serverNow } from '@platform/rush'
+import { rushBlocked, rushBlockedText, rushBoard, rushLeave, serverNow } from '@platform/rush'
 import { useRush } from '@platform/rushStore'
 import { Ghosts, snapshotOf, standing, ordinal } from '../../minigames/go-slow-dash/ghost'
 import { savedAccount } from '@platform/account'
@@ -18,7 +18,7 @@ import type { MatchView } from '@shared/rush'
 import { DashRenderer } from '../../minigames/go-slow-dash/renderer'
 import { audio } from '@platform/audio'
 import { traitSum } from '@engine/core/helpers'
-import { progressOf, recordRush } from '../../levels/progress'
+import { progressOf, recordRush, withRank } from '../../levels/progress'
 import { charSpec } from './V2'
 import { track } from '@platform/analytics'
 
@@ -317,8 +317,9 @@ export default function Dash({ rush, again }: { rush?: boolean; again?: () => vo
     if (live && !liveSettled && liveView?.status !== 'done') return // wait for the final ranking so a win is counted
     recorded.current = true
     const st = useGame.getState(), cur = progressOf(st.meta)
-    const rec = recordRush(cur, { distance: result.distance, won: live ? !!liveView && liveView.winner === liveMe : race?.youWon })
+    const rec = recordRush(cur, { distance: result.distance, won: live ? !!liveView && liveView.winner === liveMe : race?.youWon, mode: live ? 'live' : race ? 'alfred' : 'solo' })
     st.saveProgress(rec.progress); setRushPts(rec.points)
+    if (live) void rushBoard().then((r) => { if (r.me) { const s2 = useGame.getState(); s2.saveProgress(withRank(progressOf(s2.meta), r.me.rank)) } }) // the Top 3 badge
     track('rush_finished', { mode: live ? 'live' : race ? 'race' : 'solo', distance: Math.round(result.distance), won: live ? liveView?.winner === liveMe : !!race?.youWon })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rush, phase, result, race, liveSettled, liveView])

@@ -5,7 +5,8 @@ import { Btn, CountUp, Ribbon, RoundBtn, Tile } from '../components'
 import { LANGS, plain, say } from '@content/lang'
 import { speak, voiceAvailable } from '@platform/voice'
 import { Icon, type IconName } from '../icons'
-import { ACHIEVEMENTS } from '@content/achievements'
+import { BADGE_GROUPS, badgeState } from '@content/badges'
+import { progressOf } from '../../levels/progress'
 import { UNLOCKABLES } from '@platform/meta'
 import { fmtTime, remainingSec } from '@platform/tokens'
 import { audio } from '@platform/audio'
@@ -30,34 +31,37 @@ function Page({ title, children, back = 'title' }: { title: string; children: Re
 
 export function Achievements() {
   const { meta } = useGame()
-  const got = Object.keys(meta.achievements)
+  const badges = badgeState(progressOf(meta))
+  const got = badges.filter((b) => b.earned).length
   const [open, setOpen] = useState<string | null>(null)
-  const sel = ACHIEVEMENTS.find((a) => a.id === open)
-  const selHas = sel ? got.includes(sel.id) : false
+  const sel = badges.find((b) => b.id === open)
   return (
-    <Page title="Trophies">
+    <Page title="Badges">
       <div className="hud-glass rounded-2xl p-3 flex items-center gap-3">
         <Icon name="trophy" size={34} color="#d99a0a" />
-        <div className="flex-1"><div className="bar"><i style={{ width: `${(got.length / ACHIEVEMENTS.length) * 100}%`, background: 'linear-gradient(90deg,#ffe27a,#ffc72c)' }} /></div></div>
-        <span className="font-display text-lg">{got.length}/{ACHIEVEMENTS.length}</span>
+        <div className="flex-1"><div className="bar"><i style={{ width: `${(got / badges.length) * 100}%`, background: 'linear-gradient(90deg,#ffe27a,#ffc72c)' }} /></div></div>
+        <span className="font-display text-lg">{got}/{badges.length}</span>
       </div>
-      <div className="grid grid-cols-3 gap-2.5 mt-3 stagger">
-        {ACHIEVEMENTS.map((a) => {
-          const has = got.includes(a.id)
-          const hidden = a.hidden && !has
-          return (
-            <button key={a.id} className={`tile ${has ? 'is-on' : ''}`} onClick={() => setOpen(a.id === open ? null : a.id)} style={{ opacity: has ? 1 : 0.7 }}>
-              <span className="text-[34px] leading-none" style={has ? undefined : { filter: 'grayscale(1) brightness(.4)' }}>{hidden ? '❓' : a.icon}</span>
-              <span className="font-display text-[12px] leading-tight text-center uppercase">{hidden ? '???' : a.title}</span>
-            </button>
-          )
-        })}
-      </div>
+      {BADGE_GROUPS.map((g) => (
+        <section key={g.id} className="mt-4">
+          <h2 className="font-display text-xl uppercase leading-none">{g.title}</h2>
+          <p className="text-xs opacity-70 mb-1.5">{g.blurb}</p>
+          <div className="grid grid-cols-3 gap-2.5 stagger">
+            {badges.filter((b) => b.group === g.id).map((b) => (
+              <button key={b.id} className={`tile ${b.earned ? 'is-on' : ''}`} onClick={() => setOpen(b.id === open ? null : b.id)} aria-pressed={b.id === open} style={{ opacity: b.earned ? 1 : 0.75 }}>
+                <span className="text-[34px] leading-none" style={b.earned ? undefined : { filter: 'grayscale(1) brightness(.45)' }}>{b.icon}</span>
+                <span className="font-display text-[12px] leading-tight text-center uppercase">{b.title}</span>
+                {!b.earned && b.need > 1 && <span className="text-[10px] font-bold opacity-70">{b.value.toLocaleString()} / {b.need.toLocaleString()}</span>}
+              </button>
+            ))}
+          </div>
+        </section>
+      ))}
       {sel && (
         <div className="fixed left-3 right-3 bottom-3 z-30 hud-glass rounded-2xl p-3 pop flex items-center gap-3" onClick={() => setOpen(null)}>
-          <span className="text-4xl">{sel.hidden && !selHas ? '❓' : sel.icon}</span>
-          <div className="flex-1 min-w-0"><div className="font-display uppercase leading-tight">{sel.hidden && !selHas ? 'Hidden' : sel.title}</div><div className="text-xs opacity-75">{sel.hidden && !selHas ? 'Keep playing to discover it.' : sel.desc}</div></div>
-          <span className="chip chip-gold"><Icon name="shell" size={13} color="#3b2300" />{sel.cowries}</span>
+          <span className="text-4xl">{sel.icon}</span>
+          <div className="flex-1 min-w-0"><div className="font-display uppercase leading-tight">{sel.title}</div><div className="text-xs opacity-75">{sel.desc}</div></div>
+          <span className="chip chip-gold">{sel.earned ? 'Earned' : `${sel.value.toLocaleString()} / ${sel.need.toLocaleString()}`}</span>
         </div>
       )}
     </Page>

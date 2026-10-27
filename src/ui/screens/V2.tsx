@@ -5,7 +5,7 @@ import { Portrait } from '../Portrait'
 import { Confetti } from '../components'
 import { audio } from '@platform/audio'
 import { ZURI, NAVI, BABA_TUNDE, MAMA_FOLAKE, PLAYABLE } from '../../world/castData'
-import { progressOf, chapterState, type CharacterId } from '../../levels/progress'
+import { progressOf, chapterState, withRank, type CharacterId } from '../../levels/progress'
 import { LEVELS } from '../../levels/levels'
 import { CHAPTERS } from '../../levels/chapters'
 import { track } from '@platform/analytics'
@@ -273,7 +273,12 @@ export function Chapters() {
 function GlobalBoard() {
   const [data, setData] = useState<RushResponse | 'loading' | 'error'>('loading')
   const blocked = rushBlocked()
-  useEffect(() => { if (blocked) return; let live = true; void rushBoard().then((r) => { if (live) setData(r.board ? r : 'error') }); return () => { live = false } }, [blocked])
+  useEffect(() => {
+    if (blocked) return
+    let live = true
+    void rushBoard().then((r) => { if (!live) return; setData(r.board ? r : 'error'); if (r.me) { const st = useGame.getState(); st.saveProgress(withRank(progressOf(st.meta), r.me.rank)) } })
+    return () => { live = false }
+  }, [blocked])
   if (blocked) return <p className="text-sm font-semibold opacity-80 text-center">{rushBlockedText(blocked)}</p>
   if (data === 'loading') return <p className="text-center font-bold opacity-70">Loading the ranking…</p>
   if (data === 'error' || !data.board) return <p className="text-center font-bold opacity-80">Could not load the ranking. Try again later.</p>

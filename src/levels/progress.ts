@@ -16,7 +16,9 @@ export interface ChapterProgress {
   /** choices that later levels read, e.g. { 'ch1.l1.item': 'umbrella' } */
   flags: Record<string, string>
   /** The Rush, played alone or against Alfred */
-  rush: { best: number; plays: number; wins: number; points: number; secs?: number }
+  rush: { best: number; plays: number; wins: number; points: number; secs?: number
+    /** wins against Alfred ai, races against real players, wins in them, and the best place seen on the Global board (0 = never ranked) */
+    alfredWins?: number; livePlays?: number; liveWins?: number; bestRank?: number }
 }
 
 export const emptyProgress = (): ChapterProgress => ({
@@ -24,7 +26,11 @@ export const emptyProgress = (): ChapterProgress => ({
   rush: { best: 0, plays: 0, wins: 0, points: 0 },
 })
 
-export const progressOf = (m: MetaProfile): ChapterProgress => ({ ...emptyProgress(), ...(m.chapter ?? {}), rush: { ...emptyProgress().rush, ...(m.chapter?.rush ?? {}) } })
+export const progressOf = (m: MetaProfile): ChapterProgress => {
+  const rush = { ...emptyProgress().rush, ...(m.chapter?.rush ?? {}) }
+  // live races are newer than the win counter: every win saved before them was against Alfred ai
+  return { ...emptyProgress(), ...(m.chapter ?? {}), rush: { ...rush, alfredWins: rush.alfredWins ?? rush.wins, livePlays: rush.livePlays ?? 0, liveWins: rush.liveWins ?? 0, bestRank: rush.bestRank ?? 0 } }
+}
 
 export function withProgress(m: MetaProfile, p: ChapterProgress): MetaProfile { return { ...m, chapter: p } }
 
@@ -44,11 +50,20 @@ export function finishLevel(p: ChapterProgress, levelId: string, stars: number, 
 export const setFlag = (p: ChapterProgress, k: string, v: string): ChapterProgress => ({ ...p, flags: { ...p.flags, [k]: v } })
 
 /** The Rush gives 1 point the first time a personal best is passed in a run of at least 100 m, and 1 for the first win against Alfred. */
-export function recordRush(p: ChapterProgress, r: { distance: number; won?: boolean }): { progress: ChapterProgress; points: number } {
+export function recordRush(p: ChapterProgress, r: { distance: number; won?: boolean; mode?: 'solo' | 'alfred' | 'live' }): { progress: ChapterProgress; points: number } {
   const best = Math.max(p.rush.best, r.distance)
   const pts = (r.distance > p.rush.best && r.distance >= 100 ? 1 : 0) + (r.won && p.rush.wins === 0 ? 1 : 0)
-  return { points: pts, progress: { ...p, points: p.points + pts, rush: { best, plays: p.rush.plays + 1, wins: p.rush.wins + (r.won ? 1 : 0), points: p.rush.points + pts } } }
+  const mode = r.mode ?? (r.won ? 'alfred' : 'solo')
+  const win = r.won ? 1 : 0
+  return { points: pts, progress: { ...p, points: p.points + pts, rush: {
+    ...p.rush, best, plays: p.rush.plays + 1, wins: p.rush.wins + win, points: p.rush.points + pts,
+    alfredWins: (p.rush.alfredWins ?? p.rush.wins) + (mode === 'alfred' ? win : 0),
+    livePlays: (p.rush.livePlays ?? 0) + (mode === 'live' ? 1 : 0), liveWins: (p.rush.liveWins ?? 0) + (mode === 'live' ? win : 0),
+  } } }
 }
+
+/** Remember the best place seen on the Global board (lower is better; it only ever improves). */
+export const withRank = (p: ChapterProgress, rank: number): ChapterProgress => (rank > 0 && (!p.rush.bestRank || rank < p.rush.bestRank) ? { ...p, rush: { ...p.rush, bestRank: rank } } : p)
 
 export type ChapterStatus = 'active' | 'locked' | 'done'
 /** A chapter is done when every one of its levels has stars. Chapter 1 is always open; any other opens when the chapter before it is done. */
