@@ -86,3 +86,16 @@ export function raceOutcome(you: DashState, rival: DashState, timeUp: boolean): 
   const margin = you.score - rival.score
   return { youWon: margin > 0, draw: margin === 0, you: you.score, rival: rival.score, margin, timeUp }
 }
+
+/** The one-line story under the result headline, so the order of events and the outcome are both clear (never "kept running" next to a win). */
+export function raceNote(o: RaceOutcome, carried: boolean, rival = RIVAL_NAME): string {
+  const n = (v: number) => v.toLocaleString('en-US')
+  const scores = `You ${n(o.you)} · ${rival} ${n(o.rival)}${o.youWon ? ' · +10 coin bonus' : ''}`
+  let story = ''
+  if (o.timeUp) story = 'Time up. '
+  else if (!carried) story = `${rival} had already crashed out. `
+  else if (o.youWon) story = `You crashed first, but ${rival} could not beat your score. `
+  else if (o.draw) story = `You crashed first and ${rival} finished level with you. `
+  else story = `You crashed first and ${rival} kept going past your score. `
+  return story + scores
+}

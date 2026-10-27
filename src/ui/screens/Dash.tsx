@@ -8,7 +8,7 @@ import { HOWTO } from '@content/taskGuide'
 import { plain, vlang } from '@content/lang'
 import { speakLine, stopSpeaking } from '@platform/voice'
 import { createDash, resultOf, segmentAt, stepDash, ROUTES, LEVELS, type DashEvent, type DashResult, type DashState } from '../../minigames/go-slow-dash/sim'
-import { createRival, stepRival, raceOutcome, RACE_SECS, RIVAL_NAME, type RaceOutcome, type Rival } from '../../minigames/go-slow-dash/race'
+import { createRival, stepRival, raceOutcome, raceNote, RACE_SECS, RIVAL_NAME, type RaceOutcome, type Rival } from '../../minigames/go-slow-dash/race'
 import { sendChallenge, watchLobby, msUntilStart, RaceLink } from '@platform/match'
 import { rushBlocked, rushBlockedText, rushLeave, serverNow } from '@platform/rush'
 import { useRush } from '@platform/rushStore'
@@ -451,7 +451,7 @@ export default function Dash({ rush, again }: { rush?: boolean; again?: () => vo
               : race
               ? <div className={`font-display text-4xl -rotate-2 ${race.youWon ? 'text-green-700' : race.draw ? 'text-danfo' : 'text-red-700'}`}>{race.youWon ? 'YOU WIN! 🏆' : race.draw ? 'DRAW! 🤝' : `${RIVAL_NAME} wins 🤖`}</div>
               : <div className={`font-display text-5xl -rotate-2 ${timeUp ? 'text-green-700' : 'text-red-700'}`}>{timeUp ? 'TIME UP!' : 'WAHALA!'}</div>}
-            {race && <div className="text-xs font-bold opacity-80 mt-1">{race.timeUp ? 'Time up. ' : carried ? `${RIVAL_NAME} kept running after you crashed. ` : ''}You {race.you.toLocaleString()} · {RIVAL_NAME} {race.rival.toLocaleString()}{race.youWon ? ' · +10 coin bonus' : ''}</div>}
+            {race && <div className="text-xs font-bold opacity-80 mt-1">{raceNote(race, carried)}</div>}
             <div className="font-display text-6xl text-danfo leading-none mt-1">{result.score.toLocaleString()}</div>
             {result.score > (life?.dashBest ?? 0) && !rush && <div className="chip mt-1" style={{ background: '#2fd27b', color: '#06241a' }}>New best!</div>}
             <div className="grid grid-cols-2 gap-2 mt-3 text-sm">

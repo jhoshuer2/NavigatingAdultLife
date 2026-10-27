@@ -75,7 +75,7 @@ describe('go-slow dash sim', () => {
   })
 })
 
-import { createRival, stepRival, raceOutcome, RACE_SECS } from '../src/minigames/go-slow-dash/race'
+import { createRival, stepRival, raceOutcome, raceNote, RACE_SECS } from '../src/minigames/go-slow-dash/race'
 describe('racing Alfred ai', () => {
   it('a runner who crashes out early loses to a computer runner who goes on to score more', () => {
     const me = createDash({ seed: 31, mode: 'foot', hearts: 1, assist: false })
@@ -87,5 +87,31 @@ describe('racing Alfred ai', () => {
     const o = raceOutcome(me, rv.st, false)
     expect(o.rival).toBeGreaterThan(o.you)
     expect(o.youWon).toBe(false)
+  })
+})
+
+describe('the race result note', () => {
+  const o = (you: number, rival: number, timeUp = false) => ({ youWon: you > rival, draw: you === rival, you, rival, margin: you - rival, timeUp })
+  it('says who crashed first and why you won, without implying Alfred outlasted you', () => {
+    const t = raceNote(o(11236, 10584), true)
+    expect(t).toBe('You crashed first, but Alfred ai could not beat your score. You 11,236 · Alfred ai 10,584 · +10 coin bonus')
+    expect(t).not.toMatch(/kept running|kept going/)
+  })
+  it('covers a loss, a draw, time up and an opponent who was already out', () => {
+    expect(raceNote(o(100, 500), true)).toMatch(/kept going past your score.*You 100 · Alfred ai 500$/)
+    expect(raceNote(o(300, 300), true)).toMatch(/finished level with you/)
+    expect(raceNote(o(900, 800, true), false)).toMatch(/^Time up\. You 900/)
+    expect(raceNote(o(900, 800), false)).toMatch(/^Alfred ai had already crashed out\./)
+  })
+  it('matches a real sim: I crash first with the higher score, Alfred carries on and ends lower', () => {
+    const me = createDash({ seed: 7, mode: 'foot', hearts: 1, assist: false })
+    const rv = createRival({ seed: 7, mode: 'foot', hearts: 3, assist: false }, 0)
+    for (let i = 0; i < 60 * RACE_SECS && !me.over; i++) { stepDash(me, 1 / 60); stepRival(rv, 1 / 60) }
+    me.score = 1_000_000 // a great run before the crash
+    const carried = !rv.st.over && rv.st.t < RACE_SECS
+    for (let i = 0; i < RACE_SECS * 60 && !rv.st.over && rv.st.t < RACE_SECS; i++) stepRival(rv, 1 / 60)
+    const out = raceOutcome(me, rv.st, false)
+    expect(out.youWon).toBe(true)
+    expect(raceNote(out, carried)).not.toMatch(/kept running|kept going/)
   })
 })
