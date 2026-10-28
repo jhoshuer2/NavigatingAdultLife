@@ -37,6 +37,13 @@ describe('chapter progress', () => {
     r = recordRush(p, { distance: 90, won: true }); expect(r.points).toBe(0); p = r.progress
     r = recordRush(p, { distance: 150 }); expect(r.points).toBe(1)
   })
+  it('recording a run keeps the run time the player picked', () => {
+    let p = emptyProgress(); p = { ...p, rush: { ...p.rush, secs: 60 } }
+    p = recordRush(p, { distance: 300, won: true, mode: 'alfred' }).progress
+    expect(p.rush.secs).toBe(60)
+    p = recordRush(p, { distance: 50 }).progress
+    expect(p.rush.secs).toBe(60)
+  })
 })
 
 describe('chapter select', () => {

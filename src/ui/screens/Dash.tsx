@@ -412,8 +412,8 @@ export default function Dash({ rush, again }: { rush?: boolean; again?: () => vo
         <div className="absolute inset-0 grid place-items-center p-5" style={{ background: 'rgba(28,27,34,.6)' }}>
           <div className="card p-5 w-full max-w-sm pop" style={{ background: '#f3e7cf' }}>
             <h2 className="font-display text-3xl text-danfo text-center">{rush ? 'The Rush' : 'How do you want to run?'}</h2>
-            <button className="tile w-full text-left mt-4 !p-3" onClick={startSolo}><div className="font-display text-2xl">🏃 {rush ? 'Play alone' : 'Run alone'}</div><div className="text-xs opacity-80 mt-0.5">{rush ? 'Go as far as you can. Beat your best.' : 'Your normal run. Go as far as you can. This is the run that counts for your trophies.'}</div></button>
-            <button className="tile w-full text-left mt-2 !p-3" onClick={startRace}><div className="font-display text-2xl">🏁 {rush ? 'Find a player' : 'Play against someone'}</div><div className="text-xs opacity-80 mt-0.5">{rush ? `Challenges everyone online now. Same road, ${fmtT(secs)}, best score wins. If nobody accepts you can race Alfred ai.` : `Same road, ${RACE_SECS} seconds. Most points wins a 10 coin bonus.`}</div></button>
+            <button className="tile w-full text-left mt-4 !p-3" onClick={startRace}><div className="font-display text-2xl">🏁 {rush ? 'Find a player' : 'Play against someone'}</div><div className="text-xs opacity-80 mt-0.5">{rush ? `Challenges everyone online now. Same road, ${fmtT(secs)}, best score wins. If nobody accepts you can race Alfred ai.` : `Same road, ${RACE_SECS} seconds. Most points wins a 10 coin bonus.`}</div></button>
+            <button className="tile w-full text-left mt-2 !p-3" onClick={startSolo}><div className="font-display text-2xl">🏃 {rush ? 'Play alone' : 'Run alone'}</div><div className="text-xs opacity-80 mt-0.5">{rush ? 'Go as far as you can. Beat your best.' : 'Your normal run. Go as far as you can. This is the run that counts for your trophies.'}</div></button>
             {rush && <button className="tile w-full text-left mt-2 !p-3 opacity-60" disabled><div className="font-display text-2xl">🤝 Challenge a friend</div><div className="text-xs opacity-80 mt-0.5">Coming soon. It needs the online service.</div></button>}
             {rush && <div className="mt-5"><DurationPicker secs={secs} onPick={setSecs} /></div>}
             {rush && <p className="text-[11px] opacity-70 mt-4 text-center">Swipe to change lane · up jumps · down slides. Grab ⚡ boosts, 🪽 wings (dodge the sky!) and 🛹🚲🛶 rides. Alfred grabs them too.</p>}
@@ -464,7 +464,6 @@ export default function Dash({ rush, again }: { rush?: boolean; again?: () => vo
             {rush
               ? <p className="text-sm font-extrabold mt-2">{rushPts ? `⭐ +${rushPts} point${rushPts > 1 ? 's' : ''}` : `Best: ${Math.round(progressOf(useGame.getState().meta).rush.best)} m`}</p>
               : <p className="text-xs opacity-70 mt-2">Coins and fares become cash when you return to your life.</p>}
-            {rush && <div className="mt-3"><DurationPicker secs={secs} onPick={setSecs} /></div>}
             <Btn variant="green" className="w-full mt-3" onClick={goAgain}>{rush ? 'Go again' : 'GO AGAIN ⚡10'}</Btn>
             <Btn variant="ghost" className="w-full mt-2" onClick={back}>{rush ? 'Home' : 'Back to my life'}</Btn>
           </div>
