@@ -1,4 +1,4 @@
-# Spal: Project Plan
+# SPAL Biz: Project Plan
 
 Derived from [PRODUCT.md](PRODUCT.md), which stays the source of truth. If the two disagree, PRODUCT.md wins and this file gets fixed.
 
@@ -100,4 +100,4 @@ These are defaults so work can proceed. Joshua should overrule any of them.
 1. Sign-off on the stack (Next.js, Supabase, Claude API) and the recommended open-question defaults.
 2. Vercel access (step 2) and a Supabase project (step 3).
 3. Design references (step 4).
-4. Whether Spal should live in its own repo. It currently sits in `spal/` inside the Navigating Adult Life repo, which is unrelated; a separate repo is cleaner before Vercel is set up.
+4. A dedicated GitHub repo for SPAL Biz. It is unrelated to Navigating Adult Life, and the files currently sitting in `spal/` should move there as the repo root before Vercel is linked.

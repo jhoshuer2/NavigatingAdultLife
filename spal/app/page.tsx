@@ -2,7 +2,7 @@
 export default function Home() {
   return (
     <main className="p-6">
-      <h1 className="text-2xl font-semibold">Spal</h1>
+      <h1 className="text-2xl font-semibold">SPAL Biz</h1>
       <p>Coming soon.</p>
     </main>
   );
